@@ -2,39 +2,47 @@ Polyphonic Tone Transfer Language
 #################################
 
 The Polyphonic Tone Transfer Language (PTTL) is a way to describe polyphonic
-melodies, and is based on Nokia's
+melodies, and is a superset of Nokia's
 `RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ format,
 which was used for transferring monophonic ringtones.
 
-PTTL consists of a string divided into "statements" by a semicolon ``;``.
+Valid RTTTL strings are also valid PTTL strings; a parser which properly handles
+PTTL can also handle RTTTL.
 
-*default values* statement
+A PTTL string is made up of three colon-seperated sections; name, default values
+and data.
+
+The initial "name" section is generally unused, and only kept for backwards
+compatibility with RTTTL.
+
+*default values* section
 ==========================
 
 The very first statement is the *default value* section and is identical to
-the section of the same name from the RTTTL format, with the exception that it
-must end with a semicolon.
+the section of the same name from the RTTTL format.
 
 ::
 
-  b=123, d=8, o=4;
+  b=123, d=8, o=4
 
 * *d* - duration: default duration of a note if none is specified
 * *o* - octave: default octave of a note if none is specified
 * *b* - beat, tempo: tempo in BPM (Beats Per Minute)
 
-ALl of the remaining statements after the initial *default values* statement
-are *time slot* statements
+*data* section
+==============
 
-*time slot* statements
-======================
+Like RTTTL, the data section in a PTTL string contains comma-seperated values.
+*Unlike* RTTTL, where single notes are separated by commas,
+The comma seperated values in PTTL are *time slots*, where each time slot may
+contain one or more notes. Multiple notes in a time slot are separated by a
+vertical pipe "|".
 
-A time slot statement contains multiple comma-seperated notes. The format of
-each note is identical to that described by the RTTTL format: each note
-includes, in sequence: a duration specifier, a standard music note, either a, b,
-c, d, e, f or g (optionally followed by '#' or 'b' for sharps and flats), and an
-octave specifier. If no duration or octave specifier are present, the default
-applies.
+The format of a note is identical to that described by the RTTTL format; each
+note includes, in sequence: a duration specifier, a standard music note, either
+a, b, c, d, e, f or g (optionally followed by '#' or 'b' for sharps and flats),
+and an octave specifier. If no duration or octave specifier are present, the
+default applies.
 
 Durations
 ---------
@@ -47,6 +55,10 @@ Valid values for note duration:
 * **8** - eighth note
 * **16** - sixteenth note
 * **32** - thirty-second note
+
+Dotted rhythm patterns can be formed by adding a period "." either
+after the note letter (e.g. ``c#.``, or ``c#.5``), or after the octave
+number (e.g. ``c#5.``)
 
 Notes
 -----
@@ -85,12 +97,29 @@ Consider the following PTTL string:
 ::
 
     # 123 beats-per-minute, default quarter note, default 4th octave
-    b=123, d=4, o=4;
+    Test Melody:
+    b=123, d=4, o=4:
 
-    16c, 16e, 16g5;
+    16c|16e|16g5,
+    8p,
+    16c|16e|16g5
 
 
-This would play 3 sixteenth notes simultaneously; C (octave 4), E (octave 4)
-and G (octave 5).
+This would play 3 sixteenth notes simultaneously (C, octave 4; E, octave 4;
+G ,octave 5), followed by an eighth note rest, followed by the same
+three sixteenth notes again
 
+Sample implementation
+=====================
 
+A sample parser class and player implementation is provided in ``pttl.py``.
+Note that the ``pygame`` module is used to generate the tones, so ``pttl.py``
+will not work if you do not have ``pygame`` installed.
+
+``pttl.py`` will parse a text file passed on the command line, and play the
+resulting tones. Try it with some of the included melodies in the ``examples``
+directory:
+
+::
+
+   python pttl.py examples/polyphonic_example.txt

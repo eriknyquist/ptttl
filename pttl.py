@@ -13,23 +13,23 @@ pygame.init()
 FREQ, FMT, _ = get_init()
 
 NOTES = {
-    "c": 16.351,
-    "c#": 17.324,
-    "db": 17.324,
-    "d": 18.354,
-    "d#": 19.445,
-    "eb": 19.445,
-    "e": 20.601,
-    "f": 21.827,
-    "f#": 23.124,
-    "gb": 23.124,
-    "g": 24.499,
-    "g#": 25.956,
-    "ab": 25.956,
-    "a": 27.5,
-    "a#": 29.135,
-    "bb": 29.135,
-    "b": 30.868
+    "c": 261.626,
+    "c#": 277.183,
+    "db": 277.183,
+    "d": 293.665,
+    "d#": 311.127,
+    "eb": 311.127,
+    "e": 329.628,
+    "f": 349.228,
+    "f#": 369.994,
+    "gb": 369.994,
+    "g": 391.995,
+    "g#": 415.305,
+    "ab": 415.305,
+    "a": 440.0,
+    "a#": 466.164,
+    "bb": 466.164,
+    "b": 493.883
 }
 
 class Note(Sound):
@@ -159,11 +159,12 @@ class PTTLPlayer(object):
     def _note_time_to_secs(self, note_time):
         # Time in seconds for a whole note (4 beats) given current BPM.
         whole = (60.0 / float(self.bpm)) * 4.0
-        
+
         return whole / float(note_time)
 
     def _parse_note(self, string):
         i = 0
+        sawdot = False
         dur = self.default
         octave = self.octave
 
@@ -172,19 +173,24 @@ class PTTLPlayer(object):
                 invalid_note_duration(string)
 
             i += 1
-        
+
         if i > 0:
             try:
                 dur = int(string[:i])
             except ValueError:
                 invalid_note_duration(string)
-        
+
+        duration = self._note_time_to_secs(dur)
         string = string[i:].lstrip()
         i = 0
         while i < len(string) and (string[i].isalpha() or string[i] == '#'):
             i += 1
 
         note = string[:i].strip().lower()
+        if i < len(string) and string[i] == '.':
+            i += 1
+            sawdot = True
+
         string = string[i:].strip()
         i = 0
 
@@ -208,11 +214,15 @@ class PTTLPlayer(object):
 
                 if not self._is_valid_octave(octave):
                     invalid_octave(note)
-    
-            pitch = raw_pitch * (2.0 ** float(octave))
-       
-        duration = self._note_time_to_secs(dur)
-        if i < len(string) and string[-1] == '.':
+
+            if octave < 4:
+                pitch = raw_pitch / (2.0 ** float(4 - octave))
+            elif octave > 4:
+                pitch = raw_pitch * (2.0 ** float(octave - 4))
+            else:
+                pitch = raw_pitch
+
+        if sawdot or ((i < len(string)) and string[-1] == '.'):
             duration += (duration / 2.0)
 
         return duration, pitch
@@ -222,7 +232,7 @@ class PTTLPlayer(object):
             line = self._clean_statement(raw)
             if line.strip() == "":
                 continue
-            
+
             buf = []
             fields = line.split('|')
             for note in fields:
@@ -230,7 +240,7 @@ class PTTLPlayer(object):
                 buf.append(Note(pitch, time))
 
             self.notes.append(buf)
-    
+
     def play(self):
         for slot in self.notes:
             slot.sort(key=lambda x: x.duration)
