@@ -1,4 +1,5 @@
 import time
+import sys
 from array import array
 from time import sleep
 
@@ -82,7 +83,7 @@ def invalid_note(note):
     raise ValueError("invalid note '%s'" % note)
 
 def invalid_octave(note):
-    raise ValueError("invalid note '%s'" % note)
+    raise ValueError("invalid octave in note '%s'" % note)
 
 def int_setting(key, val):
     ret = None
@@ -98,6 +99,7 @@ def int_setting(key, val):
 class PTTLPlayer(object):
     def __init__(self, pttl_string):
         self.notes = []
+        self.name = None
         self.default = None
         self.octave = None
         self.bpm = None
@@ -183,25 +185,37 @@ class PTTLPlayer(object):
             i += 1
 
         note = string[:i].strip().lower()
+        string = string[i:].strip()
+        i = 0
+
         if note == 'p':
-            return self._note_time_to_secs(dur), -1
+            pitch = -1
 
-        if note not in NOTES:
-            invalid_note(note)
+        else:
+            if note not in NOTES:
+                invalid_note(note)
 
-        raw_pitch = NOTES[note]
+            raw_pitch = NOTES[note]
 
-        if string[i:] != '':
-            try:
-                octave = int(string[i:])
-            except ValueError:
-                invalid_octave(string)
+            while i < len(string) and string[i].isdigit():
+                i += 1
 
-            if not self._is_valid_octave(octave):
-                invalid_octave(string)
+            if string[:i] != '':
+                try:
+                    octave = int(string[:i])
+                except ValueError:
+                    invalid_octave(note)
+
+                if not self._is_valid_octave(octave):
+                    invalid_octave(note)
     
-        pitch = raw_pitch * (2 ** octave)
-        return self._note_time_to_secs(dur), pitch
+            pitch = raw_pitch * (2.0 ** float(octave))
+       
+        duration = self._note_time_to_secs(dur)
+        if i < len(string) and string[-1] == '.':
+            duration += (duration / 2.0)
+
+        return duration, pitch
 
     def _parse_notes(self, notes_list):
         for raw in notes_list:
@@ -210,7 +224,7 @@ class PTTLPlayer(object):
                 continue
             
             buf = []
-            fields = line.split(',')
+            fields = line.split('|')
             for note in fields:
                 time, pitch = self._parse_note(note.strip())
                 buf.append(Note(pitch, time))
@@ -241,13 +255,20 @@ class PTTLPlayer(object):
                     time.sleep(slot[i].duration - elapsed)
 
     def from_string(self, pttl_string):
-        fields = [f.strip() for f in pttl_string.split(';')]
-        self._parse_config_line(fields[0])
-        self._parse_notes(fields[1:])
+        fields = [f.strip() for f in pttl_string.split(':')]
+        if len(fields) != 3:
+            raise SyntaxError('expecting 3 colon-seperated fields')
+
+        self.name = fields[0].strip()
+        self._parse_config_line(fields[1])
+        self._parse_notes(fields[2].split(','))
 
 if __name__ == "__main__":
-    with open('test_melody.txt', 'r') as fh:
+    if len(sys.argv) != 2:
+        print "Usage: %s <.rtttl/.pttl file>" % sys.argv[0]
+        sys.exit(1)
+
+    with open(sys.argv[1], 'r') as fh:
         t = PTTLPlayer(fh.read())
 
-    while True:
-        t.play()
+    t.play()

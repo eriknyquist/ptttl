@@ -1,29 +1,31 @@
 # Simple melody to show off the
 # polyphonic capabilities
 
-d=8, o=4, b=123;
+TestMelody:
 
-8C4, 8E4, 16C5;
-8P;
+d=8, o=4, b=123:
 
-8D4, 8F;
-8E4, 8G4;
-16C5;
-16P;
+8C4|8E4|16C5,
+8P,
 
-8D4, 8F4;
-8C4, 8E4;
-8P;
+8D4|8F,
+8E4|8G4,
+16C5,
+16P,
 
-16C4, 16E4, 16C5;
-16P;
-8C4, 8E4;
+8D4|8F4,
+8C4|8E4,
+8P,
 
-8D,8F;
-8E,8G;
-16C5;
-16P;
+16C4|16E4|16C5,
+16P,
+8C4|8E4,
 
-8D,8F;
-8C,8E;
-8P;
+8D|8F,
+8E|8G,
+16C5,
+16P,
+
+8D|8F,
+8C|8E,
+8P
