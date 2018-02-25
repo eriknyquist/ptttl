@@ -112,9 +112,9 @@ three sixteenth notes again
 Sample implementation
 =====================
 
-A sample parser class and player implementation is provided in ``pttl.py``.
-Note that the ``pygame`` module is used to generate the tones, so ``pttl.py``
-will not work if you do not have ``pygame`` installed.
+A sample implementation of a PTTL parser and polyphonic tone player is provided
+in ``pttl.py``. Note that the ``pygame`` module is used to generate the tones,
+so ``pttl.py`` will not work if you do not have ``pygame`` installed.
 
 ``pttl.py`` will parse a text file passed on the command line, and play the
 resulting tones. Try it with some of the included melodies in the ``examples``
