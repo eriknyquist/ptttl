@@ -1,5 +1,6 @@
 import time
 import sys
+import math
 from array import array
 from time import sleep
 
@@ -8,7 +9,7 @@ import pygame
 from pygame.mixer import Sound, get_init, pre_init
 
 pre_init(44100, -16, 1, 1024)
-pygame.init()
+pygame.mixer.init()
 
 FREQ, FMT, _ = get_init()
 
@@ -38,7 +39,7 @@ class Note(Sound):
         self.duration = duration
 
         if self.frequency > 0:
-            Sound.__init__(self, self.build_samples())
+            Sound.__init__(self, buffer=self.build_samples())
             self.set_volume(volume)
 
     def build_samples(self):
@@ -216,9 +217,9 @@ class PTTLPlayer(object):
                     invalid_octave(note)
 
             if octave < 4:
-                pitch = raw_pitch / (2.0 ** float(4 - octave))
+                pitch = raw_pitch / math.pow(2, (4 - octave))
             elif octave > 4:
-                pitch = raw_pitch * (2.0 ** float(octave - 4))
+                pitch = raw_pitch * math.pow(2, (octave - 4))
             else:
                 pitch = raw_pitch
 
@@ -258,7 +259,7 @@ class PTTLPlayer(object):
                 elapsed = time.time() - start
 
                 while i < len(slot) and slot[i].duration <= elapsed:
-                    slot[i].stop()
+                    slot[i].fadeout(5)
                     i += 1
 
                 if i < len(slot):
