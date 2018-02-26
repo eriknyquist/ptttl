@@ -39,7 +39,13 @@ class Note(Sound):
         self.duration = duration
 
         if self.frequency > 0:
-            Sound.__init__(self, buffer=self.build_samples())
+            # This ugly try/except handles a silly thing that changed
+            # between pygame versions
+            try:
+                Sound.__init__(self, buffer=self.build_samples())
+            except TypeError:
+                Sound.__init__(self, self.build_samples())
+
             self.set_volume(volume)
 
     def build_samples(self):
