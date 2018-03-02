@@ -21,6 +21,7 @@ NOTES = {
     "d#": 311.127,
     "eb": 311.127,
     "e": 329.628,
+    "e#": 349.228,
     "f": 349.228,
     "f#": 369.994,
     "gb": 369.994,
@@ -246,16 +247,16 @@ class PTTLPlayer(object):
                 time, pitch = self._parse_note(note.strip())
                 buf.append(Note(pitch, time))
 
+            buf.sort(key=lambda x: x.duration)
             self.notes.append(buf)
 
     def play(self):
         for slot in self.notes:
-            slot.sort(key=lambda x: x.duration)
             start = time.time()
 
             i = 0
             if slot[0].frequency <= 0:
-                time.sleep(note.duration)
+                time.sleep(slot[0].duration)
                 continue
 
             for note in slot:
