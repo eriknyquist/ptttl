@@ -1,17 +1,5 @@
-import time
-import sys
 import math
-from array import array
-from time import sleep
-
-import pygame
-
-from pygame.mixer import Sound, get_init, pre_init
-
-pre_init(44100, -16, 1, 1024)
-pygame.mixer.init()
-
-FREQ, FMT, _ = get_init()
+import sys
 
 NOTES = {
     "c": 261.626,
@@ -34,54 +22,18 @@ NOTES = {
     "b": 493.883
 }
 
-class Note(Sound):
-    def __init__(self, frequency, duration, volume=.1):
-        self.frequency = frequency
-        self.duration = duration
-
-        if self.frequency > 0:
-            # This ugly try/except handles a silly thing that changed
-            # between pygame versions
-            try:
-                Sound.__init__(self, buffer=self.build_samples())
-            except TypeError:
-                Sound.__init__(self, self.build_samples())
-
-            self.set_volume(volume)
-
-    def build_samples(self):
-        period = int(round(FREQ / self.frequency))
-        samples = array("h", [0] * period)
-        amplitude = 2 ** (abs(FMT) - 1) - 1
-        for time in xrange(period):
-            if time < period / 2:
-                samples[time] = amplitude
-            else:
-                samples[time] = -amplitude
-
-        return samples
-
-    def __str__(self):
-        return '(%s, %s)' % (self.frequency, self.duration)
-
-    def __repr__(self):
-        return self.__str__()
-
-def ignore_line(line):
-    return (line == "") or line.startswith('#')
-
 def unrecognised_setting(key):
-    raise SyntaxError("unrecognised setting '%s' in PTTL script" % key)
+    raise SyntaxError("unrecognised setting '%s' in PTTTL script" % key)
 
 def missing_setting(key):
-    raise SyntaxError("missing setting '%s' in PTTL script" % key)
+    raise SyntaxError("missing setting '%s' in PTTTL script" % key)
 
 def invalid_setting(key):
-    raise SyntaxError("invalid configuration setting '%s' in PTTL script"
+    raise SyntaxError("invalid configuration setting '%s' in PTTTL script"
         % key)
 
 def invalid_value(key, val):
-    raise ValueError("invalid value '%s' for setting '%s' in PTTL script"
+    raise ValueError("invalid value '%s' for setting '%s' in PTTTL script"
         % (val, key))
 
 def invalid_note_duration(note):
@@ -100,21 +52,14 @@ def int_setting(key, val):
         ret = int(val)
     except ValueError:
         raise ValueError("expecting an integer for '%s' setting in "
-            "PTTL script" % key)
+            "PTTTL script" % key)
 
     return ret
 
-class PTTLPlayer(object):
-    def __init__(self, pttl_string):
-        self.notes = []
-        self.name = None
-        self.default = None
-        self.octave = None
-        self.bpm = None
+def ignore_line(line):
+    return (line == "") or line.startswith('#')
 
-        if pttl_string:
-            self.from_string(pttl_string)
-
+class PTTTLParser(object):
     def _is_valid_octave(self, octave):
         return octave >= 0 and octave <= 8
 
@@ -133,7 +78,7 @@ class PTTLPlayer(object):
         values = [f for f in stripped if f != ""]
 
         if not values:
-            raise SyntaxError("no valid configuration found in PTTL script")
+            raise SyntaxError("no valid configuration found in PTTTL script")
 
         for value in values:
             fields = value.split('=')
@@ -147,34 +92,39 @@ class PTTLPlayer(object):
                 invalid_setting(value)
 
             if key == 'b':
-                self.bpm = int_setting(key, val)
+                bpm = int_setting(key, val)
             elif key == 'd':
-                self.default = int_setting(key, val)
-                if not self._is_valid_duration(self.default):
+                default = int_setting(key, val)
+                if not self._is_valid_duration(default):
                     invalid_value(key, val)
             elif key == 'o':
-                self.octave = int_setting(key, val)
-                if not self._is_valid_octave(self.octave):
+                octave = int_setting(key, val)
+                if not self._is_valid_octave(octave):
                     invalid_value(key, val)
             else:
                 unrecognised_setting(key)
-        if not self.bpm:
+
+        if not octave:
+            missing_setting('o')
+
+        if not bpm:
             missing_setting('b')
 
-        if not self.default:
+        if not default:
             missing_setting('d')
 
-    def _note_time_to_secs(self, note_time):
+        return bpm, default, octave
+
+    def _note_time_to_secs(self, note_time, bpm):
         # Time in seconds for a whole note (4 beats) given current BPM.
-        whole = (60.0 / float(self.bpm)) * 4.0
+        whole = (60.0 / float(bpm)) * 4.0
 
         return whole / float(note_time)
 
-    def _parse_note(self, string):
+    def _parse_note(self, string, bpm, default, octave):
         i = 0
         sawdot = False
-        dur = self.default
-        octave = self.octave
+        dur = default
 
         while string[i].isdigit():
             if i > 1:
@@ -188,7 +138,7 @@ class PTTLPlayer(object):
             except ValueError:
                 invalid_note_duration(string)
 
-        duration = self._note_time_to_secs(dur)
+        duration = self._note_time_to_secs(dur, bpm)
         string = string[i:].lstrip()
         i = 0
         while i < len(string) and (string[i].isalpha() or string[i] == '#'):
@@ -235,7 +185,9 @@ class PTTLPlayer(object):
 
         return duration, pitch
 
-    def _parse_notes(self, notes_list):
+    def _parse_notes(self, notes_list, bpm, default, octave):
+        ret = []
+
         for raw in notes_list:
             line = self._clean_statement(raw)
             if line.strip() == "":
@@ -244,49 +196,28 @@ class PTTLPlayer(object):
             buf = []
             fields = line.split('|')
             for note in fields:
-                time, pitch = self._parse_note(note.strip())
-                buf.append(Note(pitch, time))
+                time, pitch = self._parse_note(note.strip(),
+                    bpm, default, octave)
 
-            buf.sort(key=lambda x: x.duration)
-            self.notes.append(buf)
+                buf.append((pitch, time))
 
-    def play(self):
-        for slot in self.notes:
-            start = time.time()
+            buf.sort(key=lambda x: x[1])
+            ret.append(buf)
 
-            i = 0
-            if slot[0].frequency <= 0:
-                time.sleep(slot[0].duration)
-                continue
+        return ret
 
-            for note in slot:
-                note.play(-1)
-
-            while i < len(slot):
-                elapsed = time.time() - start
-
-                while i < len(slot) and slot[i].duration <= elapsed:
-                    slot[i].fadeout(5)
-                    i += 1
-
-                if i < len(slot):
-                    time.sleep(slot[i].duration - elapsed)
-
-    def from_string(self, pttl_string):
+    def parse(self, pttl_string):
         fields = [f.strip() for f in pttl_string.split(':')]
         if len(fields) != 3:
             raise SyntaxError('expecting 3 colon-seperated fields')
 
         self.name = fields[0].strip()
-        self._parse_config_line(fields[1])
-        self._parse_notes(fields[2].split(','))
+        bpm, default, octave = self._parse_config_line(fields[1])
+        return self._parse_notes(fields[2].split(','), bpm, default, octave)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print "Usage: %s <.rtttl/.pttl file>" % sys.argv[0]
-        sys.exit(1)
-
+    p = PTTTLParser()
     with open(sys.argv[1], 'r') as fh:
-        t = PTTLPlayer(fh.read())
+        data = fh.read()
 
-    t.play()
+    print p.parse(data)

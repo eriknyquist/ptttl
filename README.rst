@@ -1,7 +1,7 @@
 Polyphonic Tone Transfer Language
 #################################
 
-The Polyphonic Tone Transfer Language (PTTL) is a way to describe polyphonic
+The Polyphonic Tone Text Transfer Language (PTTTL) is a way to describe polyphonic
 melodies, and is a superset of Nokia's
 `RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ format,
 used for monophonic ringtones.
@@ -13,20 +13,20 @@ I needed a good way to store simple tones and melodies for some project.
 RTTTL looked pretty good but only works for monophonic melodies.
 I needed polyphony.
 
-PTTL format
+PTTTL format
 ###########
 
-Valid RTTTL strings are also valid PTTL strings. A parser that properly handles
-PTTL can also handle RTTTL.
+Valid RTTTL strings are also valid PTTTL strings. A parser that properly handles
+PTTTL can also handle RTTTL.
 
-A PTTL string is made up of three colon-seperated sections; **name** section,
+A PTTTL string is made up of three colon-seperated sections; **name** section,
 **default values** section, and **data** section.
 
 Whitespace characters, empty lines, and lines beginning with a "#" character
 are ignored.
 
 The initial "name" section is intended to contain the name of the ringtone
-in the original RTTTL format. PTTL requires this field to be present, to
+in the original RTTTL format. PTTTL requires this field to be present, to
 maintain backwards compatibility with RTTTL, but places no constraints on its
 contents.
 
@@ -47,9 +47,9 @@ the section of the same name from the RTTTL format.
 *data* section
 ==============
 
-Like RTTTL, the data section in a PTTL string contains comma-seperated values.
+Like RTTTL, the data section in a PTTTL string contains comma-seperated values.
 *Unlike* RTTTL, where only single notes are separated by commas, the comma
-seperated values in PTTL are *time slots*, where each time slot may contain one
+seperated values in PTTTL are *time slots*, where each time slot may contain one
 or more notes. Multiple notes in a time slot are separated by a vertical pipe
 character "|".
 
@@ -107,7 +107,7 @@ Valid values for note octave are between **0** and **8**.
 Example
 =======
 
-Consider the following PTTL string:
+Consider the following PTTTL string:
 
 ::
 
@@ -127,17 +127,19 @@ three sixteenth notes again
 Sample implementation
 =====================
 
-A sample implementation of a PTTL parser and polyphonic tone player is provided
-in ``pttl.py``. Note that the ``pygame`` module is used to generate the tones,
-so ``pttl.py`` will not work if you do not have ``pygame`` installed.
+A sample implementation of a PTTTL parser, tone player and .wav encoder is
+provided in ``ptttl_parser.py``, ``ptttl_player.py`` and ``ptttl_wav_encoder.py``.
+Note that the ``pygame`` module is used to generate the tones in
+``ptttl_player.py`` so ``ptttl_player.py`` will not work if you do not have
+``pygame`` installed.
 
-``pttl.py`` will work on Linux & Windows (untested on OSX), as long as
-``pygame`` is installed.
+This sample scripts will work on Linux & Windows (untested on OSX).
 
-``pttl.py`` will parse a text file passed on the command line, and play the
-resulting tones. Try it with some of the included melodies in the ``examples``
-directory:
+Try the sanmple scripts out with some of the included melodies in the
+``rtttl_examples`` directory.
+
+Example of converting a RTTTL file into a .wav file:
 
 ::
 
-   python pttl.py examples/polyphonic_example.txt
+   python ptttl_wav_encoder.py rtttl_examples/monty.txt monty.wav
