@@ -1,7 +1,10 @@
 import sys
+import os
 import wave
 import math
 import struct
+import subprocess
+import tempfile
 
 from ptttl_parser import PTTTLParser
 
@@ -9,7 +12,24 @@ NUM_CHANNELS = 1
 DATA_SIZE = 2
 SAMPLE_RATE = 44100
 AMPLITUDE = 0.5
+MP3_BITRATE = 128
 MAX_AMP = float(int((2 ** (DATA_SIZE * 8)) / 2) - 1)
+
+LAME_BIN = 'lame'
+
+def _wav_to_mp3(infile, outfile):
+    args = [LAME_BIN, '--silent', '-b', str(MP3_BITRATE), infile, outfile]
+
+    try:
+        ret = subprocess.call(args)
+    except OSError as e:
+        os.remove(infile)
+        raise OSError("Unable to run %s. Is %s installed?"
+            % (LAME_BIN, LAME_BIN))
+
+    if ret != 0:
+        os.remove(infile)
+        raise OSError("Error (%d) returned by lame" % ret)
 
 def _gen_sample(amp, freq, period, rate, i):
     return float(amp) * math.sin(2.0 * math.pi * float(freq)
@@ -68,19 +88,30 @@ def _generate_samples(parsed):
 
         ret.extend(mixed)
 
-    return ret
+    return ret + [0 for _ in range(int(SAMPLE_RATE / 4.0))]
 
 def ptttl_to_wav(ptttl_filename, wav_filename):
+    if not os.path.exists(ptttl_filename):
+        raise IOError("File '%s' does not exist" % ptttl_filename)
+
     parser = PTTTLParser()
+
     with open(ptttl_filename, 'r') as fh:
         data = parser.parse(fh.read())
     
     samples = _generate_samples(data)
     _write_wav_file(samples, wav_filename)
 
+def ptttl_to_mp3(ptttl_filename, mp3_filename):
+    fd, wavfile = tempfile.mkstemp()
+    ptttl_to_wav(ptttl_filename, wavfile)
+    _wav_to_mp3(wavfile, mp3_filename)
+    os.close(fd)
+    os.remove(wavfile)
+
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print "Usage: %s <input.rtttl/.ptttl> <output.wav>" % sys.argv[0]
         sys.exit(1)
 
-    ptttl_to_wav(sys.argv[1], sys.argv[2])
+    ptttl_to_mp3(sys.argv[1], sys.argv[2])
