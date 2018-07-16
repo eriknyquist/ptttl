@@ -90,14 +90,9 @@ def _generate_samples(parsed):
 
     return ret + [0 for _ in range(int(SAMPLE_RATE / 4.0))]
 
-def ptttl_to_wav(ptttl_filename, wav_filename):
-    if not os.path.exists(ptttl_filename):
-        raise IOError("File '%s' does not exist" % ptttl_filename)
-
+def ptttl_to_wav(ptttl_data, wav_filename):
     parser = PTTTLParser()
-
-    with open(ptttl_filename, 'r') as fh:
-        data = parser.parse(fh.read())
+    data = parser.parse(ptttl_data)
     
     samples = _generate_samples(data)
     _write_wav_file(samples, wav_filename)
@@ -114,4 +109,10 @@ if __name__ == "__main__":
         print "Usage: %s <input.rtttl/.ptttl> <output.wav>" % sys.argv[0]
         sys.exit(1)
 
-    ptttl_to_mp3(sys.argv[1], sys.argv[2])
+    if not os.path.exists(sys.argv[1]):
+        raise IOError("File '%s' does not exist" % sys.argv[1])
+
+    with open(sys.argv[1], 'r') as fh:
+        ptttl_data = fh.read()
+
+    ptttl_to_mp3(ptttl_data, sys.argv[2])
