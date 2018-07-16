@@ -39,11 +39,11 @@ def _sine_wave(freq=440.0, rate=44100, num=44100, amp=0.5):
     period = int(rate / freq)
     if amp > 1.0: amp = 1.0
     if amp < 0.0: amp = 0.0
-    table = [_gen_sample(amp, freq, period, rate, i) for i in xrange(period)]
+    table = [_gen_sample(amp, freq, period, rate, i) for i in range(period)]
     return [table[i % period] for i in range(num)]
 
 def _serialize_samples(samples):
-    return ''.join([struct.pack('h', s * MAX_AMP) for s in samples])
+    return bytes(b'').join([bytes(struct.pack('h', int(s * MAX_AMP))) for s in samples])
 
 def _write_wav_file(samples, filename):
     f = wave.open(filename, 'w')
@@ -97,16 +97,16 @@ def ptttl_to_wav(ptttl_data, wav_filename):
     samples = _generate_samples(data)
     _write_wav_file(samples, wav_filename)
 
-def ptttl_to_mp3(ptttl_filename, mp3_filename):
+def ptttl_to_mp3(ptttl_data, mp3_filename):
     fd, wavfile = tempfile.mkstemp()
-    ptttl_to_wav(ptttl_filename, wavfile)
+    ptttl_to_wav(ptttl_data, wavfile)
     _wav_to_mp3(wavfile, mp3_filename)
     os.close(fd)
     os.remove(wavfile)
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print "Usage: %s <input.rtttl/.ptttl> <output.wav>" % sys.argv[0]
+        print("Usage: %s <input.rtttl/.ptttl> <output.wav>" % sys.argv[0])
         sys.exit(1)
 
     if not os.path.exists(sys.argv[1]):
