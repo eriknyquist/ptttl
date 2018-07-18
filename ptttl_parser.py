@@ -57,7 +57,7 @@ def int_setting(key, val):
     return ret
 
 def ignore_line(line):
-    return (line == "") or line.startswith('#')
+    return (line == "") or line.startswith('!') or line.startswith('#')
 
 class PTTTLParser(object):
     def _is_valid_octave(self, octave):
@@ -66,13 +66,9 @@ class PTTTLParser(object):
     def _is_valid_duration(self, duration):
         return duration in [1, 2, 4, 8, 16, 32]
 
-    def _clean_statement(self, stmt):
-        return ''.join([x for x in stmt.splitlines() if not ignore_line(x)])
-
     def _parse_config_line(self, conf):
-        line = self._clean_statement(conf)
         # Split comma-separated values
-        stripped = [f.strip() for f in line.split(',')]
+        stripped = [f.strip() for f in conf.split(',')]
 
         # Remove empty (whitespace-only) values
         values = [f for f in stripped if f != ""]
@@ -123,12 +119,16 @@ class PTTTLParser(object):
 
     def _parse_note(self, string, bpm, default, octave):
         i = 0
+        orig = string
         sawdot = False
         dur = default
 
-        while string[i].isdigit():
+        if len(string) == 0:
+            raise ValueError("Missing notes after comma")
+
+        while i < len(string) and string[i].isdigit():
             if i > 1:
-                invalid_note_duration(string)
+                invalid_note_duration(orig)
 
             i += 1
 
@@ -136,15 +136,23 @@ class PTTTLParser(object):
             try:
                 dur = int(string[:i])
             except ValueError:
-                invalid_note_duration(string)
+                invalid_note_duration(orig)
+        else:
+            if not string[0].isalpha():
+                invalid_note(orig)
 
         duration = self._note_time_to_secs(dur, bpm)
-        string = string[i:].lstrip()
+
+        string = string[i:]
+
         i = 0
         while i < len(string) and (string[i].isalpha() or string[i] == '#'):
             i += 1
 
         note = string[:i].strip().lower()
+        if note == "":
+            invalid_note(orig)
+
         if i < len(string) and string[i] == '.':
             i += 1
             sawdot = True
@@ -157,7 +165,7 @@ class PTTTLParser(object):
 
         else:
             if note not in NOTES:
-                invalid_note(note)
+                invalid_note(orig)
 
             raw_pitch = NOTES[note]
 
@@ -189,12 +197,11 @@ class PTTTLParser(object):
         ret = []
 
         for raw in notes_list:
-            line = self._clean_statement(raw)
-            if line.strip() == "":
+            if raw.strip() == "":
                 continue
 
             buf = []
-            fields = line.split('|')
+            fields = raw.split('|')
             for note in fields:
                 time, pitch = self._parse_note(note.strip(),
                     bpm, default, octave)
@@ -206,8 +213,11 @@ class PTTTLParser(object):
 
         return ret
 
-    def parse(self, pttl_string):
-        fields = [f.strip() for f in pttl_string.split(':')]
+    def parse(self, ptttl_string):
+        lines = [x.strip() for x in ptttl_string.split()]
+        cleaned = '\n'.join([x for x in lines if not ignore_line(x)])
+
+        fields = [f.strip() for f in cleaned.split(':')]
         if len(fields) != 3:
             raise SyntaxError('expecting 3 colon-seperated fields')
 
