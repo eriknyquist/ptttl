@@ -51,9 +51,6 @@ def _square_wave_table(freq, rate, period, num, amp):
 
 def _gen_wave(tablefunc, freq, rate, num, amp):
     period = int(rate / freq)
-    if amp > MAX_AMPLITUDE: amp = MAX_AMPLITUDE
-    if amp < 0.0: amp = 0.0
-    period = int(rate / freq)
     table = tablefunc(freq, rate, period, num, amp)
     return [table[i % period] for i in range(num)]
 
@@ -63,8 +60,19 @@ def _sine_wave(freq=440.0, rate=44100, num=44100, amp=0.5):
 def _square_wave(freq=440.0, rate=44100, num=44100, amp=0.5):
     return _gen_wave(_square_wave_table, freq, rate, num, amp)
 
+def _pack_sample(sample):
+    ret = int(sample * MAX_SAMPLE_VALUE)
+    maxp = int(MAX_SAMPLE_VALUE)
+
+    if ret < -maxp:
+        ret = -maxp
+    elif ret > maxp:
+        ret = maxp
+
+    return struct.pack('h', ret)
+
 def _serialize_samples(samples):
-    return bytes(b'').join([bytes(struct.pack('h', int(s * MAX_SAMPLE_VALUE))) for s in samples])
+    return bytes(b'').join([bytes(_pack_sample(s)) for s in samples])
 
 def _write_wav_file(samples, filename):
     f = wave.open(filename, 'w')
@@ -89,6 +97,9 @@ def _generate_samples(parsed, amplitude, wavetype):
         wavegen = _square_wave
     else:
         raise ValueError("Invalid wave type '%s'" % wavetype)
+
+    if amplitude > MAX_AMPLITUDE: amplitude = MAX_AMPLITUDE
+    if amplitude < 0.0: amplitude = 0.0
 
     ret = [0 for _ in range(int(SAMPLE_RATE / 4.0))]
 
@@ -142,4 +153,4 @@ if __name__ == "__main__":
     with open(sys.argv[1], 'r') as fh:
         ptttl_data = fh.read()
 
-    ptttl_to_mp3(ptttl_data, sys.argv[2], 10, SQUARE_WAVE)
+    ptttl_to_mp3(ptttl_data, sys.argv[2], 0.5, SQUARE_WAVE)
