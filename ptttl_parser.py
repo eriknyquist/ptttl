@@ -2,24 +2,24 @@ import math
 import sys
 
 NOTES = {
-    "c": 261.626,
-    "c#": 277.183,
-    "db": 277.183,
-    "d": 293.665,
+    "c": 261.6256,
+    "c#": 277.1826,
+    "db": 277.1826,
+    "d": 293.6648,
     "d#": 311.127,
     "eb": 311.127,
-    "e": 329.628,
-    "e#": 349.228,
-    "f": 349.228,
-    "f#": 369.994,
-    "gb": 369.994,
-    "g": 391.995,
-    "g#": 415.305,
-    "ab": 415.305,
+    "e": 329.6276,
+    "e#": 349.2282,
+    "f": 349.2282,
+    "f#": 369.9944,
+    "gb": 369.9944,
+    "g": 391.9954,
+    "g#": 415.3047,
+    "ab": 415.3047,
     "a": 440.0,
-    "a#": 466.164,
-    "bb": 466.164,
-    "b": 493.883
+    "a#": 466.1638,
+    "bb": 466.1638,
+    "b": 493.8833
 }
 
 def unrecognised_setting(key):
@@ -193,22 +193,21 @@ class PTTTLParser(object):
 
         return duration, pitch
 
-    def _parse_notes(self, notes_list, bpm, default, octave):
+    def _parse_notes(self, track_list, bpm, default, octave):
         ret = []
 
-        for raw in notes_list:
-            if raw.strip() == "":
+        for track in track_list:
+            if track.strip() == "":
                 continue
 
             buf = []
-            fields = raw.split('|')
+            fields = track.split(',')
             for note in fields:
                 time, pitch = self._parse_note(note.strip(),
                     bpm, default, octave)
 
                 buf.append((pitch, time))
 
-            buf.sort(key=lambda x: x[1])
             ret.append(buf)
 
         return ret
@@ -223,7 +222,8 @@ class PTTTLParser(object):
 
         self.name = fields[0].strip()
         bpm, default, octave = self._parse_config_line(fields[1])
-        return self._parse_notes(fields[2].split(','), bpm, default, octave)
+        tracks = fields[2].strip(',').split('|')
+        return self._parse_notes(tracks, bpm, default, octave)
 
 if __name__ == "__main__":
     p = PTTTLParser()

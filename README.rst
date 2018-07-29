@@ -47,16 +47,10 @@ the section of the same name from the RTTTL format.
 *data* section
 ==============
 
-Like RTTTL, the data section in a PTTTL string contains comma-seperated values.
-*Unlike* RTTTL, where only single notes are separated by commas, the comma
-seperated values in PTTTL are *time slots*, where each time slot may contain one
-or more notes. Multiple notes in a time slot are separated by a vertical pipe
-character "|".
-
-Each note in a time slot starts playing simultaneously, and each
-will stop when its respective duration has elapsed. The current time slot
-ends when the duration of the longest note has elapsed. A time slot can last
-for the length of a single measure (4 beats), at most.
+The PTTTL data section is just like the RTTTL data section, in that a melody
+consists of multiple comma-seperated notes to be played sequentially. *Unlike*
+RTTTL, PTTTL allows multiple melodys to be defined, separated by the vertical
+pipe character ``|``, all of which will be played in unison.
 
 The format of a note is identical to that described by the RTTTL format. Each
 note includes, in sequence; a duration specifier, a standard music note, either
@@ -115,25 +109,34 @@ Consider the following PTTTL string:
     Test Melody:
     b=123, d=4, o=4:
 
-    16c|16e|16g5,
-    8p,
-    16c|16e|16g5
+    16c, 8p, 16c | 16e, 8p, 16e | 16g5, 8p, 16g5
 
 
 This would play 3 sixteenth notes simultaneously (C, octave 4; E, octave 4;
 G, octave 5), followed by an eighth note rest, followed by the same
 three sixteenth notes again
 
+Note that the above sample is much easier to read if we put each melody on a new
+line and align the notes in columns. This is the recommended way to write
+PTTTL:
+
+::
+
+    # Nicely aligned
+    Test Melody:
+    b=123, d=4, o=4:
+
+    16c,  8p,  16c  |
+    16e,  8p,  16e  |
+    16g5, 8p,  16g5
+
 Sample implementation
 =====================
 
-A sample implementation of a PTTTL parser, tone player and .wav encoder is
-provided in ``ptttl_parser.py``, ``ptttl_player.py`` and ``ptttl_wav_encoder.py``.
-Note that the ``pygame`` module is used to generate the tones in
-``ptttl_player.py`` so ``ptttl_player.py`` will not work if you do not have
-``pygame`` installed.
+A sample implementation of a PTTTL parser and .wav encoder is
+provided in ``ptttl_parser.py`` and ``ptttl_audio_encoder.py``.
 
-This sample scripts will work on Linux & Windows (untested on OSX).
+These sample scripts will work on Linux & Windows (untested on OSX).
 
 Try the sanmple scripts out with some of the included melodies in the
 ``rtttl_examples`` directory.
@@ -142,4 +145,4 @@ Example of converting a RTTTL file into a .wav file:
 
 ::
 
-   python ptttl_wav_encoder.py rtttl_examples/monty.txt monty.wav
+   python ptttl_audio_encoder.py rtttl_examples/monty.txt monty.wav

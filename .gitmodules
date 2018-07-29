@@ -1,0 +1,3 @@
+[submodule "tones"]
+	path = tones
+	url = git@github.com:eriknyquist/tones

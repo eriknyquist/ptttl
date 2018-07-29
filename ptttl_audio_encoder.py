@@ -8,17 +8,12 @@ import tempfile
 
 from ptttl_parser import PTTTLParser
 
-# Wave types
-SINE_WAVE = 0
-SQUARE_WAVE = 1
+sys.path.insert(0, 'tones')
+import tones
+from tones.mixer import Mixer
 
-MAX_AMPLITUDE = 0.9
-NUM_CHANNELS = 1
-DATA_SIZE = 2
 SAMPLE_RATE = 44100
 MP3_BITRATE = 128
-MAX_SAMPLE_VALUE = float(int((2 ** (DATA_SIZE * 8)) / 2) - 1)
-
 LAME_BIN = 'lame'
 
 def _wav_to_mp3(infile, outfile):
@@ -35,107 +30,32 @@ def _wav_to_mp3(infile, outfile):
         os.remove(infile)
         raise OSError("Error (%d) returned by lame" % ret)
 
-def _gen_sample(amp, freq, period, rate, i):
-    return float(amp) * math.sin(2.0 * math.pi * float(freq)
-        * (float(i % period) / float(rate)))
-
-def _sine_wave_table(freq, rate, period, num, amp):
-    return [_gen_sample(amp, freq, period, rate, i) for i in range(period)]
-
-def _square_wave_table(freq, rate, period, num, amp):
-    ret = []
-    for s in _sine_wave_table(freq, rate, period, num ,amp):
-        ret.append(amp if s > 0 else -amp)
-
-    return ret
-
-def _gen_wave(tablefunc, freq, rate, num, amp):
-    period = int(rate / freq)
-    table = tablefunc(freq, rate, period, num, amp)
-    return [table[i % period] for i in range(num)]
-
-def _sine_wave(freq=440.0, rate=44100, num=44100, amp=0.5):
-    return _gen_wave(_sine_wave_table, freq, rate, num, amp)
-
-def _square_wave(freq=440.0, rate=44100, num=44100, amp=0.5):
-    return _gen_wave(_square_wave_table, freq, rate, num, amp)
-
-def _pack_sample(sample):
-    ret = int(sample * MAX_SAMPLE_VALUE)
-    maxp = int(MAX_SAMPLE_VALUE)
-
-    if ret < -maxp:
-        ret = -maxp
-    elif ret > maxp:
-        ret = maxp
-
-    return struct.pack('h', ret)
-
-def _serialize_samples(samples):
-    return bytes(b'').join([bytes(_pack_sample(s)) for s in samples])
-
-def _write_wav_file(samples, filename):
-    f = wave.open(filename, 'w')
-    f.setparams((NUM_CHANNELS, DATA_SIZE, SAMPLE_RATE, len(samples),
-        "NONE", "Uncompressed"))
-    f.writeframesraw(_serialize_samples(samples))
-    f.close()
-
-def _fade_up(data, start, end, step=1):
-    amp = 0.0
-    for i in range(start, end, -1):
-        if amp >= 1.0:
-            break
-
-        data[i] *= amp
-        amp += 0.005
-
-def _generate_samples(parsed, amplitude, wavetype):
-    if wavetype == SINE_WAVE:
-        wavegen = _sine_wave
-    elif wavetype == SQUARE_WAVE:
-        wavegen = _square_wave
-    else:
+def _generate_wav_file(parsed, amplitude, wavetype, filename):
+    if wavetype not in [tones.SINE_WAVE, tones.SQUARE_WAVE]:
         raise ValueError("Invalid wave type '%s'" % wavetype)
 
-    if amplitude > MAX_AMPLITUDE: amplitude = MAX_AMPLITUDE
-    if amplitude < 0.0: amplitude = 0.0
+    mixer = Mixer(SAMPLE_RATE, amplitude)
+    numchannels = 0
 
-    ret = [0 for _ in range(int(SAMPLE_RATE / 4.0))]
+    for i in range(len(parsed)):
+        mixer.create_track(i, wavetype=wavetype, attack=0.01, decay=0.01)
 
-    for slot in parsed:
-        tones = []
-
-        for pitch, time in slot:
-            numsamples = int(float(SAMPLE_RATE) * time)
-            if pitch > 0.0:
-                tone = wavegen(pitch, SAMPLE_RATE, numsamples, amplitude/len(slot))
-
-                _fade_up(tone, len(tone) - 1, -1, -1)
-                _fade_up(tone, 0, len(tone))
-                tones.append(tone)
+    for i in range(len(parsed)):
+        for pitch, time in parsed[i]:
+            if pitch <= 0.0:
+                mixer.add_silence(i, duration=time)
             else:
-                tones.append([0 for _ in range(numsamples)])
+                mixer.add_tone(i, frequency=pitch, duration=time)
 
-        tones = sorted(tones, key=len)[::-1]
-        mixed = tones[0]
-        for tone in tones[1:]:
-            amp = 0.0
-            for i in range(len(tone)):
-                mixed[i] += tone[i]
+    mixer.write_wav(filename)
 
-        ret.extend(mixed)
-
-    return ret + [0 for _ in range(int(SAMPLE_RATE / 4.0))]
-
-def ptttl_to_wav(ptttl_data, wav_filename, amplitude=0.5, wavetype=SINE_WAVE):
+def ptttl_to_wav(ptttl_data, wav_filename, amplitude=0.5, wavetype=tones.SINE_WAVE):
     parser = PTTTLParser()
     data = parser.parse(ptttl_data)
     
-    samples = _generate_samples(data, amplitude, wavetype)
-    _write_wav_file(samples, wav_filename)
+    samples = _generate_wav_file(data, amplitude, wavetype, wav_filename)
 
-def ptttl_to_mp3(ptttl_data, mp3_filename, amplitude=0.5, wavetype=SINE_WAVE):
+def ptttl_to_mp3(ptttl_data, mp3_filename, amplitude=0.5, wavetype=tones.SINE_WAVE):
     fd, wavfile = tempfile.mkstemp()
     ptttl_to_wav(ptttl_data, wavfile, amplitude, wavetype)
     _wav_to_mp3(wavfile, mp3_filename)
@@ -153,4 +73,4 @@ if __name__ == "__main__":
     with open(sys.argv[1], 'r') as fh:
         ptttl_data = fh.read()
 
-    ptttl_to_mp3(ptttl_data, sys.argv[2], 0.5, SQUARE_WAVE)
+    ptttl_to_mp3(ptttl_data, sys.argv[2], 0.5, tones.SINE_WAVE)
