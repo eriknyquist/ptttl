@@ -16,6 +16,9 @@ SAMPLE_RATE = 44100
 MP3_BITRATE = 128
 LAME_BIN = 'lame'
 
+SINE_WAVE = tones.SINE_WAVE
+SQUARE_WAVE = tones.SQUARE_WAVE
+
 def _wav_to_mp3(infile, outfile):
     args = [LAME_BIN, '--silent', '-b', str(MP3_BITRATE), infile, outfile]
 
