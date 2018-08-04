@@ -22,28 +22,32 @@ NOTES = {
     "b": 493.8833
 }
 
+class PTTTLSyntaxError(Exception): pass
+
+class PTTTLValueError(Exception): pass
+
 def unrecognised_setting(key):
-    raise SyntaxError("unrecognised setting '%s' in PTTTL script" % key)
+    raise PTTTLSyntaxError("unrecognised setting '%s' in PTTTL script" % key)
 
 def missing_setting(key):
-    raise SyntaxError("missing setting '%s' in PTTTL script" % key)
+    raise PTTTLSyntaxError("missing setting '%s' in PTTTL script" % key)
 
 def invalid_setting(key):
-    raise SyntaxError("invalid configuration setting '%s' in PTTTL script"
+    raise PTTTLSyntaxError("invalid configuration setting '%s' in PTTTL script"
         % key)
 
 def invalid_value(key, val):
-    raise ValueError("invalid value '%s' for setting '%s' in PTTTL script"
+    raise PTTTLValueError("invalid value '%s' for setting '%s' in PTTTL script"
         % (val, key))
 
 def invalid_note_duration(note):
-    raise ValueError("invalid note duration '%s'" % note)
+    raise PTTTLValueError("invalid note duration '%s'" % note)
 
 def invalid_note(note):
-    raise ValueError("invalid note '%s'" % note)
+    raise PTTTLValueError("invalid note '%s'" % note)
 
 def invalid_octave(note):
-    raise ValueError("invalid octave in note '%s'" % note)
+    raise PTTTLValueError("invalid octave in note '%s'" % note)
 
 def int_setting(key, val):
     ret = None
@@ -51,7 +55,7 @@ def int_setting(key, val):
     try:
         ret = int(val)
     except ValueError:
-        raise ValueError("expecting an integer for '%s' setting in "
+        raise PTTTLValueError("expecting an integer for '%s' setting in "
             "PTTTL script" % key)
 
     return ret
@@ -74,7 +78,7 @@ class PTTTLParser(object):
         values = [f for f in stripped if f != ""]
 
         if not values:
-            raise SyntaxError("no valid configuration found in PTTTL script")
+            raise PTTTLSyntaxError("no valid configuration found in PTTTL script")
 
         for value in values:
             fields = value.split('=')
@@ -124,7 +128,7 @@ class PTTTLParser(object):
         dur = default
 
         if len(string) == 0:
-            raise ValueError("Missing notes after comma")
+            raise PTTTLSyntaxError("Missing notes after comma")
 
         while i < len(string) and string[i].isdigit():
             if i > 1:
@@ -213,16 +217,37 @@ class PTTTLParser(object):
         return ret
 
     def parse(self, ptttl_string):
-        lines = [x.strip() for x in ptttl_string.split()]
-        cleaned = '\n'.join([x for x in lines if not ignore_line(x)])
+        lines = [x.strip() for x in ptttl_string.split('\n')]
+        cleaned = ''.join([x for x in lines if not ignore_line(x)])
 
         fields = [f.strip() for f in cleaned.split(':')]
         if len(fields) != 3:
-            raise SyntaxError('expecting 3 colon-seperated fields')
+            raise PTTTLSyntaxError('expecting 3 colon-seperated fields')
 
         self.name = fields[0].strip()
         bpm, default, octave = self._parse_config_line(fields[1])
-        tracks = fields[2].strip(',').split('|')
+
+        numtracks = -1
+        blocks = fields[2].split(';')
+        trackdata = []
+
+        for block in blocks:
+            tracks = [x.strip().strip(',') for x in block.split('|')]
+            if (numtracks > 0) and (len(tracks) != numtracks):
+                raise PTTTLSyntaxError('All blocks must have the same number of'
+                    'tracks')
+
+            numtracks = len(tracks)
+            trackdata.append(tracks)
+
+        tracks = [''] * numtracks
+
+        for i in range(len(trackdata)):
+            for j in range(numtracks):
+                tracks[j] += trackdata[i][j]
+                if i < (len(trackdata) - 1):
+                    tracks[j] += ","
+
         return self._parse_notes(tracks, bpm, default, octave)
 
 if __name__ == "__main__":
