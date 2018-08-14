@@ -202,8 +202,20 @@ These sample scripts will work on Linux & Windows (untested on OSX).
 Try the sanmple scripts out with some of the included melodies in the
 ``rtttl_examples`` directory.
 
-Example of converting a RTTTL file into a .wav file:
+Cloning sample implementation
+-----------------------------
 
 ::
 
-   python ptttl_audio_encoder.py rtttl_examples/monty.txt monty.wav
+    git clone https://github.com/eriknyquist/ptttl
+    cd ptttl
+    git submodule update --init --recursive
+
+Using sample implementation
+---------------------------
+
+Converting a PTTTL file into audible tones in a .wav file:
+
+::
+
+   python ptttl_audio_encoder.py polyphonic_example.txt monty.wav
