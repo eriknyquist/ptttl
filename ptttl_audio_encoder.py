@@ -33,7 +33,7 @@ def _wav_to_mp3(infile, outfile):
         os.remove(infile)
         raise OSError("Error (%d) returned by lame" % ret)
 
-def _generate_wav_file(parsed, amplitude, wavetype, filename):
+def _generate_sample_data(parsed, amplitude, wavetype):
     if wavetype not in [tones.SINE_WAVE, tones.SQUARE_WAVE]:
         raise ValueError("Invalid wave type '%s'" % wavetype)
 
@@ -50,12 +50,20 @@ def _generate_wav_file(parsed, amplitude, wavetype, filename):
             else:
                 mixer.add_tone(i, frequency=pitch, duration=time)
 
-    mixer.write_wav(filename)
+    return mixer.sample_data()
+
+def _generate_wav_file(parsed, amplitude, wavetype, filename):
+    samples = _generate_sample_data(parsed, amplitude, wavetype)
+    Mixer(SAMPLE_RATE, amplitude).mix(filename, samples)
+
+def ptttl_to_sample_data(ptttl_data, amplitude=0.5, wavetype=tones.SINE_WAVE):
+    parser = PTTTLParser()
+    data = parser.parse(ptttl_data)
+    return _generate_sample_data(data, amplitude, wavetype)
 
 def ptttl_to_wav(ptttl_data, wav_filename, amplitude=0.5, wavetype=tones.SINE_WAVE):
     parser = PTTTLParser()
     data = parser.parse(ptttl_data)
-    
     samples = _generate_wav_file(data, amplitude, wavetype, wav_filename)
 
 def ptttl_to_mp3(ptttl_data, mp3_filename, amplitude=0.5, wavetype=tones.SINE_WAVE):
