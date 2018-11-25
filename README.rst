@@ -209,7 +209,7 @@ Cloning sample implementation
 
     git clone https://github.com/eriknyquist/ptttl
     cd ptttl
-    git submodule update --init --recursive
+    pip install -r requirements.txt
 
 Using sample implementation
 ---------------------------
