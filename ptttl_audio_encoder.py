@@ -33,7 +33,7 @@ def _wav_to_mp3(infile, outfile):
         os.remove(infile)
         raise OSError("Error (%d) returned by lame" % ret)
 
-def _generate_sample_data(parsed, amplitude, wavetype):
+def _generate_samples(parsed, amplitude, wavetype):
     if wavetype not in [tones.SINE_WAVE, tones.SQUARE_WAVE]:
         raise ValueError("Invalid wave type '%s'" % wavetype)
 
@@ -50,16 +50,19 @@ def _generate_sample_data(parsed, amplitude, wavetype):
             else:
                 mixer.add_tone(i, frequency=pitch, duration=time)
 
-    return mixer.sample_data()
+    return mixer.mix()
 
 def _generate_wav_file(parsed, amplitude, wavetype, filename):
-    samples = _generate_sample_data(parsed, amplitude, wavetype)
-    Mixer(SAMPLE_RATE, amplitude).mix(filename, samples)
+    sampledata = _generate_samples(parsed, amplitude, wavetype).serialize()
+    Mixer(SAMPLE_RATE, amplitude).write_wav(filename, sampledata)
 
-def ptttl_to_sample_data(ptttl_data, amplitude=0.5, wavetype=tones.SINE_WAVE):
+def ptttl_to_samples(ptttl_data, amplitude=0.5, wavetype=tones.SINE_WAVE):
     parser = PTTTLParser()
     data = parser.parse(ptttl_data)
-    return _generate_sample_data(data, amplitude, wavetype)
+    return _generate_samples(data, amplitude, wavetype)
+
+def ptttl_to_wav_samples(ptttl_data, amplitude=0.5, wavetype=tones.SINE_WAVE):
+    return ptttl_to_samples(data, amplitude, wavetype).serialize()
 
 def ptttl_to_wav(ptttl_data, wav_filename, amplitude=0.5, wavetype=tones.SINE_WAVE):
     parser = PTTTLParser()
@@ -84,4 +87,4 @@ if __name__ == "__main__":
     with open(sys.argv[1], 'r') as fh:
         ptttl_data = fh.read()
 
-    ptttl_to_mp3(ptttl_data, sys.argv[2], 0.5, tones.SINE_WAVE)
+    ptttl_to_wav(ptttl_data, sys.argv[2], 0.5, tones.SINE_WAVE)
