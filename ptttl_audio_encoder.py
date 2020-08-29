@@ -8,7 +8,6 @@ import tempfile
 
 from ptttl_parser import PTTTLParser
 
-sys.path.insert(0, 'tones')
 import tones
 from tones.mixer import Mixer
 
