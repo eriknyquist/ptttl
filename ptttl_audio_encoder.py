@@ -8,15 +8,13 @@ import tempfile
 
 from ptttl_parser import PTTTLParser
 
-import tones
 from tones.mixer import Mixer
+from tones import SINE_WAVE
 
 SAMPLE_RATE = 44100
 MP3_BITRATE = 128
 LAME_BIN = 'lame'
 
-SINE_WAVE = tones.SINE_WAVE
-SQUARE_WAVE = tones.SQUARE_WAVE
 
 def _wav_to_mp3(infile, outfile):
     args = [LAME_BIN, '--silent', '-b', str(MP3_BITRATE), infile, outfile]
@@ -33,9 +31,6 @@ def _wav_to_mp3(infile, outfile):
         raise OSError("Error (%d) returned by lame" % ret)
 
 def _generate_samples(parsed, amplitude, wavetype):
-    if wavetype not in [tones.SINE_WAVE, tones.SQUARE_WAVE]:
-        raise ValueError("Invalid wave type '%s'" % wavetype)
-
     mixer = Mixer(SAMPLE_RATE, amplitude)
     numchannels = 0
 
@@ -55,20 +50,20 @@ def _generate_wav_file(parsed, amplitude, wavetype, filename):
     sampledata = _generate_samples(parsed, amplitude, wavetype).serialize()
     Mixer(SAMPLE_RATE, amplitude).write_wav(filename, sampledata)
 
-def ptttl_to_samples(ptttl_data, amplitude=0.5, wavetype=tones.SINE_WAVE):
+def ptttl_to_samples(ptttl_data, amplitude=0.5, wavetype=SINE_WAVE):
     parser = PTTTLParser()
     data = parser.parse(ptttl_data)
     return _generate_samples(data, amplitude, wavetype)
 
-def ptttl_to_wav_samples(ptttl_data, amplitude=0.5, wavetype=tones.SINE_WAVE):
+def ptttl_to_wav_samples(ptttl_data, amplitude=0.5, wavetype=SINE_WAVE):
     return ptttl_to_samples(data, amplitude, wavetype).serialize()
 
-def ptttl_to_wav(ptttl_data, wav_filename, amplitude=0.5, wavetype=tones.SINE_WAVE):
+def ptttl_to_wav(ptttl_data, wav_filename, amplitude=0.5, wavetype=SINE_WAVE):
     parser = PTTTLParser()
     data = parser.parse(ptttl_data)
     samples = _generate_wav_file(data, amplitude, wavetype, wav_filename)
 
-def ptttl_to_mp3(ptttl_data, mp3_filename, amplitude=0.5, wavetype=tones.SINE_WAVE):
+def ptttl_to_mp3(ptttl_data, mp3_filename, amplitude=0.5, wavetype=SINE_WAVE):
     fd, wavfile = tempfile.mkstemp()
     ptttl_to_wav(ptttl_data, wavfile, amplitude, wavetype)
     _wav_to_mp3(wavfile, mp3_filename)
@@ -86,4 +81,4 @@ if __name__ == "__main__":
     with open(sys.argv[1], 'r') as fh:
         ptttl_data = fh.read()
 
-    ptttl_to_wav(ptttl_data, sys.argv[2], 0.5, tones.SINE_WAVE)
+    ptttl_to_wav(ptttl_data, sys.argv[2], 0.5, SINE_WAVE)
