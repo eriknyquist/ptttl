@@ -22,9 +22,18 @@ NOTES = {
     "b": 493.883301256
 }
 
-class PTTTLSyntaxError(Exception): pass
+class PTTTLSyntaxError(Exception):
+    """
+    Raised by PTTTLParser when ptttl data is malformed and cannot be parsed
+    """
+    pass
 
-class PTTTLValueError(Exception): pass
+class PTTTLValueError(Exception):
+    """
+    Raised by PTTTLParser when ptttl data parsing completes, but an invalid
+    configuration value or note value was seen.
+    """
+    pass
 
 def unrecognised_setting(key):
     raise PTTTLSyntaxError("unrecognised setting '%s' in PTTTL script" % key)
@@ -63,7 +72,32 @@ def int_setting(key, val):
 def ignore_line(line):
     return (line == "") or line.startswith('!') or line.startswith('#')
 
+
+class PTTTLNote(object):
+    """
+    Represents a single musical note, with a pitch and duration
+    """
+    def __init__(self, pitch, duration):
+        self.pitch = pitch
+        self.duration = duration
+
+
+class PTTTLData(object):
+    """
+    Represents song data extracted from a PTTTL/RTTTL file.
+    May contain multiple tracks, where each track is a list of PTTTLNote objects.
+    """
+    def __init__(self):
+        self.tracks = []
+    
+    def add_track(self, notes):
+        self.tracks.append(notes)
+
+
 class PTTTLParser(object):
+    """
+    Converts PTTTL/RTTTL source text to a PTTTLData object.
+    """
     def _is_valid_octave(self, octave):
         return octave >= 0 and octave <= 8
 
@@ -195,10 +229,10 @@ class PTTTLParser(object):
         if sawdot or ((i < len(string)) and string[-1] == '.'):
             duration += (duration / 2.0)
 
-        return duration, pitch
+        return PTTTLNote(pitch, duration)
 
     def _parse_notes(self, track_list, bpm, default, octave):
-        ret = []
+        ret = PTTTLData()
 
         for track in track_list:
             if track.strip() == "":
@@ -207,16 +241,21 @@ class PTTTLParser(object):
             buf = []
             fields = track.split(',')
             for note in fields:
-                time, pitch = self._parse_note(note.strip(),
-                    bpm, default, octave)
+                note = self._parse_note(note.strip(), bpm, default, octave)
+                buf.append(note)
 
-                buf.append((pitch, time))
-
-            ret.append(buf)
+            ret.add_track(buf)
 
         return ret
 
     def parse(self, ptttl_string):
+        """
+        Extracts song data from ptttl/rtttl source data.
+
+        :param str ptttl_string: PTTTL/RTTTL source text.
+        :return: Song data extracted from source text.
+        :rtype: PTTTLData
+        """
         lines = [x.strip() for x in ptttl_string.split('\n')]
         cleaned = ''.join([x for x in lines if not ignore_line(x)])
 
@@ -249,10 +288,3 @@ class PTTTLParser(object):
                     tracks[j] += ","
 
         return self._parse_notes(tracks, bpm, default, octave)
-
-if __name__ == "__main__":
-    p = PTTTLParser()
-    with open(sys.argv[1], 'r') as fh:
-        data = fh.read()
-
-    print(p.parse(data))
