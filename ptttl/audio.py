@@ -54,7 +54,7 @@ def ptttl_to_samples(ptttl_data, amplitude=0.5, wavetype=SINE_WAVE):
     """
     Convert a PTTTLData object to a list of audio samples.
 
-    :param PTTTLData ptttl_data: Song data extracted from PTTTL/RTTTL source text
+    :param PTTTLData ptttl_data: PTTTL/RTTTL source text
     :param float amplitude: Output signal amplitude, between 0.0 and 1.0.
     :param int wavetype: Waveform type for output signal. Must be one of\
         tones.SINE_WAVE, tones.SQUARE_WAVE, tones.TRIANGLE_WAVE, or tones.SAWTOOTH_WAVE.
