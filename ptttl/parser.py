@@ -35,30 +35,30 @@ class PTTTLValueError(Exception):
     """
     pass
 
-def unrecognised_setting(key):
+def _unrecognised_setting(key):
     raise PTTTLSyntaxError("unrecognised setting '%s' in PTTTL script" % key)
 
-def missing_setting(key):
+def _missing_setting(key):
     raise PTTTLSyntaxError("missing setting '%s' in PTTTL script" % key)
 
-def invalid_setting(key):
+def _invalid_setting(key):
     raise PTTTLSyntaxError("invalid configuration setting '%s' in PTTTL script"
         % key)
 
-def invalid_value(key, val):
+def _invalid_value(key, val):
     raise PTTTLValueError("invalid value '%s' for setting '%s' in PTTTL script"
         % (val, key))
 
-def invalid_note_duration(note):
+def _invalid_note_duration(note):
     raise PTTTLValueError("invalid note duration '%s'" % note)
 
-def invalid_note(note):
+def _invalid_note(note):
     raise PTTTLValueError("invalid note '%s'" % note)
 
-def invalid_octave(note):
+def _invalid_octave(note):
     raise PTTTLValueError("invalid octave in note '%s'" % note)
 
-def int_setting(key, val):
+def _int_setting(key, val):
     ret = None
 
     try:
@@ -69,29 +69,64 @@ def int_setting(key, val):
 
     return ret
 
-def ignore_line(line):
+def _ignore_line(line):
     return (line == "") or line.startswith('!') or line.startswith('#')
 
 
 class PTTTLNote(object):
     """
     Represents a single musical note, with a pitch and duration
+
+    :ivar float pitch: Note pitch in Hz
+    :ivar float duration: Note duration in seconds
     """
     def __init__(self, pitch, duration):
         self.pitch = pitch
         self.duration = duration
+
+    def __str__(self):
+        return "%s(pitch=%.4f, duration=%.4f)" % (self.__class__.__name__,
+                                                  self.pitch,
+                                                  self.duration)
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class PTTTLData(object):
     """
     Represents song data extracted from a PTTTL/RTTTL file.
     May contain multiple tracks, where each track is a list of PTTTLNote objects.
+
+    :ivar [[PTTTLNote]] tracks: List of tracks. Each track is a list of PTTTLNote objects.
     """
     def __init__(self):
         self.tracks = []
     
     def add_track(self, notes):
         self.tracks.append(notes)
+
+    def __str__(self):
+        max_display_items = 2
+
+        if len(self.tracks) == 0:
+            contents = "[]"
+        else:
+            items = self.tracks[0][:max_display_items]
+            contents = ', '.join([str(x) for x in items])
+
+            if len(self.tracks[0]) > max_display_items:
+                contents += ", ..."
+
+        ret = "%s([%s]" % (self.__class__.__name__, contents)
+
+        if len(self.tracks) > 1:
+            ret += ", ..."
+
+        return ret + ')'
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class PTTTLParser(object):
@@ -117,35 +152,35 @@ class PTTTLParser(object):
         for value in values:
             fields = value.split('=')
             if len(fields) != 2:
-                invalid_setting(value)
+                _invalid_setting(value)
 
             key = fields[0].strip().lower()
             val = fields[1].strip().lower()
 
             if not key or not val:
-                invalid_setting(value)
+                _invalid_setting(value)
 
             if key == 'b':
-                bpm = int_setting(key, val)
+                bpm = _int_setting(key, val)
             elif key == 'd':
-                default = int_setting(key, val)
+                default = _int_setting(key, val)
                 if not self._is_valid_duration(default):
-                    invalid_value(key, val)
+                    _invalid_value(key, val)
             elif key == 'o':
-                octave = int_setting(key, val)
+                octave = _int_setting(key, val)
                 if not self._is_valid_octave(octave):
-                    invalid_value(key, val)
+                    _invalid_value(key, val)
             else:
-                unrecognised_setting(key)
+                _unrecognised_setting(key)
 
         if not octave:
-            missing_setting('o')
+            _missing_setting('o')
 
         if not bpm:
-            missing_setting('b')
+            _missing_setting('b')
 
         if not default:
-            missing_setting('d')
+            _missing_setting('d')
 
         return bpm, default, octave
 
@@ -166,7 +201,7 @@ class PTTTLParser(object):
 
         while i < len(string) and string[i].isdigit():
             if i > 1:
-                invalid_note_duration(orig)
+                _invalid_note_duration(orig)
 
             i += 1
 
@@ -174,10 +209,10 @@ class PTTTLParser(object):
             try:
                 dur = int(string[:i])
             except ValueError:
-                invalid_note_duration(orig)
+                _invalid_note_duration(orig)
         else:
             if not string[0].isalpha():
-                invalid_note(orig)
+                _invalid_note(orig)
 
         duration = self._note_time_to_secs(dur, bpm)
 
@@ -189,7 +224,7 @@ class PTTTLParser(object):
 
         note = string[:i].strip().lower()
         if note == "":
-            invalid_note(orig)
+            _invalid_note(orig)
 
         if i < len(string) and string[i] == '.':
             i += 1
@@ -203,7 +238,7 @@ class PTTTLParser(object):
 
         else:
             if note not in NOTES:
-                invalid_note(orig)
+                _invalid_note(orig)
 
             raw_pitch = NOTES[note]
 
@@ -214,10 +249,10 @@ class PTTTLParser(object):
                 try:
                     octave = int(string[:i])
                 except ValueError:
-                    invalid_octave(note)
+                    _invalid_octave(note)
 
                 if not self._is_valid_octave(octave):
-                    invalid_octave(note)
+                    _invalid_octave(note)
 
             if octave < 4:
                 pitch = raw_pitch / math.pow(2, (4 - octave))
@@ -257,7 +292,7 @@ class PTTTLParser(object):
         :rtype: PTTTLData
         """
         lines = [x.strip() for x in ptttl_string.split('\n')]
-        cleaned = ''.join([x for x in lines if not ignore_line(x)])
+        cleaned = ''.join([x for x in lines if not _ignore_line(x)])
 
         fields = [f.strip() for f in cleaned.split(':')]
         if len(fields) != 3:
