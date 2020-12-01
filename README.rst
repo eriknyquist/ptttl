@@ -14,7 +14,7 @@ RTTTL looked pretty good but only works for monophonic melodies.
 I needed polyphony.
 
 PTTTL format
-###########
+############
 
 Valid RTTTL strings are also valid PTTTL strings. A parser that properly handles
 PTTTL can also handle RTTTL.

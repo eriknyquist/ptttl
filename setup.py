@@ -3,8 +3,12 @@ import os
 from setuptools import setup
 from distutils.core import Command
 
+from ptttl import __version__
+
+
 HERE = os.path.abspath(os.path.dirname(__file__))
 README = os.path.join(HERE, "README.rst")
+REQS = os.path.join(HERE, "requirements.txt")
 
 classifiers = [
     'License :: OSI Approved :: Apache Software License',
@@ -22,9 +26,15 @@ classifiers = [
 with open(README, 'r') as f:
     long_description = f.read()
 
+deps = []
+with open(REQS, 'r') as f:
+    deps = f.read().strip().split('\n')
+
+print(deps)
+
 setup(
     name='ptttl',
-    version='1.0.1',
+    version=__version__,
     description=('Converts PTTTL/RTTTL files to audio data'),
     long_description=long_description,
     url='http://github.com/eriknyquist/ptttl',
@@ -33,4 +43,5 @@ setup(
     license='Apache 2.0',
     packages=['ptttl'],
     classifiers = classifiers,
+    install_requires=deps
 )
