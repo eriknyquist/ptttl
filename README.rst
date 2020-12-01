@@ -1,10 +1,72 @@
 Polyphonic Tone Transfer Language
 #################################
 
+``ptttl`` is a command-line utility for converting PTTTL and
+`RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ files to
+.wav audio files. `ptttl` also provides an API for parsing PTTTL and
+`RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ files to convert them
+into usable musical data.
+
 The Polyphonic Tone Text Transfer Language (PTTTL) is a way to describe polyphonic
 melodies, and is a superset of Nokia's
 `RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ format,
 used for monophonic ringtones.
+
+
+API documentation
+#################
+
+API documentation `can be found here <https://ptttl.readthedocs.io/>`_
+
+
+Install
+#######
+
+Install from pip
+
+::
+
+    pip install -r ptttl
+
+
+Usage
+#####
+
+Converting PTTTL/RTTTL files to .wav files from the command line
+================================================================
+
+::
+
+   python -m ptttl input.ptttl -f output.wav
+
+Run ``python -m ptttl -h`` to see available options.
+
+
+Parsing PTTTL/RTTTL files in a python script
+============================================
+
+::
+
+   >>> from ptttl.parser import PTTTLParser
+   >>> with open('input.pttl', 'r') as fh:
+   ...     ptttl_source = fh.read()
+   ...
+   >>> parser = PTTTLParser()
+   >>> ptttl_data = parser.parse(ptttl_source)
+   >>> ptttl_data
+   PTTTLData([PTTTLNote(pitch=195.9977, duration=0.5625), PTTTLNote(pitch=195.9977, duration=0.2812), ...], ...)
+
+
+Converting PTTTL/RTTTL files to .wav in a python script
+=======================================================
+
+::
+
+   >>> from ptttl.audio import ptttl_to_wav
+   >>> with open('input.pttl', 'r') as fh:
+   ...     ptttl_source = fh.read()
+   ...
+   >>> ptttl_to_wav(ptttl_source, 'output.wav')
 
 Why?
 ####
