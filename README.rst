@@ -191,31 +191,19 @@ semicolon is useful:
     16d6.,  32c4.,  32b.,   16c.,   32b4.,  32b4.,  16f#.,  32e.  |
     16b3.,  32d.,   32d.,   16d#4., 32e.,   32e.,   16c.,   32e.
 
-Sample implementation
-=====================
+Usage
+-----
 
-A sample implementation of a PTTTL parser and .wav encoder is
-provided in ``ptttl_parser.py`` and ``ptttl_audio_encoder.py``.
-
-These sample scripts will work on Linux & Windows (untested on OSX).
-
-Try the sanmple scripts out with some of the included melodies in the
-``rtttl_examples`` directory.
-
-Cloning sample implementation
------------------------------
+Install from pip
 
 ::
 
-    git clone https://github.com/eriknyquist/ptttl
-    cd ptttl
-    pip install -r requirements.txt
+    pip install -r ptttl
 
-Using sample implementation
----------------------------
-
-Converting a PTTTL file into audible tones in a .wav file:
+Convert a PTTTL file into audible tones in a .wav file:
 
 ::
 
-   python ptttl_audio_encoder.py polyphonic_example.txt monty.wav
+   python -m ptttl input.ptttl -f output.wav
+
+API documentation `can be found here <https://ptttl.readthedocs.io/>`_
