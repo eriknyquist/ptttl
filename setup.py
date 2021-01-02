@@ -35,7 +35,7 @@ print(deps)
 setup(
     name='ptttl',
     version=__version__,
-    description=('Converts PTTTL/RTTTL files to audio data'),
+    description=('Parses PTTTL/RTTTL musical notation files'),
     long_description=long_description,
     url='http://github.com/eriknyquist/ptttl',
     author='Erik Nyquist',
