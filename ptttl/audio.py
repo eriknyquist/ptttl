@@ -42,7 +42,9 @@ def _generate_samples(parsed, amplitude, wavetype):
             if note.pitch <= 0.0:
                 mixer.add_silence(i, duration=note.duration)
             else:
-                mixer.add_tone(i, frequency=note.pitch, duration=note.duration)
+                mixer.add_tone(i, frequency=note.pitch, duration=note.duration,
+                               vibrato_frequency=note.vibrato_frequency,
+                               vibrato_variance=note.vibrato_variance)
 
     return mixer.mix()
 

@@ -9,8 +9,8 @@ into usable musical data.
 
 The Polyphonic Tone Text Transfer Language (PTTTL) is a way to describe polyphonic
 melodies, and is a superset of Nokia's
-`RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ format,
-used for monophonic ringtones.
+`RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ format, extending
+it to enable polyphony and vibrato.
 
 
 API documentation
@@ -95,16 +95,18 @@ contents.
 *default values* section
 ========================
 
-The very first statement is the *default value* section and is identical to
+The very first statement is the *default value* section and is the same as
 the section of the same name from the RTTTL format.
 
 ::
 
-  b=123, d=8, o=4
+  b=123, d=8, o=4, f=7, v=10
 
 * *b* - beat, tempo: tempo in BPM (Beats Per Minute)
 * *d* - duration: default duration of a note if none is specified
 * *o* - octave: default octave of a note if none is specified
+* *f* - frequency: default vibrato frequency if none is specified, in Hz
+* *v* - variance: default vibrato variance from the main pitch if none is specified, in Hz
 
 *data* section
 ==============
@@ -159,6 +161,19 @@ Octave
 ------
 
 Valid values for note octave are between **0** and **8**.
+
+Vibrato
+-------
+
+Optionally, vibrato maybe enabled and configured for an individual note. This is
+done by adding a ``v`` at the end of the note, and optionally a frequency and variance
+value seperated by a ``-`` character. For example:
+
+* ``4c#v`` refers to a C# quarter note with vibrato enabled, using default settings
+* ``4c#v10`` refers to a C# quarter note with vibrato enabled, using a vibrato frequency of 10Hz,
+   and the default value for vibrato variance
+* ``4c#v10-15`` refers to a C# quarter note with vibrato enabled, using a vibrato frequency of 10Hz,
+  with a maximum vibrato variance of 15Hz from the main pitch.
 
 Example
 =======
