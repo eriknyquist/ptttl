@@ -5,7 +5,7 @@
 
 int main(int argc, char *argv[])
 {
-    char buf[1024];
+    char buf[2048];
 
     FILE *f = fopen(argv[1], "rb");
     if (NULL == f)

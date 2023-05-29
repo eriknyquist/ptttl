@@ -421,7 +421,7 @@ static int _parse_settings(ptttl_input_t *input, settings_t *settings)
     settings->default_vibrato_freq = 0u;
     settings->default_vibrato_var = 0u;
 
-    do
+    while(input->pos < input->input_text_size)
     {
         int result = _get_next_visible_char(input, &c);
         if (result < 0)
@@ -444,13 +444,18 @@ static int _parse_settings(ptttl_input_t *input, settings_t *settings)
             return -1;
         }
 
-        if ((c != ',') && (c != ':'))
+        if (':' == c)
+        {
+            // End of settings section
+            break;
+        }
+        else if (',' != c)
         {
             ERROR("Invalid settings section", input->line, input->column);
             return -1;
         }
+
     }
-    while(':' != c);
 
     printf("b=%u, d=%u, o=%u, f=%u, v=%u\n", settings->bpm, settings->default_duration,
            settings->default_octave, settings->default_vibrato_freq, settings->default_vibrato_var);
@@ -807,6 +812,7 @@ int ptttl_parse(ptttl_input_t *input, ptttl_output_t *output)
         char namechar = input->input_text[input->pos];
         if (':' == namechar)
         {
+            input->pos += 1u;
             input->column += 1u;
             output->name[namepos] = '\0';
             break;
