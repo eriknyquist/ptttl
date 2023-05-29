@@ -11,6 +11,9 @@
 #ifndef PTTTL_PARSER_H
 #define PTTTL_PARSER_H
 
+#include <stdint.h>
+
+
 #define PTTTL_MAX_CHANNELS_PER_FILE (8u)   // Max. channels allowed in a single PTTTL file
 #define PTTTL_MAX_NOTES_PER_CHANNEL (512)  // Max. notes allowed in a single PTTTL channel
 #define PTTTL_MAX_NAME_LEN          (256u)  // Max. characters allowed in the "name" field of a PTTTL file
@@ -28,15 +31,14 @@ typedef struct
 } ptttl_input_t;
 
 /**
- * Represents a single note, pitch & duration
+ * Represents a single "compiled" note: pitch, duration & vibrato data
  */
 typedef struct
 {
-    float pitch_hz;        ///< Note pitch in Hz (0.0f for pause)
-    float duration_secs;   ///< Note duration in seconds
-    float vibrato_freq_hz; ///< Vibrato frequency in Hz (0.0f for no vibrato)
-    float vibrato_var_hz;  ///< Vibrato +/-variance from main pitch, in Hz
-} note_t;
+    float pitch_hz;             ///< Note pitch in Hz (0.0f for pause)
+    float duration_secs;        ///< Note duration in seconds
+    uint32_t vibrato_settings;  ///< Bits 0-15 is vibrato frequency, and 16-31 is variance, both in Hz
+} ptttl_output_note_t;
 
 /**
  * Represents a single channel (sequence of notes)
@@ -44,8 +46,8 @@ typedef struct
 typedef struct
 {
     unsigned int note_count;                    ///< Number of notes populated
-    note_t notes[PTTTL_MAX_NOTES_PER_CHANNEL];  ///< Array of notes for this channel
-} channel_t;
+    ptttl_output_note_t notes[PTTTL_MAX_NOTES_PER_CHANNEL];  ///< Array of notes for this channel
+} ptttl_output_channel_t;
 
 /**
  * Holds processed PTTTL data as a sequence of channel_t objects
@@ -54,7 +56,7 @@ typedef struct
 {
     char name[PTTTL_MAX_NAME_LEN];                    ///< Name field of PTTTL file
     unsigned int channel_count;                       ///< Number of channels populated
-    channel_t channels[PTTTL_MAX_CHANNELS_PER_FILE];  ///< Array of channels
+    ptttl_output_channel_t channels[PTTTL_MAX_CHANNELS_PER_FILE];  ///< Array of channels
 } ptttl_output_t;
 
 /**

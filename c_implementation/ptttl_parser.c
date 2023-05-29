@@ -13,72 +13,14 @@
 #include <string.h>
 #include "ptttl_parser.h"
 
-#define MAX_ERRMSG_SIZE (256u)
 
-static ptttl_error_t _error;
-
+// Helper macro, stores information about an error, which can be retrieved by ptttl_error()
 #define ERROR(s, l, c)              \
 {                                   \
     _error.error_message = s;       \
     _error.line = l;                \
     _error.column = c;              \
 }
-
-/**
- * Holds the string name + pitch (Hz) of a musical note
- */
-typedef struct
-{
-    const char *string;
-    float pitch;
-} note_info_t;
-
-/**
- * Holds all values that can be gleaned from the PTTTL 'settings' section
- */
-typedef struct
-{
-    unsigned int bpm;
-    unsigned int default_duration;
-    unsigned int default_octave;
-    unsigned int default_vibrato_freq;
-    unsigned int default_vibrato_var;
-} settings_t;
-
-/**
- * Enumerates all possible musical notes in a single octave
- */
-typedef enum
-{
-    NOTE_C = 0,   // C
-    NOTE_CS,      // C sharp
-    NOTE_DB,      // D flat
-    NOTE_D,       // D
-    NOTE_DS,      // D sharp
-    NOTE_EB,      // E flat
-    NOTE_E,       // E
-    NOTE_ES,      // E sharp
-    NOTE_F,       // F
-    NOTE_FS,      // F sharp
-    NOTE_GB,      // G flat
-    NOTE_G,       // G
-    NOTE_GS,      // G sharp
-    NOTE_AB,      // A flat
-    NOTE_A,       // A
-    NOTE_AS,      // A sharp
-    NOTE_BB,      // B flat
-    NOTE_B,       // B
-    NOTE_INVALID, // Unecognized/invalid note
-    NOTE_PITCH_COUNT = NOTE_INVALID
-} note_pitch_e;
-
-
-#define NOTE_DURATION_COUNT (6u)
-// Valid values for note duration
-static unsigned int _valid_note_durations[NOTE_DURATION_COUNT] = {1u, 2u, 4u, 8u, 16u, 32u};
-
-// Max. value allowed for note octave
-#define NOTE_OCTAVE_MAX (8u)
 
 // Helper macro, checks if a character is whitespace
 #define IS_WHITESPACE(c) (((c) == '\t') || ((c) == ' ') || ((c) == '\v') || ((c) == '\n'))
@@ -166,28 +108,82 @@ static unsigned int _valid_note_durations[NOTE_DURATION_COUNT] = {1u, 2u, 4u, 8u
     }                                                                   \
 }
 
-// Maps note_pitch_e enum values to the corresponding pitch in Hz
-static note_info_t _note_info[NOTE_PITCH_COUNT] =
+// Max. value allowed for note octave
+#define NOTE_OCTAVE_MAX (8u)
+
+// Number of valid note duration values
+#define NOTE_DURATION_COUNT (6u)
+
+
+/**
+ * Holds all values that can be gleaned from the PTTTL 'settings' section
+ */
+typedef struct
 {
-    {"c", 261.625565301},    // NOTE_C
-    {"c#", 277.182630977},   // NOTE_CS
-    {"db", 277.182630977},   // NOTE_DB
-    {"d", 293.664767918},    // NOTE_D
-    {"d#", 311.126983723},   // NOTE_DS
-    {"eb", 311.126983723},   // NOTE_EB
-    {"e", 329.627556913},    // NOTE_E
-    {"e#", 349.228231433},   // NOTE_ES
-    {"f", 349.228231433},    // NOTE_F
-    {"f#", 369.994422712},   // NOTE_FS
-    {"gb", 369.994422712},   // NOTE_GB
-    {"g", 391.995435982},    // NOTE_G
-    {"g#", 415.30469758},    // NOTE_GS
-    {"ab", 415.30469758},    // NOTE_AB
-    {"a", 440.0},            // NOTE_A
-    {"a#", 466.163761518},   // NOTE_AS
-    {"bb", 466.163761518},   // NOTE_BB
-    {"b", 493.883301256}     // NOTE_B
+    unsigned int bpm;
+    unsigned int default_duration;
+    unsigned int default_octave;
+    unsigned int default_vibrato_freq;
+    unsigned int default_vibrato_var;
+} settings_t;
+
+/**
+ * Enumerates all possible musical notes in a single octave
+ */
+typedef enum
+{
+    NOTE_C = 0,   // C
+    NOTE_CS,      // C sharp
+    NOTE_DB,      // D flat
+    NOTE_D,       // D
+    NOTE_DS,      // D sharp
+    NOTE_EB,      // E flat
+    NOTE_E,       // E
+    NOTE_ES,      // E sharp
+    NOTE_F,       // F
+    NOTE_FS,      // F sharp
+    NOTE_GB,      // G flat
+    NOTE_G,       // G
+    NOTE_GS,      // G sharp
+    NOTE_AB,      // A flat
+    NOTE_A,       // A
+    NOTE_AS,      // A sharp
+    NOTE_BB,      // B flat
+    NOTE_B,       // B
+    NOTE_INVALID, // Unecognized/invalid note
+    NOTE_PITCH_COUNT = NOTE_INVALID
+} note_pitch_e;
+
+
+// Maps note_pitch_e enum values to the corresponding pitch in Hz
+static float _note_pitches[NOTE_PITCH_COUNT] =
+{
+    261.625565301f,   // NOTE_C
+    277.182630977f,   // NOTE_CS
+    277.182630977f,   // NOTE_DB
+    293.664767918f,   // NOTE_D
+    311.126983723f,   // NOTE_DS
+    311.126983723f,   // NOTE_EB
+    329.627556913f,   // NOTE_E
+    349.228231433f,   // NOTE_ES
+    349.228231433f,   // NOTE_F
+    369.994422712f,   // NOTE_FS
+    369.994422712f,   // NOTE_GB
+    391.995435982f,   // NOTE_G
+    415.30469758f,    // NOTE_GS
+    415.30469758f,    // NOTE_AB
+    440.0f,           // NOTE_A
+    466.163761518f,   // NOTE_AS
+    466.163761518f,   // NOTE_BB
+    493.883301256f    // NOTE_B
 };
+
+// Valid values for note duration
+static unsigned int _valid_note_durations[NOTE_DURATION_COUNT] = {1u, 2u, 4u, 8u, 16u, 32u};
+
+// Holds information about lastg error encountered
+static ptttl_error_t _error;
+
 
 /**
  * Find the corresponding note_pitch_e value corresponding to a musical note string
@@ -251,7 +247,6 @@ static int _eat_all_nonvisible_chars(ptttl_input_t *input)
 
     return -1;
 }
-
 
 /**
  * Look for the next non-whitespace character, starting from the current input
@@ -532,23 +527,30 @@ static int _parse_musical_note(ptttl_input_t *input, float *note_pitch)
     }
     else
     {
-        note_pitch_e pitch = _note_string_to_enum(notebuf, notepos);
-        if (NOTE_INVALID == pitch)
+        note_pitch_e enum_val = _note_string_to_enum(notebuf, notepos);
+        if (NOTE_INVALID == enum_val)
         {
             ERROR("Invalid musical note name", input->line, input->column);
             return -1;
         }
 
-        *note_pitch = _note_info[pitch].pitch;
+        *note_pitch = _note_pitches[enum_val];
     }
 
     return 0;
 }
 
-static unsigned int _raise_powerof2(unsigned int num)
+/**
+ * Calculate the power of 2 for a given exponent
+ *
+ * @param exp  Exponent
+ *
+ * @return Result
+ */
+static unsigned int _raise_powerof2(unsigned int exp)
 {
     unsigned int ret = 1u;
-    for (unsigned int i = 0u; i < num; i++)
+    for (unsigned int i = 0u; i < exp; i++)
     {
         ret *= 2u;
     }
@@ -567,7 +569,7 @@ static unsigned int _raise_powerof2(unsigned int num)
  *
  * @return 0 if successful, -1 otherwise
  */
-static int _parse_note_vibrato(ptttl_input_t *input, float *freq_hz, float *var_hz)
+static int _parse_note_vibrato(ptttl_input_t *input, settings_t *settings, ptttl_output_note_t *output)
 {
     if ('v' != input->input_text[input->pos])
     {
@@ -579,6 +581,9 @@ static int _parse_note_vibrato(ptttl_input_t *input, float *freq_hz, float *var_
 
     INPUT_SIZE_CHECK(input);
 
+    uint32_t freq_hz = settings->default_vibrato_freq;
+    uint32_t var_hz = settings->default_vibrato_var;
+
     // Parse vibrato frequency, if any
     if (IS_DIGIT(input->input_text[input->pos]))
     {
@@ -589,7 +594,7 @@ static int _parse_note_vibrato(ptttl_input_t *input, float *freq_hz, float *var_
             return ret;
         }
 
-        *freq_hz = (float) freq;
+        freq_hz = (uint32_t) freq;
     }
     else
     {
@@ -610,23 +615,26 @@ static int _parse_note_vibrato(ptttl_input_t *input, float *freq_hz, float *var_
             return ret;
         }
 
-        *var_hz = (float) var;
+        var_hz = (uint32_t) var;
     }
+
+    output->vibrato_settings = freq_hz & 0xffffu;
+    output->vibrato_settings |= ((var_hz & 0xffffu) << 16u);
 
     return 0;
 }
 
 /**
- * Parse a single PTTTL note (duration, note letter, octave, and vibrato settings)
- * from the current input position, and populate a note_t object.
+ * Parse a single PTTTL note (duration, musical note, octave, and vibrato settings)
+ * from the current input position, and populate a ptttl_output_note_t object.
  *
  * @param input     Pointer to input PTTTL data
  * @param settings  Pointer to PTTTL settings parsed from settings section
- * @param output    Pointer to location to store output note_t data
+ * @param output    Pointer to location to store output ptttl_output_note_t data
  *
  * @return 0 if successful, -1 otherwise
  */
-static int _parse_ptttl_note(ptttl_input_t *input, settings_t *settings, note_t *output)
+static int _parse_ptttl_note(ptttl_input_t *input, settings_t *settings, ptttl_output_note_t *output)
 {
     unsigned int dot_seen = 0u;
 
@@ -710,14 +718,12 @@ static int _parse_ptttl_note(ptttl_input_t *input, settings_t *settings, note_t 
         output->duration_secs += (output->duration_secs / 2.0f);
     }
 
-    output->vibrato_freq_hz = settings->default_vibrato_freq;
-    output->vibrato_var_hz = settings->default_vibrato_var;
-
-    return _parse_note_vibrato(input, &output->vibrato_freq_hz, &output->vibrato_var_hz);
+    return _parse_note_vibrato(input, settings, output);
 }
 
 /**
- * Parse the entire "data" section and populate the output struct
+ * Parse the entire "data" section from the current input position, and populate
+ * the output struct
  *
  * @param input     Pointer to PTTTL input data
  * @param output    Pointer to location to store parsed output
@@ -731,8 +737,8 @@ static int _parse_note_data(ptttl_input_t *input, ptttl_output_t *output, settin
 
     while (input->pos < input->input_text_size)
     {
-        channel_t *current_channel = &output->channels[current_channel_idx];
-        note_t *current_note = &current_channel->notes[current_channel->note_count];
+        ptttl_output_channel_t *current_channel = &output->channels[current_channel_idx];
+        ptttl_output_note_t *current_note = &current_channel->notes[current_channel->note_count];
 
         int ret = _parse_ptttl_note(input, settings, current_note);
         if (ret < 0)
@@ -875,6 +881,7 @@ int ptttl_parse(ptttl_input_t *input, ptttl_output_t *output)
 
     INPUT_SIZE_CHECK(input);
 
+    // Read PTTTL settings, next section after the name
     settings_t settings;
     ret = _parse_settings(input, &settings);
     if (ret < 0)
@@ -889,5 +896,6 @@ int ptttl_parse(ptttl_input_t *input, ptttl_output_t *output)
         return -1;
     }
 
+    // Read & process all note data
     return _parse_note_data(input, output, &settings);
 }
