@@ -50,25 +50,25 @@ typedef struct
  */
 typedef enum
 {
-    NOTE_C = 0,
-    NOTE_CS,
-    NOTE_DB,
-    NOTE_D,
-    NOTE_DS,
-    NOTE_EB,
-    NOTE_E,
-    NOTE_ES,
-    NOTE_F,
-    NOTE_FS,
-    NOTE_GB,
-    NOTE_G,
-    NOTE_GS,
-    NOTE_AB,
-    NOTE_A,
-    NOTE_AS,
-    NOTE_BB,
-    NOTE_B,
-    NOTE_INVALID,
+    NOTE_C = 0,   // C
+    NOTE_CS,      // C sharp
+    NOTE_DB,      // D flat
+    NOTE_D,       // D
+    NOTE_DS,      // D sharp
+    NOTE_EB,      // E flat
+    NOTE_E,       // E
+    NOTE_ES,      // E sharp
+    NOTE_F,       // F
+    NOTE_FS,      // F sharp
+    NOTE_GB,      // G flat
+    NOTE_G,       // G
+    NOTE_GS,      // G sharp
+    NOTE_AB,      // A flat
+    NOTE_A,       // A
+    NOTE_AS,      // A sharp
+    NOTE_BB,      // B flat
+    NOTE_B,       // B
+    NOTE_INVALID, // Unecognized/invalid note
     NOTE_PITCH_COUNT = NOTE_INVALID
 } note_pitch_e;
 
@@ -216,17 +216,16 @@ static note_pitch_e _note_string_to_enum(char *string, int size)
 }
 
 /**
- * Look for the next non-whitespace character, starting from the current input
- * position, and return it. Input position, line + column count will be incremented
- * accordingly. After this function runs successfully, the input position will be
- * at the character *after* the first non-whitespace character that was found.
+ * Starting from the current input position, consume all characters that are not
+ * PTTTL source (comments and whitespace), incrementing line and column counters as needed,
+ * until a visible PTTTL character or EOF is seen. Input position will be left at the first
+ * visible PTTTL source character that is seen.
  *
- * @param input    Pointer to PTTTL input data
- * @param output   Pointer to location to store first non-whitespace char
+ * @param input   Pointer to PTTTL input data
  *
- * @return 0 if successful, -1 if EOF was encountered before non-whitespace char was found
+ * @return 0 if successful, -1 if EOF was seen
  */
-static int _get_next_visible_char(ptttl_input_t *input, char *output)
+static int _eat_all_nonvisible_chars(ptttl_input_t *input)
 {
     while (input->pos < input->input_text_size)
     {
@@ -246,14 +245,37 @@ static int _get_next_visible_char(ptttl_input_t *input, char *output)
         }
         else
         {
-            *output = input->input_text[input->pos];
-            input->pos += 1;
-            input->column += 1;
             return 0;
         }
     }
 
     return -1;
+}
+
+
+/**
+ * Look for the next non-whitespace character, starting from the current input
+ * position, and return it. Input position, line + column count will be incremented
+ * accordingly. After this function runs successfully, the input position will be
+ * at the character *after* the first non-whitespace character that was found.
+ *
+ * @param input    Pointer to PTTTL input data
+ * @param output   Pointer to location to store first non-whitespace char
+ *
+ * @return 0 if successful, -1 if EOF was encountered before non-whitespace char was found
+ */
+static int _get_next_visible_char(ptttl_input_t *input, char *output)
+{
+    int ret = _eat_all_nonvisible_chars(input);
+    if (ret < 0)
+    {
+        return -1;
+    }
+
+    *output = input->input_text[input->pos];
+    input->pos += 1;
+    input->column += 1;
+    return 0;
 }
 
 /**
@@ -480,7 +502,7 @@ static int _parse_musical_note(ptttl_input_t *input, float *note_pitch)
     while ((notepos < 2u) && (input->pos < input->input_text_size))
     {
         char c = input->input_text[input->pos];
-        if ((c >= 'A') && (c <= 'G'))
+        if ((c >= 'A') && (c <= 'Z'))
         {
             notebuf[notepos] = c + ' ';
         }
@@ -504,14 +526,22 @@ static int _parse_musical_note(ptttl_input_t *input, float *note_pitch)
         return -1;
     }
 
-    note_pitch_e pitch = _note_string_to_enum(notebuf, notepos);
-    if (NOTE_INVALID == pitch)
+    if ((notepos == 1u) && (notebuf[0] == 'p'))
     {
-        ERROR("Invalid musical note name", input->line, input->column);
-        return -1;
+        *note_pitch = 0.0f;
+    }
+    else
+    {
+        note_pitch_e pitch = _note_string_to_enum(notebuf, notepos);
+        if (NOTE_INVALID == pitch)
+        {
+            ERROR("Invalid musical note name", input->line, input->column);
+            return -1;
+        }
+
+        *note_pitch = _note_info[pitch].pitch;
     }
 
-    *note_pitch = _note_info[pitch].pitch;
     return 0;
 }
 
@@ -697,7 +727,6 @@ static int _parse_ptttl_note(ptttl_input_t *input, settings_t *settings, note_t 
  */
 static int _parse_note_data(ptttl_input_t *input, ptttl_output_t *output, settings_t *settings)
 {
-    (void) memset(output, 0, sizeof(ptttl_output_t));
     unsigned int current_channel_idx = 0u;
 
     while (input->pos < input->input_text_size)
@@ -758,6 +787,12 @@ static int _parse_note_data(ptttl_input_t *input, ptttl_output_t *output, settin
                 return -1;
             }
         }
+
+        ret = _eat_all_nonvisible_chars(input);
+        if (ret < 0)
+        {
+            return 0;
+        }
     }
 
     return 0;
@@ -797,6 +832,8 @@ int ptttl_parse(ptttl_input_t *input, ptttl_output_t *output)
     input->line = 1;
     input->column = 1;
     input->pos = 0;
+
+    (void) memset(output, 0, sizeof(ptttl_output_t));
 
     // Read name (first field)
     int ret = _get_next_visible_char(input, &output->name[0]);
@@ -842,6 +879,13 @@ int ptttl_parse(ptttl_input_t *input, ptttl_output_t *output)
     ret = _parse_settings(input, &settings);
     if (ret < 0)
     {
+        return -1;
+    }
+
+    ret = _eat_all_nonvisible_chars(input);
+    if (ret < 0)
+    {
+        ERROR("Unexpected EOF encountered", input->line, input->column);
         return -1;
     }
 

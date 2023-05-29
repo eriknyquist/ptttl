@@ -34,4 +34,12 @@ int main(int argc, char *argv[])
         printf("Error in %s[%d:%d]: %s\n", argv[1], err.line, err.column, err.error_message);
         return -1;
     }
+
+    printf("Song name     : %s\n", output.name);
+    printf("Channel count : %u\n", output.channel_count);
+
+    for (unsigned int i = 0u; i < output.channel_count; i++)
+    {
+        printf("Channel %u: %u notes\n", i, output.channels[i].note_count);
+    }
 }
