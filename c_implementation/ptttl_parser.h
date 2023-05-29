@@ -11,19 +11,20 @@
 #ifndef PTTTL_PARSER_H
 #define PTTTL_PARSER_H
 
-#define PTTTL_MAX_CHANNELS_PER_FILE (32u)
-#define PTTTL_MAX_NOTES_PER_CHANNEL (1024)
+#define PTTTL_MAX_CHANNELS_PER_FILE (32u)   // Max. channels allowed in a single PTTTL file
+#define PTTTL_MAX_NOTES_PER_CHANNEL (1024)  // Max. notes allowed in a single PTTTL channel
+#define PTTTL_MAX_NAME_LEN          (256u)  // Max. characters allowed in the "name" field of a PTTTL file
 
 /**
  * Represents PTTTL source loaded fully into memory from a single file
  */
 typedef struct
 {
-    char *input_text;        // Pointer to PTTTL text
-    size_t input_text_size;  // Size of PTTTL text (excluding NULL terminator, if any)
-    int line;                // Current line count
-    int column;              // Current column count
-    int pos;                 // Current position in input text
+    char *input_text;        ///< Pointer to PTTTL text
+    size_t input_text_size;  ///< Size of PTTTL text (excluding NULL terminator, if any)
+    int line;                ///< Current line count
+    int column;              ///< Current column count
+    int pos;                 ///< Current position in input text
 } ptttl_input_t;
 
 /**
@@ -31,10 +32,10 @@ typedef struct
  */
 typedef struct
 {
-    float pitch_hz;        // Note pitch in Hz (0.0f for pause)
-    float duration_secs;   // Note duration in seconds
-    float vibrato_freq_hz; // Vibrato frequency in Hz (0.0f for no vibrato)
-    float vibrato_var_hz;  // Vibrato +/-variance from main pitch, in Hz
+    float pitch_hz;        ///< Note pitch in Hz (0.0f for pause)
+    float duration_secs;   ///< Note duration in seconds
+    float vibrato_freq_hz; ///< Vibrato frequency in Hz (0.0f for no vibrato)
+    float vibrato_var_hz;  ///< Vibrato +/-variance from main pitch, in Hz
 } note_t;
 
 /**
@@ -42,8 +43,8 @@ typedef struct
  */
 typedef struct
 {
-    unsigned int note_count;                    // Number of notes populated
-    note_t notes[PTTTL_MAX_NOTES_PER_CHANNEL];  // Array of notes for this channel
+    unsigned int note_count;                    ///< Number of notes populated
+    note_t notes[PTTTL_MAX_NOTES_PER_CHANNEL];  ///< Array of notes for this channel
 } channel_t;
 
 /**
@@ -51,8 +52,9 @@ typedef struct
  */
 typedef struct
 {
-    unsigned int channel_count;                       // Number of channels populated
-    channel_t channels[PTTTL_MAX_CHANNELS_PER_FILE];  // Array of channels
+    char name[PTTTL_MAX_NAME_LEN];                    ///< Name field of PTTTL file
+    unsigned int channel_count;                       ///< Number of channels populated
+    channel_t channels[PTTTL_MAX_CHANNELS_PER_FILE];  ///< Array of channels
 } ptttl_output_t;
 
 /**
@@ -60,9 +62,9 @@ typedef struct
  */
 typedef struct
 {
-    const char *error_message;  // Human-readable error message
-    int line;                   // Line number within input text
-    int column;                 // Column number within input text
+    const char *error_message;  ///< Human-readable error message
+    int line;                   ///< Line number within input text
+    int column;                 ///< Column number within input text
 } ptttl_error_t;
 
 /**

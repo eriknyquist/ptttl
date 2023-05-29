@@ -87,13 +87,13 @@ static unsigned int _valid_note_durations[NOTE_DURATION_COUNT] = {1u, 2u, 4u, 8u
 #define IS_DIGIT(c) (((c) >= '0') && ((c) <= '9'))
 
 // Helper macro, set error and return if max. input size is reached
-#define INPUT_SIZE_CHECK(i)                           \
-{                                                     \
-    if (i->pos >= i->input_text_size)                 \
-    {                                                 \
-        ERROR("Unexpected EOF", i->line, i->column);  \
-        return -1;                                    \
-    }                                                 \
+#define INPUT_SIZE_CHECK(i)                                       \
+{                                                                 \
+    if (i->pos >= i->input_text_size)                             \
+    {                                                             \
+        ERROR("Unexpected EOF encountered", i->line, i->column);  \
+        return -1;                                                \
+    }                                                             \
 }
 
 #define CHECK_SHARPONLY(string, size, notechar, val, sharpval) \
@@ -235,7 +235,7 @@ static int _get_next_visible_char(ptttl_input_t *input, char *output)
             if ('\n' == input->input_text[input->pos])
             {
                 input->line += 1;
-                input->column = 0;
+                input->column = 1;
             }
             else
             {
@@ -705,6 +705,54 @@ static int _parse_note_data(ptttl_input_t *input, ptttl_output_t *output, settin
         {
             return ret;
         }
+
+        // Increment note count for this channel
+        current_channel->note_count += 1u;
+
+        char next_char;
+        int result = _get_next_visible_char(input, &next_char);
+        if (result < 0)
+        {
+            // EOF was reached
+            break;
+        }
+
+        if ('|' == next_char)
+        {
+            // Channel increment
+            current_channel_idx += 1u;
+            if (PTTTL_MAX_CHANNELS_PER_FILE == current_channel_idx)
+            {
+                ERROR("Maximum channel count exceeded", input->line, input->column);
+                return -1;
+            }
+        }
+        else if (';' == next_char)
+        {
+            // block end; make sure all blocks have the same number of channels
+            if (0u == output->channel_count)
+            {
+                output->channel_count = current_channel_idx + 1u;
+            }
+            else
+            {
+                if ((current_channel_idx + 1u) != output->channel_count)
+                {
+                    ERROR("All blocks must have the same number of channels", input->line, input->column);
+                    return -1;
+                }
+            }
+
+            current_channel_idx = 0u;
+        }
+        else
+        {
+            if (',' != next_char)
+            {
+                ERROR("Unexpected character, expecting one of: , | ;", input->line, input->column);
+                return -1;
+            }
+        }
     }
 
     return 0;
@@ -742,10 +790,50 @@ int ptttl_parse(ptttl_input_t *input, ptttl_output_t *output)
     }
 
     input->line = 1;
-    input->column = 0;
+    input->column = 1;
     input->pos = 0;
+
+    // Read name (first field)
+    int ret = _get_next_visible_char(input, &output->name[0]);
+    if (ret < 0)
+    {
+        ERROR("Unexpected EOF encountered", input->line, input->column);
+        return -1;
+    }
+
+    int namepos = 1;
+    while (input->pos < input->input_text_size)
+    {
+        char namechar = input->input_text[input->pos];
+        if (':' == namechar)
+        {
+            input->column += 1u;
+            output->name[namepos] = '\0';
+            break;
+        }
+        else
+        {
+            if ('\n' == namechar)
+            {
+                input->column = 1;
+                input->line += 1;
+            }
+            else
+            {
+                input->column += 1;
+            }
+
+            output->name[namepos] = namechar;
+            namepos += 1;
+        }
+
+        input->pos += 1u;
+    }
+
+    INPUT_SIZE_CHECK(input);
+
     settings_t settings;
-    int ret = _parse_settings(input, &settings);
+    ret = _parse_settings(input, &settings);
     if (ret < 0)
     {
         return -1;
