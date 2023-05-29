@@ -1,3 +1,13 @@
+/* pttl_parser.c
+ *
+ * PTTTL & RTTTL parser implemented in C. No dynamic memory allocation, and minimal
+ * dependencies (requires strtoul() from stdlib.h, and memset() from string.h).
+ *
+ * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
+ *
+ * Erik Nyquist 2023
+ */
+
 #ifndef PTTTL_PARSER_H
 #define PTTTL_PARSER_H
 
@@ -23,6 +33,8 @@ typedef struct
 {
     float pitch_hz;        // Note pitch in Hz (0.0f for pause)
     float duration_secs;   // Note duration in seconds
+    float vibrato_freq_hz; // Vibrato frequency in Hz (0.0f for no vibrato)
+    float vibrato_var_hz;  // Vibrato +/-variance from main pitch, in Hz
 } note_t;
 
 /**

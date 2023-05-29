@@ -1,5 +1,16 @@
+/* pttl_parser.c
+ *
+ * PTTTL & RTTTL parser implemented in C. No dynamic memory allocation, and minimal
+ * dependencies (requires strtoul() from stdlib.h, and memset() from string.h).
+ *
+ * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
+ *
+ * Erik Nyquist 2023
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "ptttl_parser.h"
 
 #define MAX_ERRMSG_SIZE (256u)
@@ -13,13 +24,18 @@ static ptttl_error_t _error;
     _error.column = c;              \
 }
 
-
+/**
+ * Holds the string name + pitch (Hz) of a musical note
+ */
 typedef struct
 {
     const char *string;
     float pitch;
 } note_info_t;
 
+/**
+ * Holds all values that can be gleaned from the PTTTL 'settings' section
+ */
 typedef struct
 {
     unsigned int bpm;
@@ -29,8 +45,9 @@ typedef struct
     unsigned int default_vibrato_var;
 } settings_t;
 
-#define NOTE_PITCH_COUNT (18u)
-
+/**
+ * Enumerates all possible musical notes in a single octave
+ */
 typedef enum
 {
     NOTE_C = 0,
@@ -51,12 +68,33 @@ typedef enum
     NOTE_AS,
     NOTE_BB,
     NOTE_B,
-    NOTE_INVALID
+    NOTE_INVALID,
+    NOTE_PITCH_COUNT = NOTE_INVALID
 } note_pitch_e;
 
+
+#define NOTE_DURATION_COUNT (6u)
+// Valid values for note duration
+static unsigned int _valid_note_durations[NOTE_DURATION_COUNT] = {1u, 2u, 4u, 8u, 16u, 32u};
+
+// Max. value allowed for note octave
+#define NOTE_OCTAVE_MAX (8u)
+
+// Helper macro, checks if a character is whitespace
 #define IS_WHITESPACE(c) (((c) == '\t') || ((c) == ' ') || ((c) == '\v') || ((c) == '\n'))
 
+// Helper macro, checks if a character is a digit
 #define IS_DIGIT(c) (((c) >= '0') && ((c) <= '9'))
+
+// Helper macro, set error and return if max. input size is reached
+#define INPUT_SIZE_CHECK(i)                           \
+{                                                     \
+    if (i->pos >= i->input_text_size)                 \
+    {                                                 \
+        ERROR("Unexpected EOF", i->line, i->column);  \
+        return -1;                                    \
+    }                                                 \
+}
 
 #define CHECK_SHARPONLY(string, size, notechar, val, sharpval) \
 {                                                              \
@@ -128,6 +166,7 @@ typedef enum
     }                                                                   \
 }
 
+// Maps note_pitch_e enum values to the corresponding pitch in Hz
 static note_info_t _note_info[NOTE_PITCH_COUNT] =
 {
     {"c", 261.625565301},    // NOTE_C
@@ -150,7 +189,14 @@ static note_info_t _note_info[NOTE_PITCH_COUNT] =
     {"b", 493.883301256}     // NOTE_B
 };
 
-
+/**
+ * Find the corresponding note_pitch_e value corresponding to a musical note string
+ *
+ * @param string    Pointer to musical note string
+ * @param size      Size of musical note string
+ *
+ * @return corresponding note_pitch_e value
+ */
 static note_pitch_e _note_string_to_enum(char *string, int size)
 {
     if (size > 2)
@@ -166,9 +212,20 @@ static note_pitch_e _note_string_to_enum(char *string, int size)
     CHECK_SHARPFLAT(string, size, 'a', NOTE_A, NOTE_AS, NOTE_AB);
     CHECK_FLATONLY(string, size, 'b', NOTE_B, NOTE_BB);
 
-	return NOTE_INVALID;
+    return NOTE_INVALID;
 }
 
+/**
+ * Look for the next non-whitespace character, starting from the current input
+ * position, and return it. Input position, line + column count will be incremented
+ * accordingly. After this function runs successfully, the input position will be
+ * at the character *after* the first non-whitespace character that was found.
+ *
+ * @param input    Pointer to PTTTL input data
+ * @param output   Pointer to location to store first non-whitespace char
+ *
+ * @return 0 if successful, -1 if EOF was encountered before non-whitespace char was found
+ */
 static int _get_next_visible_char(ptttl_input_t *input, char *output)
 {
     while (input->pos < input->input_text_size)
@@ -199,6 +256,14 @@ static int _get_next_visible_char(ptttl_input_t *input, char *output)
     return -1;
 }
 
+/**
+ * Parse an unsigned integer from the current input position
+ *
+ * @param input    Pointer to PTTTL input data
+ * @param output   Pointer to location to store parsed unsigned integer
+ *
+ * @return 0 if successful, -1 otherwise
+ */
 static int _parse_uint_from_input(ptttl_input_t *input, unsigned int *output)
 {
     char buf[32u];
@@ -237,6 +302,38 @@ static int _parse_uint_from_input(ptttl_input_t *input, unsigned int *output)
     return 0;
 }
 
+/**
+ * Check if number is a valid note duration
+ *
+ * @param duration   Note duration value to check
+ *
+ * @return 1 if note duration is value, 0 otherwise
+ */
+static unsigned int _valid_note_duration(unsigned int duration)
+{
+    unsigned int valid = 0u;
+    for (unsigned int i = 0u; i < NOTE_DURATION_COUNT; i++)
+    {
+        if (_valid_note_durations[i] == duration)
+        {
+            valid = 1u;
+            break;
+        }
+    }
+
+    return valid;
+}
+
+/**
+ * Parse a single option in the "settings" section, and populate the corresponding
+ * field in the provided settings_t object
+ *
+ * @param opt       Key for the option being set
+ * @param input     Pointer to PTTTL input data
+ * @param settings  Pointer to location to store parsed setting data
+ *
+ * @return 0 if successful, -1 otherwise
+ */
 static int _parse_option(char opt, ptttl_input_t *input, settings_t *settings)
 {
     if (':' == opt)
@@ -266,10 +363,29 @@ static int _parse_option(char opt, ptttl_input_t *input, settings_t *settings)
             ret = _parse_uint_from_input(input, &settings->bpm);
             break;
         case 'd':
+        {
             ret = _parse_uint_from_input(input, &settings->default_duration);
+
+            if (0 == ret)
+            {
+                if (!_valid_note_duration(settings->default_duration))
+                {
+                    ERROR("Invalid note duration (must be 1, 2, 4, 8, 16 or 32)", input->line, input->column);
+                    return -1;
+                }
+            }
             break;
+        }
         case 'o':
             ret = _parse_uint_from_input(input, &settings->default_octave);
+            if (0 == ret)
+            {
+                if (NOTE_OCTAVE_MAX < settings->default_octave)
+                {
+                    ERROR("Invalid octave (must be 0 through 8)", input->line, input->column);
+                    return -1;
+                }
+            }
             break;
         case 'f':
             ret = _parse_uint_from_input(input, &settings->default_vibrato_freq);
@@ -286,6 +402,15 @@ static int _parse_option(char opt, ptttl_input_t *input, settings_t *settings)
     return ret;
 }
 
+/**
+ * Parse the 'settings' section from the current input position, and populate
+ * a settings_t object
+ *
+ * @param input     Pointer to PTTTL input data
+ * @param settings  Pointer to location to store parsed settings
+ *
+ * @return 0 if successful, 1 otherwise
+ */
 static int _parse_settings(ptttl_input_t *input, settings_t *settings)
 {
     char c = '\0';
@@ -333,8 +458,254 @@ static int _parse_settings(ptttl_input_t *input, settings_t *settings)
     return 0;
 }
 
+/**
+ * Parse musical note character(s) at the current input position, and provide the
+ * corresponding pitch value in Hz
+ *
+ * @param input       Pointer to PTTTL input data
+ * @param note_pitch  Pointer to location to store note pitch in Hz
+ *
+ * @return 0 if successful, -1 otherwise
+ */
+static int _parse_musical_note(ptttl_input_t *input, float *note_pitch)
+{
+    // Read musical note name, convert to lowercase if needed
+    char notebuf[3];
+    unsigned int notepos = 0u;
+    while ((notepos < 2u) && (input->pos < input->input_text_size))
+    {
+        char c = input->input_text[input->pos];
+        if ((c >= 'A') && (c <= 'G'))
+        {
+            notebuf[notepos] = c + ' ';
+        }
+        else if (((c >= 'a') && (c <= 'z')) || (c == '#'))
+        {
+            notebuf[notepos] = c;
+        }
+        else
+        {
+            break;
+        }
+
+        notepos += 1u;
+        input->pos += 1u;
+        input->column += 1u;
+    }
+
+    if (notepos == 0u)
+    {
+        ERROR("Expecting a musical note name", input->line, input->column);
+        return -1;
+    }
+
+    note_pitch_e pitch = _note_string_to_enum(notebuf, notepos);
+    if (NOTE_INVALID == pitch)
+    {
+        ERROR("Invalid musical note name", input->line, input->column);
+        return -1;
+    }
+
+    *note_pitch = _note_info[pitch].pitch;
+    return 0;
+}
+
+static unsigned int _raise_powerof2(unsigned int num)
+{
+    unsigned int ret = 1u;
+    for (unsigned int i = 0u; i < num; i++)
+    {
+        ret *= 2u;
+    }
+
+    return ret;
+}
+
+/**
+ * Parse vibrato settings at the end of a PTTTL note (if any) from the current
+ * input position. If there are no vibrato settings at the current input position,
+ * return success.
+ *
+ * @param input     Pointer to input PTTTL data
+ * @param freq_hz   Pointer to location to store parsed vibrato frequency Hz
+ * @param freq_var  Pointer to location to store parsed vibrato variance Hz
+ *
+ * @return 0 if successful, -1 otherwise
+ */
+static int _parse_note_vibrato(ptttl_input_t *input, float *freq_hz, float *var_hz)
+{
+    if ('v' != input->input_text[input->pos])
+    {
+        return 0;
+    }
+
+    input->pos += 1;
+    input->column += 1;
+
+    INPUT_SIZE_CHECK(input);
+
+    // Parse vibrato frequency, if any
+    if (IS_DIGIT(input->input_text[input->pos]))
+    {
+        unsigned int freq = 0u;
+        int ret = _parse_uint_from_input(input, &freq);
+        if (ret < 0)
+        {
+            return ret;
+        }
+
+        *freq_hz = (float) freq;
+    }
+    else
+    {
+        return 0;
+    }
+
+    if ('-' == input->input_text[input->pos])
+    {
+        input->pos += 1;
+        input->column += 1;
+
+        INPUT_SIZE_CHECK(input);
+
+        unsigned int var = 0u;
+        int ret = _parse_uint_from_input(input, &var);
+        if (ret < 0)
+        {
+            return ret;
+        }
+
+        *var_hz = (float) var;
+    }
+
+    return 0;
+}
+
+/**
+ * Parse a single PTTTL note (duration, note letter, octave, and vibrato settings)
+ * from the current input position, and populate a note_t object.
+ *
+ * @param input     Pointer to input PTTTL data
+ * @param settings  Pointer to PTTTL settings parsed from settings section
+ * @param output    Pointer to location to store output note_t data
+ *
+ * @return 0 if successful, -1 otherwise
+ */
+static int _parse_ptttl_note(ptttl_input_t *input, settings_t *settings, note_t *output)
+{
+    unsigned int dot_seen = 0u;
+
+    // Read note duration, if it exists
+    unsigned int duration = settings->default_duration;
+    if (IS_DIGIT(input->input_text[input->pos]))
+    {
+        int ret = _parse_uint_from_input(input, &duration);
+        if (ret < 0)
+        {
+            return ret;
+        }
+
+        if (!_valid_note_duration(duration))
+        {
+            ERROR("Invalid note duration (must be 1, 2, 4, 8, 16 or 32)", input->line, input->column);
+            return -1;
+        }
+    }
+
+    int ret = _parse_musical_note(input, &output->pitch_hz);
+    if (ret < 0)
+    {
+        return ret;
+    }
+
+    INPUT_SIZE_CHECK(input);
+
+    // Check for dot after note letter
+    if ('.' == input->input_text[input->pos])
+    {
+        dot_seen = 1u;
+        input->pos += 1u;
+        input->column += 1u;
+        INPUT_SIZE_CHECK(input);
+    }
+
+    // Read octave, if it exists
+    unsigned int octave = settings->default_octave;
+    if (IS_DIGIT(input->input_text[input->pos]))
+    {
+        octave = ((unsigned int) input->input_text[input->pos]) - 48u;
+        if (NOTE_OCTAVE_MAX < octave)
+        {
+            ERROR("Invalid octave (must be 0 through 8)", input->line, input->column);
+            return -1;
+        }
+
+        input->pos += 1;
+        input->column += 1;
+    }
+
+    INPUT_SIZE_CHECK(input);
+
+    // Check for dot again after octave
+    if ('.' == input->input_text[input->pos])
+    {
+        dot_seen = 1u;
+        input->pos += 1u;
+        input->column += 1u;
+        INPUT_SIZE_CHECK(input);
+    }
+
+    // Set true pitch based on octave, if octave is not 4
+    if (octave < 4u)
+    {
+        output->pitch_hz = output->pitch_hz / (float) _raise_powerof2(4u - octave);
+    }
+    else if (octave > 4u)
+    {
+        output->pitch_hz = output->pitch_hz * (float) _raise_powerof2(octave - 4u);
+    }
+
+    // Set note time in seconds based on note duration + BPM
+    float whole_time = (60.0f / (float) settings->bpm) * 4.0f;
+    output->duration_secs = whole_time / (float) duration;
+
+    // Handle dotted rhythm
+    if (dot_seen == 1u)
+    {
+        output->duration_secs += (output->duration_secs / 2.0f);
+    }
+
+    output->vibrato_freq_hz = settings->default_vibrato_freq;
+    output->vibrato_var_hz = settings->default_vibrato_var;
+
+    return _parse_note_vibrato(input, &output->vibrato_freq_hz, &output->vibrato_var_hz);
+}
+
+/**
+ * Parse the entire "data" section and populate the output struct
+ *
+ * @param input     Pointer to PTTTL input data
+ * @param output    Pointer to location to store parsed output
+ * @param settings  Pointer to PTTTL settings parsed from settings section
+ *
+ * @return 0 if successful, -1 otherwise
+ */
 static int _parse_note_data(ptttl_input_t *input, ptttl_output_t *output, settings_t *settings)
 {
+    (void) memset(output, 0, sizeof(ptttl_output_t));
+    unsigned int current_channel_idx = 0u;
+
+    while (input->pos < input->input_text_size)
+    {
+        channel_t *current_channel = &output->channels[current_channel_idx];
+        note_t *current_note = &current_channel->notes[current_channel->note_count];
+
+        int ret = _parse_ptttl_note(input, settings, current_note);
+        if (ret < 0)
+        {
+            return ret;
+        }
+    }
 
     return 0;
 }
