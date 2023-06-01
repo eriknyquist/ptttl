@@ -52,15 +52,15 @@ typedef struct
  */
 static wavfile_header_t _default_header =
 {
-	.chunk_id = {'R', 'I', 'F', 'F'},
-	.chunk_size = 0,
-	.format = {'W', 'A', 'V', 'E'},
+    .chunk_id = {'R', 'I', 'F', 'F'},
+    .chunk_size = 0,
+    .format = {'W', 'A', 'V', 'E'},
 
-	.subchunk1_id = {'f', 'm', 't', ' '},
-	.subchunk1_size = BITS_PER_SAMPLE,
-	.audio_format = 1,
-	.num_channels = 1,
-	.sample_rate = SAMPLE_RATE,
+    .subchunk1_id = {'f', 'm', 't', ' '},
+    .subchunk1_size = BITS_PER_SAMPLE,
+    .audio_format = 1,
+    .num_channels = 1,
+    .sample_rate = SAMPLE_RATE,
     .byte_rate = (SAMPLE_RATE * BITS_PER_SAMPLE) / 8,
     .block_align = BITS_PER_SAMPLE / 8,
     .bits_per_sample = BITS_PER_SAMPLE,
