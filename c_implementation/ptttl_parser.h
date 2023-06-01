@@ -15,8 +15,8 @@
 #include <stdint.h>
 
 
-#define PTTTL_MAX_CHANNELS_PER_FILE (8u)   // Max. channels allowed in a single PTTTL file
-#define PTTTL_MAX_NOTES_PER_CHANNEL (512)  // Max. notes allowed in a single PTTTL channel
+#define PTTTL_MAX_CHANNELS_PER_FILE (8u)    // Max. channels allowed in a single PTTTL file
+#define PTTTL_MAX_NOTES_PER_CHANNEL (128u)  // Max. notes allowed in a single PTTTL channel
 #define PTTTL_MAX_NAME_LEN          (256u)  // Max. characters allowed in the "name" field of a PTTTL file
 
 /**

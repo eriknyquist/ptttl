@@ -223,8 +223,23 @@ static note_pitch_e _note_string_to_enum(char *string, int size)
  */
 static int _eat_all_nonvisible_chars(ptttl_input_t *input)
 {
+    uint8_t in_comment = 0u;
     while (input->pos < input->input_text_size)
     {
+        if (1u == in_comment)
+        {
+            if ('\n' == input->input_text[input->pos])
+            {
+                in_comment = 0u;
+            }
+            else
+            {
+                input->pos += 1u;
+                input->column += 1u;
+                continue;
+            }
+        }
+
         if (IS_WHITESPACE(input->input_text[input->pos]))
         {
             if ('\n' == input->input_text[input->pos])
@@ -241,7 +256,16 @@ static int _eat_all_nonvisible_chars(ptttl_input_t *input)
         }
         else
         {
-            return 0;
+            if ('#' == input->input_text[input->pos])
+            {
+                in_comment = 1u;
+                input->pos += 1u;
+                input->column += 1u;
+            }
+            else
+            {
+                return 0;
+            }
         }
     }
 
