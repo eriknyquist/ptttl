@@ -4,7 +4,7 @@
  * No dynamic memory allocation, and no need to have enough memory to hold the
  * entire WAV file in memory.
  *
- * Requires fopen/fseek/fwrite from stdio.h, and memset() from string.h, and sinf from math.h.
+ * Requires stdint.h, fopen/fseek/fwrite from stdio.h, memset() from string.h, and sinf from math.h.
  *
  * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
  *
