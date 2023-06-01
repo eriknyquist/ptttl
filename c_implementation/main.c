@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ptttl_parser.h"
+#include "ptttl_to_wav.h"
 
 
 int main(int argc, char *argv[])
@@ -42,4 +43,13 @@ int main(int argc, char *argv[])
     {
         printf("Channel %u: %u notes\n", i, output.channels[i].note_count);
     }
+
+    ret = ptttl_to_wav(&output, "test_file.wav");
+    if (ret < 0)
+    {
+        printf("Error generating WAV file: %s\n", ptttl_to_wav_error());
+        return ret;
+    }
+
+    printf("Done\n");
 }

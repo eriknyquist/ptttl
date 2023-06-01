@@ -43,6 +43,6 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
 int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
                                     int32_t *sample);
 
-int ptttl_source_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename);
+int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename);
 
 #endif // PTTTL_TO_WAV_H
