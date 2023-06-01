@@ -1,3 +1,16 @@
+/* pttl_to_wav.c
+ *
+ * Converts the output of ptttl_parse() into samples suitable for a WAV file.
+ * No dynamic memory allocation, and no need to have enough memory to hold the
+ * entire WAV file in memory.
+ *
+ * Requires fopen/fseek/fwrite from stdio.h, and memset() from string.h, and sinf from math.h.
+ *
+ * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
+ *
+ * Erik Nyquist 2023
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -15,11 +28,11 @@
  */
 typedef struct
 {
-    char    chunk_id[4];
+    char chunk_id[4];
     int32_t chunk_size;
-    char    format[4];
+    char format[4];
 
-    char    subchunk1_id[4];
+    char subchunk1_id[4];
     int32_t subchunk1_size;
     int16_t audio_format;
     int16_t num_channels;
@@ -28,10 +41,15 @@ typedef struct
     int16_t block_align;
     int16_t bits_per_sample;
 
-    char    subchunk2_id[4];
+    char subchunk2_id[4];
     int32_t subchunk2_size;
 } wavfile_header_t;
 
+/**
+ * WAV header data with all fixed/known values populated (chunk_size and
+ * subchunk2_size can only be calculated when we know how many samples are in
+ * the WAV file)
+ */
 static wavfile_header_t _default_header =
 {
 	.chunk_id = {'R', 'I', 'F', 'F'},
@@ -57,11 +75,14 @@ static wavfile_header_t _default_header =
 
 static const char *_error = NULL;
 
-const char *ptttl_to_wav_error(void)
-{
-    return _error;
-}
-
+/**
+ * Generate a single sine wave sample for an active note_stream_t object
+ *
+ * @param freq        Frequency of sine wave
+ * @param sine_index  Index of sample within this note (0 is the first sample of the note)
+ *
+ * @return Sine wave sample
+ */
 static int32_t _generate_sine_sample(float freq, unsigned int sine_index)
 {
     // Calculate sample value between 0.0 - 1.0
@@ -82,6 +103,14 @@ static int32_t _generate_sine_sample(float freq, unsigned int sine_index)
     return sample;
 }
 
+/**
+ * Load a single PTTTL note from a specific channel into a note_stream_t object
+ * 
+ * @param generator    Pointer to initialized sample generator
+ * @param channel      Pointer to channel containing PTTTL note to load
+ * @param note_index   Index of note within channel
+ * @param note_stream  Pointer to note stream object to populate
+ */
 static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_channel_t *channel,
                              unsigned int note_index, ptttl_note_stream_t *note_stream)
 {
@@ -94,6 +123,17 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
     note_stream->num_samples = (unsigned int) num_samples;
 }
 
+/**
+ * @see ptttl_to_wav.h
+ */
+const char *ptttl_to_wav_error(void)
+{
+    return _error;
+}
+
+/**
+ * @see ptttl_to_wav.h
+ */
 int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator)
 {
     if ((NULL == parsed_ptttl) || (NULL == generator))
@@ -128,6 +168,9 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
     return 0;
 }
 
+/**
+ * @see ptttl_to_wav.h
+ */
 int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
                                     int32_t *sample)
 {
@@ -196,6 +239,9 @@ int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_g
     return 0;
 }
 
+/**
+ * @see ptttl_to_wav.h
+ */
 int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
 {
     if ((NULL == parsed_ptttl) || (NULL == wav_filename))

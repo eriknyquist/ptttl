@@ -1,7 +1,8 @@
 /* pttl_parser.c
  *
- * PTTTL & RTTTL parser implemented in C. No dynamic memory allocation, and minimal
- * dependencies (requires strtoul() from stdlib.h, and memset() from string.h).
+ * PTTTL & RTTTL parser implemented in C. No dynamic memory allocation.
+ *
+ * Requires stdint.h, strtoul() from stdlib.h and memset() from string.h.
  *
  * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
  *
@@ -9,7 +10,6 @@
  */
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include "ptttl_parser.h"
 
@@ -473,9 +473,6 @@ static int _parse_settings(ptttl_input_t *input, settings_t *settings)
         }
 
     }
-
-    printf("b=%u, d=%u, o=%u, f=%u, v=%u\n", settings->bpm, settings->default_duration,
-           settings->default_octave, settings->default_vibrato_freq, settings->default_vibrato_var);
 
     return 0;
 }

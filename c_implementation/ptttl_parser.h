@@ -1,7 +1,8 @@
-/* pttl_parser.c
+/* pttl_parser.h
  *
- * PTTTL & RTTTL parser implemented in C. No dynamic memory allocation, and minimal
- * dependencies (requires strtoul() from stdlib.h, and memset() from string.h).
+ * PTTTL & RTTTL parser implemented in C. No dynamic memory allocation.
+ *
+ * Requires stdint.h, strtoul() from stdlib.h, and memset() from string.h.
  *
  * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
  *
