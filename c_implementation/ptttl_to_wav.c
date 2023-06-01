@@ -18,7 +18,6 @@
 #include "ptttl_to_wav.h"
 
 #define BITS_PER_SAMPLE (16)
-#define SAMPLE_RATE (44100)
 #define MAX_SAMPLE_VALUE (0x7FFF)
 #define AMPLITUDE (0.8f)
 
@@ -46,9 +45,7 @@ typedef struct
 } wavfile_header_t;
 
 /**
- * WAV header data with all fixed/known values populated (chunk_size and
- * subchunk2_size can only be calculated when we know how many samples are in
- * the WAV file)
+ * WAV header data with all fixed/known values populated
  */
 static wavfile_header_t _default_header =
 {
@@ -60,8 +57,8 @@ static wavfile_header_t _default_header =
     .subchunk1_size = BITS_PER_SAMPLE,
     .audio_format = 1,
     .num_channels = 1,
-    .sample_rate = SAMPLE_RATE,
-    .byte_rate = (SAMPLE_RATE * BITS_PER_SAMPLE) / 8,
+    .sample_rate = 0u,
+    .byte_rate = 0u,
     .block_align = BITS_PER_SAMPLE / 8,
     .bits_per_sample = BITS_PER_SAMPLE,
 
@@ -78,15 +75,16 @@ static const char *_error = NULL;
 /**
  * Generate a single sine wave sample for an active note_stream_t object
  *
- * @param freq        Frequency of sine wave
- * @param sine_index  Index of sample within this note (0 is the first sample of the note)
+ * @param sample_rate  Sampling rate
+ * @param freq         Frequency of sine wave
+ * @param sine_index   Index of sample within this note (0 is the first sample of the note)
  *
  * @return Sine wave sample
  */
-static int32_t _generate_sine_sample(float freq, unsigned int sine_index)
+static int32_t _generate_sine_sample(int32_t sample_rate, float freq, unsigned int sine_index)
 {
     // Calculate sample value between 0.0 - 1.0
-    float sin_input = 2.0f * M_PI * freq * (((float) sine_index) / (float) SAMPLE_RATE);
+    float sin_input = 2.0f * M_PI * freq * (((float) sine_index) / (float) sample_rate);
     float sample_norm = sinf(sin_input);
 
     // Convert to 0x0-0x7fff range
@@ -119,7 +117,7 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
     note_stream->start_sample = generator->current_sample;
 
     // Calculate note time in samples
-    float num_samples = channel->notes[note_index].duration_secs  * (float) SAMPLE_RATE;
+    float num_samples = channel->notes[note_index].duration_secs  * (float) generator->sample_rate;
     note_stream->num_samples = (unsigned int) num_samples;
 }
 
@@ -134,7 +132,8 @@ const char *ptttl_to_wav_error(void)
 /**
  * @see ptttl_to_wav.h
  */
-int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator)
+int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
+                                  int32_t sample_rate)
 {
     if ((NULL == parsed_ptttl) || (NULL == generator))
     {
@@ -148,11 +147,12 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
         return -1;
     }
 
-    // Zero out 'finished' flag for channels
-
-    // Populate note streams for initial note on all channels
+    generator->sample_rate = sample_rate;
     generator->current_sample = 0u;
 
+    memset(generator->channel_finished, 0, sizeof(generator->channel_finished));
+
+    // Populate note streams for initial note on all channels
     for (unsigned int i = 0u; i < parsed_ptttl->channel_count; i++)
     {
         // Verify all channels have at least 1 note, while we're at it
@@ -172,7 +172,7 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
  * @see ptttl_to_wav.h
  */
 int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
-                                    int32_t *sample)
+                                    int16_t *sample)
 {
     if ((NULL == parsed_ptttl) || (NULL == generator))
     {
@@ -196,7 +196,7 @@ int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_g
         // Generate next sample value for this channel, add it to the sum
         if (0.0f < note->pitch_hz) // Pitch of 0 indicates pause/rest
         {
-            int32_t raw_sample = _generate_sine_sample(note->pitch_hz, stream->sine_index);
+            int32_t raw_sample = _generate_sine_sample(generator->sample_rate, note->pitch_hz, stream->sine_index);
             stream->sine_index += 1u;
 
             // Turn down volume to account for other channels
@@ -233,7 +233,7 @@ int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_g
 
     if (NULL != sample)
     {
-        *sample = (int32_t) (summed_sample / (float) parsed_ptttl->channel_count);
+        *sample = (int16_t) (summed_sample / (float) parsed_ptttl->channel_count);
     }
 
     return 0;
@@ -251,7 +251,7 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     }
 
     ptttl_sample_generator_t generator;
-    int ret = ptttl_sample_generator_create(parsed_ptttl, &generator);
+    int ret = ptttl_sample_generator_create(parsed_ptttl, &generator, 44100);
     if (ret < 0)
     {
         return ret;
@@ -273,12 +273,11 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     }
 
     // Generate all samples and write to file
-    int32_t sample = 0;
+    int16_t sample = 0;
     while ((ret = ptttl_sample_generator_generate(parsed_ptttl, &generator, &sample)) == 0)
     {
-        int16_t i16_sample = (int16_t) sample;
-        size_t size_written = fwrite(&i16_sample, 1u, sizeof(i16_sample), fp);
-        if (sizeof(i16_sample) != size_written)
+        size_t size_written = fwrite(&sample, 1u, sizeof(sample), fp);
+        if (sizeof(sample) != size_written)
         {
             ERROR("Failed to write to WAV file");
             return -1;
@@ -296,6 +295,8 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     int32_t framecount = ((int32_t) generator.current_sample) + 1u;
     _default_header.subchunk2_size = (framecount * BITS_PER_SAMPLE) / 8;
     _default_header.chunk_size = (4  + (8 + _default_header.subchunk1_size)) + (8 + _default_header.subchunk2_size);
+    _default_header.sample_rate = generator.sample_rate;
+    _default_header.byte_rate = (generator.sample_rate * BITS_PER_SAMPLE) / 8;
 
     // Write header
     size_t size_written = fwrite(&_default_header, 1u, sizeof(_default_header), fp);

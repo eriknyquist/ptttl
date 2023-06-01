@@ -36,6 +36,7 @@ typedef struct
     unsigned int current_sample;
     ptttl_note_stream_t note_streams[PTTTL_MAX_CHANNELS_PER_FILE];
     uint8_t channel_finished[PTTTL_MAX_CHANNELS_PER_FILE];
+    int32_t sample_rate;
 } ptttl_sample_generator_t;
 
 
@@ -51,11 +52,13 @@ const char *ptttl_to_wav_error(void);
  *
  * @param parsed_ptttl   Pointer to parsed PTTTL data
  * @param generator      Pointer to generator instance to initialize
+ * @param sample_rate    Sample rate, samples per second
  *
  * @return 0 if successful, -1 if an error occurred. Call #ptttl_to_wav_error for
  *         an error description if -1 is returned.
  */
-int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator);
+int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
+                                  int32_t sample_rate);
 
 /**
  * Generate the next audio sample for some parsed PTTTL data
@@ -68,7 +71,7 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
            Call #ptttl_to_wav_error for an error description if -1 is returned.
  */
 int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
-                                    int32_t *sample);
+                                    int16_t *sample);
 
 /**
  * Generate samples for some parsed PTTTL data and write them directly to a .wav file.
