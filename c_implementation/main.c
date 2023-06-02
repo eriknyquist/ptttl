@@ -1,3 +1,5 @@
+// Sample file using ptttl_to_wav.c
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "ptttl_parser.h"
@@ -34,15 +36,6 @@ int main(int argc, char *argv[])
         ptttl_error_t err = ptttl_error();
         printf("Error in %s (line %d, column %d): %s\n", argv[1], err.line, err.column, err.error_message);
         return -1;
-    }
-
-    printf("ptttl_output_t size : %u\n\n", sizeof(ptttl_output_t));
-    printf("Song name     : %s\n", output.name);
-    printf("Channel count : %u\n", output.channel_count);
-
-    for (unsigned int i = 0u; i < output.channel_count; i++)
-    {
-        printf("Channel %u: %u notes\n", i, output.channels[i].note_count);
     }
 
     ret = ptttl_to_wav(&output, "test_file.wav");
