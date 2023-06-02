@@ -81,14 +81,14 @@ typedef struct
     const char *error_message;  ///< Human-readable error message
     int line;                   ///< Line number within input text
     int column;                 ///< Column number within input text
-} ptttl_error_t;
+} ptttl_parser_error_t;
 
 /**
  * Get pointer to error message after ptttl_parse has returned -1
  *
  * @return  Object describing the error that occurred
  */
-ptttl_error_t ptttl_error(void);
+ptttl_parser_error_t ptttl_parser_error(void);
 
 /**
  * Convert a ptttl_input_t struct to a ptttl_output_t struct

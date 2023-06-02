@@ -19,7 +19,7 @@
 #include "ptttl_parser.h"
 
 
-// Helper macro, stores information about an error, which can be retrieved by ptttl_error()
+// Helper macro, stores information about an error, which can be retrieved by ptttl_parser_error()
 #define ERROR(s, l, c)              \
 {                                   \
     _error.error_message = s;       \
@@ -187,7 +187,7 @@ static float _note_pitches[NOTE_PITCH_COUNT] =
 static unsigned int _valid_note_durations[NOTE_DURATION_COUNT] = {1u, 2u, 4u, 8u, 16u, 32u};
 
 // Holds information about lastg error encountered
-static ptttl_error_t _error;
+static ptttl_parser_error_t _error;
 
 
 /**
@@ -838,7 +838,7 @@ static int _parse_note_data(ptttl_input_t *input, ptttl_output_t *output, settin
 /**
  * @see ptttl_parser.h
  */
-ptttl_error_t ptttl_error(void)
+ptttl_parser_error_t ptttl_parser_error(void)
 {
     return _error;
 }

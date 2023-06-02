@@ -53,8 +53,8 @@ const char *ptttl_sample_generator_error(void);
  * @param generator      Pointer to generator instance to initialize
  * @param sample_rate    Sample rate, samples per second
  *
- * @return 0 if successful, -1 if an error occurred. Call #ptttl_to_wav_error for
- *         an error description if -1 is returned.
+ * @return 0 if successful, -1 if an error occurred. Call #ptttl_sample_generator_error
+ *         for an error description if -1 is returned.
  */
 int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
                                   int32_t sample_rate);
@@ -66,8 +66,8 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
  * @param generator      Pointer to initialized generator object
  * @param sample         Pointer to location to store sample value
  *
- * @return 0 if successful, 1, if all samples have been generated, and -1 if an error occurred.
-           Call #ptttl_to_wav_error for an error description if -1 is returned.
+ * @return 0 if successful, 1 if all samples have been generated, and -1 if an error occurred.
+           Call #ptttl_sample_generator_error for an error description if -1 is returned.
  */
 int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
                                     int16_t *sample);

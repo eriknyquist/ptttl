@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     int ret = ptttl_parse(&input, &output);
     if (ret < 0)
     {
-        ptttl_error_t err = ptttl_error();
+        ptttl_parser_error_t err = ptttl_parser_error();
         printf("Error in %s (line %d, column %d): %s\n", argv[1], err.line, err.column, err.error_message);
         return -1;
     }
