@@ -1,8 +1,13 @@
-/* pttl_parser.c
+/* ptttl_parser.c
  *
- * PTTTL & RTTTL parser implemented in C. No dynamic memory allocation.
+ * Parser for RTTTL (Ring Tone Text Transfer Language) and PTTTL (Polyphonic Tone
+ * Text Transfer Language)
  *
- * Requires stdint.h, strtoul() from stdlib.h and memset() from string.h.
+ * Converts a PTTTL or RTTTL source file into a ptttl_output_t object, which is
+ * an intermediate representation that can be processed by ptttl_sample_generator.c
+ * to obtain the audio samples directly, or ptttl_to_wav.c to create a .wav file.
+ *
+ * Requires stdint.h, strtoul() from stdlib.h, and memset() from string.h.
  *
  * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
  *
