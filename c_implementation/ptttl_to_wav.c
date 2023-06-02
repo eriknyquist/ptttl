@@ -96,6 +96,7 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     int ret = ptttl_sample_generator_create(parsed_ptttl, &generator, 44100);
     if (ret < 0)
     {
+        _error = ptttl_sample_generator_error();
         return ret;
     }
 
@@ -124,6 +125,12 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
             ERROR("Failed to write to WAV file");
             return -1;
         }
+    }
+
+    if (ret < 0)
+    {
+        _error = ptttl_sample_generator_error();
+        return ret;
     }
 
     // Seek back to beginning and populate header

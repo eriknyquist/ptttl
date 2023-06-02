@@ -44,7 +44,7 @@ typedef struct
  *
  * @return Pointer to error string, or NULL if no error occurred
  */
-const char *ptttl_to_samples_error(void);
+const char *ptttl_sample_generator_error(void);
 
 /**
  * Initialize a sample generator instance for a specific ptttl_output_t object

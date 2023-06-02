@@ -17,8 +17,8 @@
 
 #include "ptttl_sample_generator.h"
 
-#define MAX_SAMPLE_VALUE (0x7FFF)
-#define AMPLITUDE (0.8f)
+#define MAX_SAMPLE_VALUE (0x7FFF)   ///< Max. value of a signed 16-bit sample
+#define AMPLITUDE        (0.8f)     ///< Amplitude of generated samples, 0.0 through 1.0
 
 #define ERROR(error_msg) (_error = error_msg)
 
@@ -76,7 +76,15 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
 }
 
 /**
- * @see ptttl_to_wav.h
+ * @see ptttl_sample_generator.h
+ */
+const char *ptttl_sample_generator_error(void)
+{
+    return _error;
+}
+
+/**
+ * @see ptttl_sample_generator.h
  */
 int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
                                   int32_t sample_rate)
