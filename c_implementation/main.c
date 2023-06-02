@@ -32,10 +32,11 @@ int main(int argc, char *argv[])
     if (ret < 0)
     {
         ptttl_error_t err = ptttl_error();
-        printf("Error in %s[%d:%d]: %s\n", argv[1], err.line, err.column, err.error_message);
+        printf("Error in %s (line %d, column %d): %s\n", argv[1], err.line, err.column, err.error_message);
         return -1;
     }
 
+    printf("ptttl_output_t size : %u\n\n", sizeof(ptttl_output_t));
     printf("Song name     : %s\n", output.name);
     printf("Channel count : %u\n", output.channel_count);
 

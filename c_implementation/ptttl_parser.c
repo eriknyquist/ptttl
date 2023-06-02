@@ -644,8 +644,13 @@ static int _parse_note_vibrato(ptttl_input_t *input, settings_t *settings, ptttl
         var_hz = (uint32_t) var;
     }
 
+#if PTTTL_VIBRATO_ENABLED
     output->vibrato_settings = freq_hz & 0xffffu;
     output->vibrato_settings |= ((var_hz & 0xffffu) << 16u);
+#else
+    (void) freq_hz;
+    (void) var_hz;
+#endif // PTTTL_VIBRATO_ENABLED
 
     return 0;
 }

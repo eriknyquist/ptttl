@@ -24,6 +24,12 @@
 #define PTTTL_MAX_NOTES_PER_CHANNEL (128u)  // Max. notes allowed in a single PTTTL channel
 #define PTTTL_MAX_NAME_LEN          (256u)  // Max. characters allowed in the "name" field of a PTTTL file
 
+
+#ifndef PTTTL_VIBRATO_ENABLED
+#define PTTTL_VIBRATO_ENABLED (0u)          // If 1, vibrato settings for each note will be included in ptttl_output_t
+#endif // PTTTL_VIBRATO_ENABLED
+
+
 /**
  * Represents PTTTL source loaded fully into memory from a single file
  */
@@ -43,7 +49,9 @@ typedef struct
 {
     float pitch_hz;             ///< Note pitch in Hz (0.0f for pause)
     float duration_secs;        ///< Note duration in seconds
+#if PTTTL_VIBRATO_ENABLED
     uint32_t vibrato_settings;  ///< Bits 0-15 is vibrato frequency, and 16-31 is variance, both in Hz
+#endif // PTTTL_VIBRATO_ENABLED
 } ptttl_output_note_t;
 
 /**
