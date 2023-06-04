@@ -20,11 +20,11 @@
 
 
 // Helper macro, stores information about an error, which can be retrieved by ptttl_parser_error()
-#define ERROR(s, l, c)              \
+#define ERROR(s)                    \
 {                                   \
     _error.error_message = s;       \
-    _error.line = l;                \
-    _error.column = c;              \
+    _error.line = _line;            \
+    _error.column = _column;        \
 }
 
 // Helper macro, checks if a character is whitespace
@@ -32,16 +32,6 @@
 
 // Helper macro, checks if a character is a digit
 #define IS_DIGIT(c) (((c) >= '0') && ((c) <= '9'))
-
-// Helper macro, set error and return if max. input size is reached
-#define INPUT_SIZE_CHECK(i)                                       \
-{                                                                 \
-    if (i->pos >= i->input_text_size)                             \
-    {                                                             \
-        ERROR("Unexpected EOF encountered", i->line, i->column);  \
-        return -1;                                                \
-    }                                                             \
-}
 
 #define CHECK_SHARPONLY(string, size, notechar, val, sharpval) \
 {                                                              \
@@ -113,12 +103,42 @@
     }                                                                   \
 }
 
+#define CHECK_READCHAR_RET(_retval)                  \
+{                                                    \
+    if (1 == _retval)                                \
+    {                                                \
+        ERROR("Unexpected EOF encountered");         \
+        return -1;                                   \
+    }                                                \
+    else if (0 > _retval)                            \
+    {                                                \
+        ERROR("readchar callback returned -1");      \
+        return -1;                                   \
+    }                                                \
+}
+
+#define CHECK_READCHAR_RET_EOF(_retval)              \
+{                                                    \
+    if (1 == _retval)                                \
+    {                                                \
+        return 1;                                    \
+    }                                                \
+    else if (0 > _retval)                            \
+    {                                                \
+        ERROR("readchar callback returned -1");      \
+        return -1;                                   \
+    }                                                \
+}
+
 // Max. value allowed for note octave
 #define NOTE_OCTAVE_MAX (8u)
 
 // Number of valid note duration values
 #define NOTE_DURATION_COUNT (6u)
 
+
+static unsigned int _line = 0u;    // Current line number in PTTTL source file
+static unsigned int _column = 0u;  // Current column number in PTTTL source file
 
 /**
  * Holds all values that can be gleaned from the PTTTL 'settings' section
@@ -189,6 +209,9 @@ static unsigned int _valid_note_durations[NOTE_DURATION_COUNT] = {1u, 2u, 4u, 8u
 // Holds information about lastg error encountered
 static ptttl_parser_error_t _error;
 
+static uint8_t _have_saved_char = 0u;
+static char _saved_char = '\0';
+
 
 /**
  * Find the corresponding note_pitch_e value corresponding to a musical note string
@@ -216,65 +239,78 @@ static note_pitch_e _note_string_to_enum(char *string, int size)
     return NOTE_INVALID;
 }
 
+static int _readchar_wrapper(ptttl_parser_readchar_t readchar, char *nextchar)
+{
+    if (1u == _have_saved_char)
+    {
+        _have_saved_char = 0u;
+        *nextchar = _saved_char;
+        return 0u;
+    }
+
+    return readchar(nextchar);
+}
+
 /**
  * Starting from the current input position, consume all characters that are not
  * PTTTL source (comments and whitespace), incrementing line and column counters as needed,
  * until a visible PTTTL character or EOF is seen. Input position will be left at the first
  * visible PTTTL source character that is seen.
  *
- * @param input   Pointer to PTTTL input data
+ * @param readchar  Callback function to read next PTTTL source character
  *
  * @return 0 if successful, -1 if EOF was seen
  */
-static int _eat_all_nonvisible_chars(ptttl_input_t *input)
+static int _eat_all_nonvisible_chars(ptttl_parser_readchar_t readchar)
 {
+    char nextchar = '\0';
+    int readchar_ret = 0;
     uint8_t in_comment = 0u;
-    while (input->pos < input->input_text_size)
+
+    while ((readchar_ret = _readchar_wrapper(readchar, &nextchar)) == 0)
     {
         if (1u == in_comment)
         {
-            if ('\n' == input->input_text[input->pos])
+            if ('\n' == nextchar)
             {
                 in_comment = 0u;
             }
             else
             {
-                input->pos += 1u;
-                input->column += 1u;
+                _column += 1u;
                 continue;
             }
         }
 
-        if (IS_WHITESPACE(input->input_text[input->pos]))
+        if (IS_WHITESPACE(nextchar))
         {
-            if ('\n' == input->input_text[input->pos])
+            if ('\n' == nextchar)
             {
-                input->line += 1;
-                input->column = 1;
+                _line += 1;
+                _column = 1;
             }
             else
             {
-                input->column += 1;
+                _column += 1;
             }
-
-            input->pos += 1;
         }
         else
         {
-            if ('#' == input->input_text[input->pos])
+            if ('#' == nextchar)
             {
                 in_comment = 1u;
-                input->pos += 1u;
-                input->column += 1u;
+                _column += 1u;
             }
             else
             {
+                _saved_char = nextchar;
+                _have_saved_char = 1u;
                 return 0;
             }
         }
     }
 
-    return -1;
+    return readchar_ret;
 }
 
 /**
@@ -283,64 +319,74 @@ static int _eat_all_nonvisible_chars(ptttl_input_t *input)
  * accordingly. After this function runs successfully, the input position will be
  * at the character *after* the first non-whitespace character that was found.
  *
- * @param input    Pointer to PTTTL input data
- * @param output   Pointer to location to store first non-whitespace char
+ * @param input     Pointer to PTTTL input data
+ * @param readchar  Callback function to read next PTTTL source character
  *
  * @return 0 if successful, -1 if EOF was encountered before non-whitespace char was found
  */
-static int _get_next_visible_char(ptttl_input_t *input, char *output)
+static int _get_next_visible_char(ptttl_parser_readchar_t readchar, char *output)
 {
-    int ret = _eat_all_nonvisible_chars(input);
+    int ret = _eat_all_nonvisible_chars(readchar);
     if (ret < 0)
     {
         return -1;
     }
 
-    *output = input->input_text[input->pos];
-    input->pos += 1;
-    input->column += 1;
-    return 0;
+    return _readchar_wrapper(readchar, output);
 }
 
 /**
  * Parse an unsigned integer from the current input position
  *
- * @param input    Pointer to PTTTL input data
- * @param output   Pointer to location to store parsed unsigned integer
+ * @param input        Pointer to PTTTL input data
+ * @param readchar     Callback function to read next PTTTL source character
+ * @param eof_allowed  if 1, error will not be reported on EOF
  *
  * @return 0 if successful, -1 otherwise
  */
-static int _parse_uint_from_input(ptttl_input_t *input, unsigned int *output)
+static int _parse_uint_from_input(ptttl_parser_readchar_t readchar, unsigned int *output,
+                                  uint8_t eof_allowed)
 {
     char buf[32u];
     int pos = 0;
+    int readchar_ret = 0;
+    char nextchar = '\0';
 
-    while (input->pos < input->input_text_size)
+    while ((readchar_ret = _readchar_wrapper(readchar, &nextchar)) == 0)
     {
-        char c = input->input_text[input->pos];
-        if (IS_DIGIT(c))
+        if (IS_DIGIT(nextchar))
         {
             if (pos == (sizeof(buf) - 1))
             {
-                ERROR("Integer is too long", input->line, input->column);
+                ERROR("Integer is too long");
                 return -1;
             }
 
-            buf[pos] = c;
-            input->column += 1;
-            input->pos += 1;
+            buf[pos] = nextchar;
+            _column += 1;
             pos += 1;
         }
         else
         {
+            _saved_char = nextchar;
+            _have_saved_char = 1u;
             buf[pos] = '\0';
             break;
         }
     }
 
+    if (eof_allowed)
+    {
+        CHECK_READCHAR_RET_EOF(readchar_ret);
+    }
+    else
+    {
+        CHECK_READCHAR_RET(readchar_ret);
+    }
+
     if (0 == pos)
     {
-        ERROR("Expected an integer", input->line, input->column);
+        ERROR("Expected an integer");
         return -1;
     }
 
@@ -375,12 +421,12 @@ static unsigned int _valid_note_duration(unsigned int duration)
  * field in the provided settings_t object
  *
  * @param opt       Key for the option being set
- * @param input     Pointer to PTTTL input data
+ * @param readchar  Callback function to read next PTTTL source character
  * @param settings  Pointer to location to store parsed setting data
  *
  * @return 0 if successful, -1 otherwise
  */
-static int _parse_option(char opt, ptttl_input_t *input, settings_t *settings)
+static int _parse_option(char opt, ptttl_parser_readchar_t readchar, settings_t *settings)
 {
     if (':' == opt)
     {
@@ -389,16 +435,16 @@ static int _parse_option(char opt, ptttl_input_t *input, settings_t *settings)
     }
 
     char equals;
-    int result = _get_next_visible_char(input, &equals);
+    int result = _get_next_visible_char(readchar, &equals);
     if (result < 0)
     {
-        ERROR("Reached EOF before end of settings section", input->line, input->column);
+        ERROR("Reached EOF before end of settings section");
         return -1;
     }
 
     if ('=' != equals)
     {
-        ERROR("Invalid option setting", input->line, input->column);
+        ERROR("Invalid option setting");
         return -1;
     }
 
@@ -406,41 +452,41 @@ static int _parse_option(char opt, ptttl_input_t *input, settings_t *settings)
     switch (opt)
     {
         case 'b':
-            ret = _parse_uint_from_input(input, &settings->bpm);
+            ret = _parse_uint_from_input(readchar, &settings->bpm, 0u);
             break;
         case 'd':
         {
-            ret = _parse_uint_from_input(input, &settings->default_duration);
+            ret = _parse_uint_from_input(readchar, &settings->default_duration, 0u);
 
             if (0 == ret)
             {
                 if (!_valid_note_duration(settings->default_duration))
                 {
-                    ERROR("Invalid note duration (must be 1, 2, 4, 8, 16 or 32)", input->line, input->column);
+                    ERROR("Invalid note duration (must be 1, 2, 4, 8, 16 or 32)");
                     return -1;
                 }
             }
             break;
         }
         case 'o':
-            ret = _parse_uint_from_input(input, &settings->default_octave);
+            ret = _parse_uint_from_input(readchar, &settings->default_octave, 0u);
             if (0 == ret)
             {
                 if (NOTE_OCTAVE_MAX < settings->default_octave)
                 {
-                    ERROR("Invalid octave (must be 0 through 8)", input->line, input->column);
+                    ERROR("Invalid octave (must be 0 through 8)");
                     return -1;
                 }
             }
             break;
         case 'f':
-            ret = _parse_uint_from_input(input, &settings->default_vibrato_freq);
+            ret = _parse_uint_from_input(readchar, &settings->default_vibrato_freq, 0u);
             break;
         case 'v':
-            ret = _parse_uint_from_input(input, &settings->default_vibrato_var);
+            ret = _parse_uint_from_input(readchar, &settings->default_vibrato_var, 0u);
             break;
         default:
-            ERROR("Unrecognized option key", input->line, input->column);
+            ERROR("Unrecognized option key");
             return -1;
             break;
     }
@@ -452,12 +498,12 @@ static int _parse_option(char opt, ptttl_input_t *input, settings_t *settings)
  * Parse the 'settings' section from the current input position, and populate
  * a settings_t object
  *
- * @param input     Pointer to PTTTL input data
+ * @param readchar  Callback function to read next PTTTL source character
  * @param settings  Pointer to location to store parsed settings
  *
  * @return 0 if successful, 1 otherwise
  */
-static int _parse_settings(ptttl_input_t *input, settings_t *settings)
+static int _parse_settings(ptttl_parser_readchar_t readchar, settings_t *settings)
 {
     char c = '\0';
 
@@ -467,40 +513,34 @@ static int _parse_settings(ptttl_input_t *input, settings_t *settings)
     settings->default_vibrato_freq = 0u;
     settings->default_vibrato_var = 0u;
 
-    while(input->pos < input->input_text_size)
+    while (':' != c)
     {
-        int result = _get_next_visible_char(input, &c);
+        int result = _get_next_visible_char(readchar, &c);
         if (result < 0)
         {
-            ERROR("Reached EOF before end of settings section", input->line, input->column);
+            ERROR("Reached EOF before end of settings section");
             return -1;
         }
 
-        result = _parse_option(c, input, settings);
+        result = _parse_option(c, readchar, settings);
         if (result < 0)
         {
             return result;
         }
 
         // After parsing option, next visible char should be comma or colon, otherwise error
-        result = _get_next_visible_char(input, &c);
+        result = _get_next_visible_char(readchar, &c);
         if (result < 0)
         {
-            ERROR("Reached EOF before end of settings section", input->line, input->column);
+            ERROR("Reached EOF before end of settings section");
             return -1;
         }
 
-        if (':' == c)
+        if ((',' != c) && (':' != c))
         {
-            // End of settings section
-            break;
-        }
-        else if (',' != c)
-        {
-            ERROR("Invalid settings section", input->line, input->column);
+            ERROR("Invalid settings section");
             return -1;
         }
-
     }
 
     return 0;
@@ -510,40 +550,45 @@ static int _parse_settings(ptttl_input_t *input, settings_t *settings)
  * Parse musical note character(s) at the current input position, and provide the
  * corresponding pitch value in Hz
  *
- * @param input       Pointer to PTTTL input data
+ * @param readchar    Callback function to read next PTTTL source character
  * @param note_pitch  Pointer to location to store note pitch in Hz
  *
  * @return 0 if successful, -1 otherwise
  */
-static int _parse_musical_note(ptttl_input_t *input, float *note_pitch)
+static int _parse_musical_note(ptttl_parser_readchar_t readchar, float *note_pitch)
 {
     // Read musical note name, convert to lowercase if needed
     char notebuf[3];
     unsigned int notepos = 0u;
-    while ((notepos < 2u) && (input->pos < input->input_text_size))
+    int readchar_ret = 0;
+    char nextchar = '\0';
+
+    while ((notepos < 2u) && ((readchar_ret = _readchar_wrapper(readchar, &nextchar)) == 0))
     {
-        char c = input->input_text[input->pos];
-        if ((c >= 'A') && (c <= 'Z'))
+        if ((nextchar >= 'A') && (nextchar <= 'Z'))
         {
-            notebuf[notepos] = c + ' ';
+            notebuf[notepos] = nextchar + ' ';
         }
-        else if (((c >= 'a') && (c <= 'z')) || (c == '#'))
+        else if (((nextchar >= 'a') && (nextchar <= 'z')) || (nextchar == '#'))
         {
-            notebuf[notepos] = c;
+            notebuf[notepos] = nextchar;
         }
         else
         {
+            _saved_char = nextchar;
+            _have_saved_char = 1u;
             break;
         }
 
         notepos += 1u;
-        input->pos += 1u;
-        input->column += 1u;
+        _column += 1u;
     }
+
+    CHECK_READCHAR_RET_EOF(readchar_ret);
 
     if (notepos == 0u)
     {
-        ERROR("Expecting a musical note name", input->line, input->column);
+        ERROR("Expecting a musical note name");
         return -1;
     }
 
@@ -556,7 +601,7 @@ static int _parse_musical_note(ptttl_input_t *input, float *note_pitch)
         note_pitch_e enum_val = _note_string_to_enum(notebuf, notepos);
         if (NOTE_INVALID == enum_val)
         {
-            ERROR("Invalid musical note name", input->line, input->column);
+            ERROR("Invalid musical note name");
             return -1;
         }
 
@@ -589,32 +634,40 @@ static unsigned int _raise_powerof2(unsigned int exp)
  * input position. If there are no vibrato settings at the current input position,
  * return success.
  *
- * @param input     Pointer to input PTTTL data
+ * @param readchar  Callback function to read next PTTTL source character
  * @param freq_hz   Pointer to location to store parsed vibrato frequency Hz
  * @param freq_var  Pointer to location to store parsed vibrato variance Hz
  *
  * @return 0 if successful, -1 otherwise
  */
-static int _parse_note_vibrato(ptttl_input_t *input, settings_t *settings, ptttl_output_note_t *output)
+static int _parse_note_vibrato(ptttl_parser_readchar_t readchar, settings_t *settings, ptttl_output_note_t *output)
 {
-    if ('v' != input->input_text[input->pos])
+    int readchar_ret = 0;
+    char nextchar = '\0';
+
+    readchar_ret = _readchar_wrapper(readchar, &nextchar);
+    CHECK_READCHAR_RET_EOF(readchar_ret);
+    if ('v' != nextchar)
     {
+        _saved_char = nextchar;
+        _have_saved_char = 1u;
         return 0;
     }
 
-    input->pos += 1;
-    input->column += 1;
-
-    INPUT_SIZE_CHECK(input);
+    _column += 1;
 
     uint32_t freq_hz = settings->default_vibrato_freq;
     uint32_t var_hz = settings->default_vibrato_var;
 
     // Parse vibrato frequency, if any
-    if (IS_DIGIT(input->input_text[input->pos]))
+    readchar_ret = _readchar_wrapper(readchar, &nextchar);
+    CHECK_READCHAR_RET_EOF(readchar_ret);
+    _saved_char = nextchar;
+    _have_saved_char = 1u;
+    if (IS_DIGIT(nextchar))
     {
         unsigned int freq = 0u;
-        int ret = _parse_uint_from_input(input, &freq);
+        int ret = _parse_uint_from_input(readchar, &freq, 1u);
         if (ret < 0)
         {
             return ret;
@@ -627,15 +680,12 @@ static int _parse_note_vibrato(ptttl_input_t *input, settings_t *settings, ptttl
         return 0;
     }
 
-    if ('-' == input->input_text[input->pos])
+    if ('-' == nextchar)
     {
-        input->pos += 1;
-        input->column += 1;
-
-        INPUT_SIZE_CHECK(input);
+        _column += 1;
 
         unsigned int var = 0u;
-        int ret = _parse_uint_from_input(input, &var);
+        int ret = _parse_uint_from_input(readchar, &var, 1u);
         if (ret < 0)
         {
             return ret;
@@ -659,21 +709,28 @@ static int _parse_note_vibrato(ptttl_input_t *input, settings_t *settings, ptttl
  * Parse a single PTTTL note (duration, musical note, octave, and vibrato settings)
  * from the current input position, and populate a ptttl_output_note_t object.
  *
- * @param input     Pointer to input PTTTL data
+ * @param readchar  Callback function to read next PTTTL source character
  * @param settings  Pointer to PTTTL settings parsed from settings section
  * @param output    Pointer to location to store output ptttl_output_note_t data
  *
  * @return 0 if successful, -1 otherwise
  */
-static int _parse_ptttl_note(ptttl_input_t *input, settings_t *settings, ptttl_output_note_t *output)
+static int _parse_ptttl_note(ptttl_parser_readchar_t readchar, settings_t *settings, ptttl_output_note_t *output)
 {
     unsigned int dot_seen = 0u;
 
     // Read note duration, if it exists
     unsigned int duration = settings->default_duration;
-    if (IS_DIGIT(input->input_text[input->pos]))
+
+    char nextchar = '\0';
+    int readchar_ret = _readchar_wrapper(readchar, &nextchar);
+    CHECK_READCHAR_RET_EOF(readchar_ret);
+    _saved_char = nextchar;
+    _have_saved_char = 1u;
+
+    if (IS_DIGIT(nextchar))
     {
-        int ret = _parse_uint_from_input(input, &duration);
+        int ret = _parse_uint_from_input(readchar, &duration, 0u);
         if (ret < 0)
         {
             return ret;
@@ -681,52 +738,64 @@ static int _parse_ptttl_note(ptttl_input_t *input, settings_t *settings, ptttl_o
 
         if (!_valid_note_duration(duration))
         {
-            ERROR("Invalid note duration (must be 1, 2, 4, 8, 16 or 32)", input->line, input->column);
+            ERROR("Invalid note duration (must be 1, 2, 4, 8, 16 or 32)");
             return -1;
         }
     }
 
-    int ret = _parse_musical_note(input, &output->pitch_hz);
+    int ret = _parse_musical_note(readchar, &output->pitch_hz);
     if (ret < 0)
     {
         return ret;
     }
 
-    INPUT_SIZE_CHECK(input);
-
     // Check for dot after note letter
-    if ('.' == input->input_text[input->pos])
+    readchar_ret = _readchar_wrapper(readchar, &nextchar);
+    CHECK_READCHAR_RET_EOF(readchar_ret);
+    if ('.' == nextchar)
     {
         dot_seen = 1u;
-        input->pos += 1u;
-        input->column += 1u;
-        INPUT_SIZE_CHECK(input);
+        _column += 1u;
+    }
+    else
+    {
+        _saved_char = nextchar;
+        _have_saved_char = 1u;
     }
 
     // Read octave, if it exists
     unsigned int octave = settings->default_octave;
-    if (IS_DIGIT(input->input_text[input->pos]))
+    readchar_ret = _readchar_wrapper(readchar, &nextchar);
+    CHECK_READCHAR_RET_EOF(readchar_ret);
+    if (IS_DIGIT(nextchar))
     {
-        octave = ((unsigned int) input->input_text[input->pos]) - 48u;
+        octave = ((unsigned int) nextchar) - 48u;
         if (NOTE_OCTAVE_MAX < octave)
         {
-            ERROR("Invalid octave (must be 0 through 8)", input->line, input->column);
+            ERROR("Invalid octave (must be 0 through 8)");
             return -1;
         }
 
-        input->pos += 1;
-        input->column += 1;
+        _column += 1;
+    }
+    else
+    {
+        _saved_char = nextchar;
+        _have_saved_char = 1u;
     }
 
-    INPUT_SIZE_CHECK(input);
-
     // Check for dot again after octave
-    if ('.' == input->input_text[input->pos])
+    readchar_ret = _readchar_wrapper(readchar, &nextchar);
+    CHECK_READCHAR_RET_EOF(readchar_ret);
+    if ('.' == nextchar)
     {
         dot_seen = 1u;
-        input->pos += 1u;
-        input->column += 1u;
-        INPUT_SIZE_CHECK(input);
+        _column += 1u;
+    }
+    else
+    {
+        _saved_char = nextchar;
+        _have_saved_char = 1u;
     }
 
     // Set true pitch based on octave, if octave is not 4
@@ -749,30 +818,31 @@ static int _parse_ptttl_note(ptttl_input_t *input, settings_t *settings, ptttl_o
         output->duration_secs += (output->duration_secs / 2.0f);
     }
 
-    return _parse_note_vibrato(input, settings, output);
+    return _parse_note_vibrato(readchar, settings, output);
 }
 
 /**
  * Parse the entire "data" section from the current input position, and populate
  * the output struct
  *
- * @param input     Pointer to PTTTL input data
+ * @param readchar  Callback function to read next PTTTL source character
  * @param output    Pointer to location to store parsed output
  * @param settings  Pointer to PTTTL settings parsed from settings section
  *
  * @return 0 if successful, -1 otherwise
  */
-static int _parse_note_data(ptttl_input_t *input, ptttl_output_t *output, settings_t *settings)
+static int _parse_note_data(ptttl_parser_readchar_t readchar, ptttl_output_t *output, settings_t *settings)
 {
+    int result = 0;
     unsigned int current_channel_idx = 0u;
 
-    while (input->pos < input->input_text_size)
+    while (0 == result)
     {
         ptttl_output_channel_t *current_channel = &output->channels[current_channel_idx];
         ptttl_output_note_t *current_note = &current_channel->notes[current_channel->note_count];
 
-        int ret = _parse_ptttl_note(input, settings, current_note);
-        if (ret < 0)
+        int ret = _parse_ptttl_note(readchar, settings, current_note);
+        if (ret != 0)
         {
             return ret;
         }
@@ -781,7 +851,7 @@ static int _parse_note_data(ptttl_input_t *input, ptttl_output_t *output, settin
         current_channel->note_count += 1u;
 
         char next_char;
-        int result = _get_next_visible_char(input, &next_char);
+        int result = _get_next_visible_char(readchar, &next_char);
         if (result < 0)
         {
             // EOF was reached
@@ -794,7 +864,7 @@ static int _parse_note_data(ptttl_input_t *input, ptttl_output_t *output, settin
             current_channel_idx += 1u;
             if (PTTTL_MAX_CHANNELS_PER_FILE == current_channel_idx)
             {
-                ERROR("Maximum channel count exceeded", input->line, input->column);
+                ERROR("Maximum channel count exceeded");
                 return -1;
             }
         }
@@ -809,7 +879,7 @@ static int _parse_note_data(ptttl_input_t *input, ptttl_output_t *output, settin
             {
                 if ((current_channel_idx + 1u) != output->channel_count)
                 {
-                    ERROR("All blocks must have the same number of channels", input->line, input->column);
+                    ERROR("All blocks must have the same number of channels");
                     return -1;
                 }
             }
@@ -820,16 +890,18 @@ static int _parse_note_data(ptttl_input_t *input, ptttl_output_t *output, settin
         {
             if (',' != next_char)
             {
-                ERROR("Unexpected character, expecting one of: , | ;", input->line, input->column);
+                ERROR("Unexpected character, expecting one of: , | ;");
                 return -1;
             }
         }
 
-        ret = _eat_all_nonvisible_chars(input);
-        if (ret < 0)
-        {
-            return 0;
-        }
+        result = _eat_all_nonvisible_chars(readchar);
+    }
+
+    if (0 > result)
+    {
+        ERROR("readchar callback returned -1");
+        return result;
     }
 
     return 0;
@@ -846,87 +918,79 @@ ptttl_parser_error_t ptttl_parser_error(void)
 /**
  * @see ptttl_parser.h
  */
-int ptttl_parse(ptttl_input_t *input, ptttl_output_t *output)
+int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output)
 {
-    if ((NULL == input) || (NULL == output))
+    _line = 0u;
+    _column = 0u;
+
+    if ((NULL == readchar) || (NULL == output))
     {
-        ERROR("NULL pointer provided", 0, 0);
+        ERROR("NULL pointer provided");
         return -1;
     }
 
-    if (NULL == input->input_text)
-    {
-        ERROR("NULL pointer provided", 0, 0);
-        return -1;
-    }
-
-    if (0u == input->input_text_size)
-    {
-        ERROR("Input text size is 0", 0, 0);
-        return -1;
-    }
-
-    input->line = 1;
-    input->column = 1;
-    input->pos = 0;
+    _line = 1u;
+    _column = 1u;
 
     (void) memset(output, 0, sizeof(ptttl_output_t));
 
     // Read name (first field)
-    int ret = _get_next_visible_char(input, &output->name[0]);
+    int ret = _get_next_visible_char(readchar, &output->name[0]);
     if (ret < 0)
     {
-        ERROR("Unexpected EOF encountered", input->line, input->column);
+        ERROR("Unexpected EOF encountered");
         return -1;
     }
 
-    int namepos = 1;
-    while (input->pos < input->input_text_size)
+    unsigned int namepos = 1u;
+    int readchar_ret = 0;
+    char namechar = '\0';
+    while ((readchar_ret = _readchar_wrapper(readchar, &namechar) == 0))
     {
-        char namechar = input->input_text[input->pos];
         if (':' == namechar)
         {
-            input->pos += 1u;
-            input->column += 1u;
+            _column += 1u;
             output->name[namepos] = '\0';
             break;
         }
         else
         {
+            if ((PTTTL_MAX_NAME_LEN - 1u) == namepos)
+            {
+                ERROR("Name too long, see PTTTL_MAX_NAME_LEN in ptttl_parser.h");
+                return -1;
+            }
+
             if ('\n' == namechar)
             {
-                input->column = 1;
-                input->line += 1;
+                _column = 1;
+                _line += 1;
             }
             else
             {
-                input->column += 1;
+                _column += 1;
             }
 
             output->name[namepos] = namechar;
-            namepos += 1;
+            namepos += 1u;
         }
-
-        input->pos += 1u;
     }
-
-    INPUT_SIZE_CHECK(input);
 
     // Read PTTTL settings, next section after the name
     settings_t settings;
-    ret = _parse_settings(input, &settings);
+    ret = _parse_settings(readchar, &settings);
     if (ret < 0)
     {
         return -1;
     }
 
-    ret = _eat_all_nonvisible_chars(input);
+    ret = _eat_all_nonvisible_chars(readchar);
     if (ret < 0)
     {
-        ERROR("Unexpected EOF encountered", input->line, input->column);
+        ERROR("Unexpected EOF encountered");
         return -1;
     }
 
     // Read & process all note data
-    return _parse_note_data(input, output, &settings);
+    return _parse_note_data(readchar, output, &settings);
 }

@@ -5,38 +5,40 @@
 #include "ptttl_parser.h"
 #include "ptttl_to_wav.h"
 
+static FILE *fp = NULL;
+
+static int _ptttl_readchar(char *nextchar)
+{
+    size_t ret = fread(nextchar, 1, 1, fp);
+    return (1u == ret) ? 0 : 1;
+}
 
 int main(int argc, char *argv[])
 {
-    char buf[2048];
+    if (2 != argc)
+    {
+        printf("Usage: %s <ptttl or rtttl source file>\n", argv[0]);
+        return -1;
+    }
 
-    FILE *f = fopen(argv[1], "rb");
-    if (NULL == f)
+    fp = fopen(argv[1], "rb");
+    if (NULL == fp)
     {
         printf("Unable to open file %s\n", argv[1]);
         return -1;
     }
 
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    fread(buf, fsize, 1, f);
-    buf[fsize] = '\0';
-    fclose(f);
-
     ptttl_output_t output;
-    ptttl_input_t input;
 
-    input.input_text = buf;
-    input.input_text_size = fsize;
-    int ret = ptttl_parse(&input, &output);
+    int ret = ptttl_parse(_ptttl_readchar, &output);
     if (ret < 0)
     {
         ptttl_parser_error_t err = ptttl_parser_error();
         printf("Error in %s (line %d, column %d): %s\n", argv[1], err.line, err.column, err.error_message);
         return -1;
     }
+
+    fclose(fp);
 
     ret = ptttl_to_wav(&output, "test_file.wav");
     if (ret < 0)
