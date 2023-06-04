@@ -157,7 +157,7 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
         }
     }
 
-    // Generate next sample value for this channel, add it to the sum
+    // Generate next sample value for this channel
     if (0.0f == note->pitch_hz) // Pitch of 0 indicates pause/rest
     {
         *sample = 0.0f;
