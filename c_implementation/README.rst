@@ -4,10 +4,12 @@ Portable C implementation of PTTTL/RTTTL parser
 This implementation is split into 3 parts, to make it easier for you to take
 only the file(s) that you need:
 
-* **ptttl_parser.c**: Reads PTTTL or RTTTL source text from memory, and produces an
-  intermediate representation of the musical data which is easy to convert to audio
-  samples. See ``ptttl_parser.h`` for more details. Requires ``stdint.h``,
-  ``strtoul()`` from ``stdlib.h``, and ``memset()`` from ``string.h``.
+* **ptttl_parser.c**: Reads PTTTL or RTTTL source, and produces an intermediate
+  representation of the musical data which is easy to convert to audio samples.
+  No dynamic memory allocation, and no loading the entire source file into memory
+  (a callback must be provided to read/fetch the next source character). See
+  ``ptttl_parser.h`` for more details. Requires ``stdint.h``, ``strtoul()`` from
+  ``stdlib.h``, and ``memset()`` from ``string.h``.
 
 * **ptttl_sample_generator.c**: Reads the output of ``ptttl_parser.c`` and produces
   16-bit audio samples containing the tones described by the RTTTL/PTTTL source, as sine

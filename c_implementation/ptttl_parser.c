@@ -1,7 +1,7 @@
 /* ptttl_parser.c
  *
  * Parser for RTTTL (Ring Tone Text Transfer Language) and PTTTL (Polyphonic Tone
- * Text Transfer Language)
+ * Text Transfer Language, superset of RTTTL which supports polyphony)
  *
  * Converts a PTTTL or RTTTL source file into a ptttl_output_t object, which is
  * an intermediate representation that can be processed by ptttl_sample_generator.c
@@ -992,5 +992,17 @@ int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output)
     }
 
     // Read & process all note data
-    return _parse_note_data(readchar, output, &settings);
+    ret = _parse_note_data(readchar, output, &settings);
+    if (ret < 0)
+    {
+        return ret;
+    }
+
+    // Edge case for RTTTL or PTTTL with a single note channel
+    if ((0u == output->channel_count) && (0u < output->channels[0].note_count))
+    {
+        output->channel_count = 1u;
+    }
+
+    return 0;
 }

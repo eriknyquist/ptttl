@@ -7,9 +7,12 @@
 
 static FILE *fp = NULL;
 
+// ptttl_readchar_t callback to read the next PTTTL/RTTTL source character from a file
 static int _ptttl_readchar(char *nextchar)
 {
     size_t ret = fread(nextchar, 1, 1, fp);
+
+    // Return 0 for success, 1 for EOF, and -1 for error
     return (1u == ret) ? 0 : 1;
 }
 
@@ -28,8 +31,8 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    // Parse PTTTL/RTTTL source and produce intermediate representation
     ptttl_output_t output;
-
     int ret = ptttl_parse(_ptttl_readchar, &output);
     if (ret < 0)
     {
@@ -40,6 +43,7 @@ int main(int argc, char *argv[])
 
     fclose(fp);
 
+    // Convert intermediate representation to .wav file
     ret = ptttl_to_wav(&output, "test_file.wav");
     if (ret < 0)
     {

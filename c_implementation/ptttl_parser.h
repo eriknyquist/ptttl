@@ -1,7 +1,7 @@
 /* ptttl_parser.h
  *
  * Parser for RTTTL (Ring Tone Text Transfer Language) and PTTTL (Polyphonic Tone
- * Text Transfer Language)
+ * Text Transfer Language, superset of RTTTL which supports polyphony)
  *
  * Converts a PTTTL or RTTTL source file into a ptttl_output_t object, which is
  * an intermediate representation that can be processed by ptttl_sample_generator.c
@@ -51,6 +51,7 @@ typedef struct
     ptttl_output_note_t notes[PTTTL_MAX_NOTES_PER_CHANNEL];  ///< Array of notes for this channel
 } ptttl_output_channel_t;
 
+
 /**
  * Holds processed PTTTL data as a sequence of channel_t objects
  */
@@ -61,6 +62,7 @@ typedef struct
     ptttl_output_channel_t channels[PTTTL_MAX_CHANNELS_PER_FILE];  ///< Array of channels
 } ptttl_output_t;
 
+
 /**
  * Holds information about a failure to parse input PTTTL text
  */
@@ -70,6 +72,7 @@ typedef struct
     int line;                   ///< Line number within input text
     int column;                 ///< Column number within input text
 } ptttl_parser_error_t;
+
 
 /**
  * Callback function to fetch the next character of PTTTL source
@@ -89,15 +92,16 @@ typedef int (*ptttl_parser_readchar_t)(char *input_char);
  */
 ptttl_parser_error_t ptttl_parser_error(void);
 
+
 /**
  * Convert a ptttl_input_t struct to a ptttl_output_t struct
  *
  * @param input              Pointer to input data
- * @param readchar_callback  Callback function to read the next PTTTL source character
+ * @param readchar           Callback function to read the next PTTTL source character
  *
  * @return  0 if successful, -1 otherwise. If -1, use #ptttl_error_message
  *          to get a more detailed error message.
  */
-int ptttl_parse(ptttl_parser_readchar_t readchar_callback, ptttl_output_t *output);
+int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output);
 
 #endif // PTTTL_PARSER_H
