@@ -22,7 +22,7 @@
  * ptttl_sample_generator_t object initialization with sane defaults
  */
 #define PTTTL_SAMPLE_GENERATOR_DEFAULT {.current_sample=0u, .sample_rate=44100u,\
-                                        .attack_samples=50u, .decay_samples=100u}
+                                        .attack_samples=50u, .decay_samples=500u}
 
 
 /**
@@ -30,10 +30,10 @@
  */
 typedef struct
 {
-    unsigned int sine_index;    // Monotonically increasing index for sinf() function
-    unsigned int start_sample;  // The sample index on which this note started
-    unsigned int num_samples;   // Number of samples this note runs for
-    unsigned int note_index;    // Index of this note within the ptttl_channel_t->notes array
+    unsigned int sine_index;    ///< Monotonically increasing index for sinf() function
+    unsigned int start_sample;  ///< The sample index on which this note started
+    unsigned int num_samples;   ///< Number of samples this note runs for
+    unsigned int note_index;    ///< Index of this note within the ptttl_channel_t->notes array
 } ptttl_note_stream_t;
 
 /**
@@ -46,9 +46,10 @@ typedef struct
     uint8_t channel_finished[PTTTL_MAX_CHANNELS_PER_FILE];
 
     // Configurable options-- set these before calling ptttl_sample_generator_generate
-    unsigned int sample_rate;
-    unsigned int attack_samples;
-    unsigned int decay_samples;
+
+    unsigned int sample_rate;     ///< Sampling rate in samples per second (Hz)
+    unsigned int attack_samples;  ///< no. of samples to ramp from 0 to full volume, at note start
+    unsigned int decay_samples;   ///< no. of samples to ramp from full volume to 0, at note end
 } ptttl_sample_generator_t;
 
 /**

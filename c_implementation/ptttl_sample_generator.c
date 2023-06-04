@@ -120,11 +120,42 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
     return 0;
 }
 
+/**
+ * Generate the next sample for the given note stream on the given channel
+ *
+ * @param parsed_ptttl   Pointer to parsed PTTTL data
+ * @param generator      Pointer to initialized sample generator
+ * @param note           Pointer to the ptttl_output_note_t instance to generate a sample for
+ * @param stream         Pointer to ptttl_note_stream_t instance to generate a sample for
+ * @param channel_idx    Channel index of channel the generated sample is for
+ * @param sample         Pointer to location to store generated sample
+ *
+ * @return 0 if there are more samples remaining for the provided note stream, 1 otherwise
+ */
 static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
                                     ptttl_output_note_t *note, ptttl_note_stream_t *stream,
                                     unsigned int channel_idx, float *sample)
 {
     int ret = 0;
+    unsigned int samples_elapsed = generator->current_sample - stream->start_sample;
+    unsigned int samples_remaining = stream->num_samples - samples_elapsed;
+
+    unsigned int attack = generator->attack_samples;
+    unsigned int decay = generator->decay_samples;
+
+    // Handle case where attack + delay is longer than note length
+    if ((attack + decay) > stream->num_samples)
+    {
+        unsigned int diff = (attack + decay) - stream->num_samples;
+        if (attack > decay)
+        {
+            attack = (attack > diff) ? attack - diff : 0u;
+        }
+        else
+        {
+            decay = (decay > diff) ? decay - diff : 0u;
+        }
+    }
 
     // Generate next sample value for this channel, add it to the sum
     if (0.0f == note->pitch_hz) // Pitch of 0 indicates pause/rest
@@ -136,7 +167,17 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
         int32_t raw_sample = _generate_sine_sample(generator->sample_rate, note->pitch_hz, stream->sine_index);
         stream->sine_index += 1u;
 
-        // Set desired amplitude
+        // Modify channel sample amplitude based on attack/decay settings
+        if (samples_elapsed < attack)
+        {
+            raw_sample *= ((float) samples_elapsed) / ((float) attack);
+        }
+        else if (samples_remaining < decay)
+        {
+            raw_sample *= ((float) samples_remaining) / ((float) decay);
+        }
+
+        // Set final desired amplitude for channel sample
         *sample = ((float) raw_sample) * AMPLITUDE;
     }
 
