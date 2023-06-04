@@ -45,6 +45,9 @@ You want to read PTTTL/RTTTL text and generate a .wav file
 * Compile ``ptttl_parser.c``, ``ptttl_sample_generator.c`` and ``ptttl_to_wav.c``
   along with your project
 
+* Use ``ptttl_parser.c`` to convert your PTTTL/RTTTL source to intermediate representation
+  (See ``ptttl_parser.h`` for API documentation)
+
 * Use ``ptttl_to_wav.c`` to convert intermediate representation to .wav file
   (See ``ptttl_to_wav.h`` for API documentation)
 
