@@ -86,8 +86,7 @@ const char *ptttl_sample_generator_error(void)
 /**
  * @see ptttl_sample_generator.h
  */
-int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
-                                  int32_t sample_rate)
+int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator)
 {
     if ((NULL == parsed_ptttl) || (NULL == generator))
     {
@@ -101,7 +100,6 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
         return -1;
     }
 
-    generator->sample_rate = sample_rate;
     generator->current_sample = 0u;
 
     memset(generator->channel_finished, 0, sizeof(generator->channel_finished));
@@ -120,6 +118,46 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
     }
 
     return 0;
+}
+
+static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
+                                    ptttl_output_note_t *note, ptttl_note_stream_t *stream,
+                                    unsigned int channel_idx, float *sample)
+{
+    int ret = 0;
+
+    // Generate next sample value for this channel, add it to the sum
+    if (0.0f == note->pitch_hz) // Pitch of 0 indicates pause/rest
+    {
+        *sample = 0.0f;
+    }
+    else
+    {
+        int32_t raw_sample = _generate_sine_sample(generator->sample_rate, note->pitch_hz, stream->sine_index);
+        stream->sine_index += 1u;
+
+        // Set desired amplitude
+        *sample = ((float) raw_sample) * AMPLITUDE;
+    }
+
+    // Check if last sample for this note stream
+    if ((generator->current_sample - stream->start_sample) >= stream->num_samples)
+    {
+        if (stream->note_index >= parsed_ptttl->channels[channel_idx].note_count)
+        {
+            // All notes for this channel finished
+            ret = 1u;
+        }
+        else
+        {
+            // Load the next note for this channel
+            stream->note_index += 1u;
+            _load_note_stream(generator, &parsed_ptttl->channels[channel_idx], stream->note_index,
+                              &generator->note_streams[channel_idx]);
+        }
+    }
+
+    return ret;
 }
 
 /**
@@ -146,37 +184,20 @@ int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_g
             continue;
         }
 
+        num_channels_provided += 1u;
         ptttl_note_stream_t *stream = &generator->note_streams[i];
         ptttl_output_note_t *note = &parsed_ptttl->channels[i].notes[stream->note_index];
 
-        // Generate next sample value for this channel, add it to the sum
-        if (0.0f < note->pitch_hz) // Pitch of 0 indicates pause/rest
+        float chan_sample = 0.0f;
+        int channel_finished = _generate_channel_sample(parsed_ptttl, generator, note, stream,
+                                                        i, &chan_sample);
+
+        summed_sample += chan_sample;
+
+        if (1 == channel_finished)
         {
-            int32_t raw_sample = _generate_sine_sample(generator->sample_rate, note->pitch_hz, stream->sine_index);
-            stream->sine_index += 1u;
-
-            // Set desired amplitude
-            summed_sample += ((float) raw_sample) * AMPLITUDE;
-        }
-
-        num_channels_provided += 1u;
-
-        // Check if last sample for this note stream
-        if ((generator->current_sample - stream->start_sample) >= stream->num_samples)
-        {
-            if (stream->note_index >= parsed_ptttl->channels[i].note_count)
-            {
-                // All notes for this channel finished
-                generator->channel_finished[i] = 1u;
-                continue;
-            }
-            else
-            {
-                // Load the next note for this channel
-                stream->note_index += 1u;
-                _load_note_stream(generator, &parsed_ptttl->channels[i], stream->note_index,
-                                  &generator->note_streams[i]);
-            }
+            // All notes for this channel finished
+            generator->channel_finished[i] = 1u;
         }
     }
 

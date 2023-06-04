@@ -91,8 +91,8 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
         return -1;
     }
 
-    ptttl_sample_generator_t generator;
-    int ret = ptttl_sample_generator_create(parsed_ptttl, &generator, 44100);
+    ptttl_sample_generator_t generator = PTTTL_SAMPLE_GENERATOR_DEFAULT;
+    int ret = ptttl_sample_generator_create(parsed_ptttl, &generator);
     if (ret < 0)
     {
         _error = ptttl_sample_generator_error();

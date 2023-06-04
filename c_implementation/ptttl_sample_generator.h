@@ -17,6 +17,14 @@
 
 #include "ptttl_parser.h"
 
+
+/**
+ * ptttl_sample_generator_t object initialization with sane defaults
+ */
+#define PTTTL_SAMPLE_GENERATOR_DEFAULT {.current_sample=0u, .sample_rate=44100u,\
+                                        .attack_samples=50u, .decay_samples=100u}
+
+
 /**
  * Represents the current note that samples are being generated for on any one channel
  */
@@ -36,7 +44,11 @@ typedef struct
     unsigned int current_sample;
     ptttl_note_stream_t note_streams[PTTTL_MAX_CHANNELS_PER_FILE];
     uint8_t channel_finished[PTTTL_MAX_CHANNELS_PER_FILE];
-    int32_t sample_rate;
+
+    // Configurable options-- set these before calling ptttl_sample_generator_generate
+    unsigned int sample_rate;
+    unsigned int attack_samples;
+    unsigned int decay_samples;
 } ptttl_sample_generator_t;
 
 /**
@@ -56,8 +68,7 @@ const char *ptttl_sample_generator_error(void);
  * @return 0 if successful, -1 if an error occurred. Call #ptttl_sample_generator_error
  *         for an error description if -1 is returned.
  */
-int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
-                                  int32_t sample_rate);
+int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator);
 
 /**
  * Generate the next audio sample for some parsed PTTTL data
