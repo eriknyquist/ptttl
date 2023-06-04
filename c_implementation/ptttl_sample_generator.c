@@ -123,7 +123,7 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
 }
 
 /**
- * @see ptttl_to_wav.h
+ * @see ptttl_sample_generator.h
  */
 int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
                                     int16_t *sample)
@@ -137,10 +137,12 @@ int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_g
     float summed_sample = 0.0f;
     unsigned int num_channels_provided = 0u;
 
+    // Sum the current state of all channels to generate the next sample
     for (unsigned int i = 0u; i < parsed_ptttl->channel_count; i++)
     {
         if (1u == generator->channel_finished[i])
         {
+            // No more samples to generate for this channel
             continue;
         }
 
@@ -153,7 +155,7 @@ int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_g
             int32_t raw_sample = _generate_sine_sample(generator->sample_rate, note->pitch_hz, stream->sine_index);
             stream->sine_index += 1u;
 
-            // Turn down volume to account for other channels
+            // Set desired amplitude
             summed_sample += ((float) raw_sample) * AMPLITUDE;
         }
 
@@ -180,6 +182,7 @@ int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_g
 
     if (num_channels_provided == 0u)
     {
+        // Finished-- no samples left on any channel
         return 1;
     }
 
