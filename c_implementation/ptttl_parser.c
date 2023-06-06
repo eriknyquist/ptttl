@@ -680,6 +680,8 @@ static int _parse_note_vibrato(ptttl_parser_readchar_t readchar, settings_t *set
         return 0;
     }
 
+    readchar_ret = _readchar_wrapper(readchar, &nextchar);
+    CHECK_READCHAR_RET_EOF(readchar_ret);
     if ('-' == nextchar)
     {
         _column += 1;
@@ -692,6 +694,11 @@ static int _parse_note_vibrato(ptttl_parser_readchar_t readchar, settings_t *set
         }
 
         var_hz = (uint32_t) var;
+    }
+    else
+    {
+        _saved_char = nextchar;
+        _have_saved_char = 1u;
     }
 
 #if PTTTL_VIBRATO_ENABLED

@@ -20,13 +20,29 @@
 #include <stdint.h>
 
 
-#define PTTTL_MAX_CHANNELS_PER_FILE (8u)    // Max. channels allowed in a single PTTTL file
-#define PTTTL_MAX_NOTES_PER_CHANNEL (128u)  // Max. notes allowed in a single PTTTL channel
-#define PTTTL_MAX_NAME_LEN          (256u)  // Max. characters allowed in the "name" field of a PTTTL file
+#ifndef PTTTL_MAX_CHANNELS_PER_FILE
+#define PTTTL_MAX_CHANNELS_PER_FILE  (8u)    // Max. channels allowed in a single PTTTL file
+#endif // PTTTL_MAX_CHANNELS_PER_FILE
 
+#ifndef PTTTL_MAX_NOTES_PER_CHANNEL
+#define PTTTL_MAX_NOTES_PER_CHANNEL  (128u)  // Max. notes allowed in a single PTTTL channel
+#endif // PTTTL_MAX_NOTES_PER_CHANNEL
+
+#ifndef PTTTL_MAX_NAME_LEN
+#define PTTTL_MAX_NAME_LEN           (256u)  // Max. characters allowed in the "name" field of a PTTTL file
+#endif // PTTTL_MAX_NAME_LEN
 
 #ifndef PTTTL_VIBRATO_ENABLED
-#define PTTTL_VIBRATO_ENABLED (0u)          // If 1, vibrato settings for each note will be included in ptttl_output_t
+#define PTTTL_VIBRATO_ENABLED (1u)          // If 1, vibrato settings for each note will be included in ptttl_output_t
+#endif // PTTTL_VIBRATO_ENABLED
+
+
+#if PTTTL_VIBRATO_ENABLED
+// Read vibrato frequency from vibrato settings
+#define PTTTL_NOTE_VIBRATO_FREQ(note) (((note)->vibrato_settings) & 0xffffu)
+
+// Read vibrato variance from vibrato settings
+#define PTTTL_NOTE_VIBRATO_VAR(note)  ((((note)->vibrato_settings) >> 16u) & 0xffffu)
 #endif // PTTTL_VIBRATO_ENABLED
 
 

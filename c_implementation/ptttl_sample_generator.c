@@ -17,8 +17,9 @@
 
 #include "ptttl_sample_generator.h"
 
-#define MAX_SAMPLE_VALUE (0x7FFF)   ///< Max. value of a signed 16-bit sample
-#define AMPLITUDE        (0.8f)     ///< Amplitude of generated samples, 0.0 through 1.0
+#define MAX_SAMPLE_VALUE   (0x7FFF)   ///< Max. value of a signed 16-bit sample
+#define AMPLITUDE          (0.8f)     ///< Amplitude of generated samples, 0.0 through 1.0
+#define VIBRATO_CHUNK_SIZE (200u)     ///< Number of samples between updating vibrato frequency
 
 #define ERROR(error_msg) (_error = error_msg)
 
@@ -27,7 +28,7 @@ static const char *_error = NULL;
 
 
 /**
- * Generate a single sine wave sample for an active note_stream_t object
+ * Generate a single point on a sine wave, between 0.0-1.0, for a given sample rate and frequency
  *
  * @param sample_rate  Sampling rate
  * @param freq         Frequency of sine wave
@@ -35,11 +36,24 @@ static const char *_error = NULL;
  *
  * @return Sine wave sample
  */
-static int32_t _generate_sine_sample(int32_t sample_rate, float freq, unsigned int sine_index)
+static float _generate_sine_point(unsigned int sample_rate, float freq, unsigned int sine_index)
+{
+    return sinf(2.0f * M_PI * freq * (((float) sine_index) / (float) sample_rate));
+}
+
+/**
+ * Generate a single sine wave sample between 0-65535 for a given sample rate and frequency
+ *
+ * @param sample_rate  Sampling rate
+ * @param freq         Frequency of sine wave
+ * @param sine_index   Index of sample within this note (0 is the first sample of the note)
+ *
+ * @return Sine wave sample
+ */
+static int32_t _generate_sine_sample(unsigned int sample_rate, float freq, unsigned int sine_index)
 {
     // Calculate sample value between 0.0 - 1.0
-    float sin_input = 2.0f * M_PI * freq * (((float) sine_index) / (float) sample_rate);
-    float sample_norm = sinf(sin_input);
+    float sample_norm = _generate_sine_point(sample_rate, freq, sine_index);
 
     // Convert to 0x0-0x7fff range
     int32_t sample = (int32_t) (sample_norm * (float) MAX_SAMPLE_VALUE);
@@ -69,6 +83,9 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
     note_stream->sine_index = 0u;
     note_stream->note_index = note_index;
     note_stream->start_sample = generator->current_sample;
+#ifdef PTTTL_VIBRATO_ENABLED
+    note_stream->phasor_state = 0.0f;
+#endif // PTTTL_VIBRATO_ENABLED
 
     // Calculate note time in samples
     float num_samples = channel->notes[note_index].duration_secs  * (float) generator->sample_rate;
@@ -164,7 +181,37 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
     }
     else
     {
-        int32_t raw_sample = _generate_sine_sample(generator->sample_rate, note->pitch_hz, stream->sine_index);
+        int32_t raw_sample = 0;
+
+#if PTTTL_VIBRATO_ENABLED
+        uint32_t vfreq = PTTTL_NOTE_VIBRATO_FREQ(note);
+        uint32_t vvar = PTTTL_NOTE_VIBRATO_VAR(note);
+
+        if ((0u != vfreq) || (0u != vvar))
+        {
+            float vsine = _generate_sine_point(generator->sample_rate, vfreq, stream->sine_index);
+            float pitch_change_hz = ((float) vvar) * vsine;
+            float note_pitch_hz = note->pitch_hz + pitch_change_hz;
+
+            float vsample = sinf(2.0f * M_PI * stream->phasor_state);
+            float phasor_inc = note_pitch_hz / generator->sample_rate;
+            stream->phasor_state += phasor_inc;
+            if (stream->phasor_state >= 1.0f)
+            {
+                stream->phasor_state -= 1.0f;
+            }
+
+            raw_sample = (int32_t) (vsample * (float) MAX_SAMPLE_VALUE);
+        }
+        else
+        {
+#endif // PTTTL_VIBRATO_ENABLED
+
+        raw_sample = _generate_sine_sample(generator->sample_rate, note->pitch_hz, stream->sine_index);
+#if PTTTL_VIBRATO_ENABLED
+        }
+#endif // PTTTL_VIBRATO_ENABLED
+
         stream->sine_index += 1u;
 
         // Modify channel sample amplitude based on attack/decay settings

@@ -30,10 +30,13 @@
  */
 typedef struct
 {
-    unsigned int sine_index;    ///< Monotonically increasing index for sinf() function
-    unsigned int start_sample;  ///< The sample index on which this note started
-    unsigned int num_samples;   ///< Number of samples this note runs for
-    unsigned int note_index;    ///< Index of this note within the ptttl_channel_t->notes array
+    unsigned int sine_index;      ///< Monotonically increasing index for sinf() function, note pitch
+    unsigned int start_sample;    ///< The sample index on which this note started
+    unsigned int num_samples;     ///< Number of samples this note runs for
+    unsigned int note_index;      ///< Index of this note within the ptttl_channel_t->notes array
+#ifdef PTTTL_VIBRATO_ENABLED
+    float phasor_state;           ///< Phasor state for vibrato (frequency modulation)
+#endif // PTTTL_VIBRATO_ENABLED
 } ptttl_note_stream_t;
 
 /**
