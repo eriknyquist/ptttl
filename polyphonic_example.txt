@@ -1,45 +1,45 @@
 All Star but it's a Bach chorale:
-d=4,o=5,b=40:
+d=4,o=5,b=100:
 
 #some   bo  -   dy      once    told    me      the     world   was     go -
 
-16g3.,  32g3.,  32g3.,  16g3.,  32f#.,  32g.,   32g.,   16a3.,  32g#.,  32g#. |
-16g.,   32g.,   32g.,   16d.,   32a3.,  32b3.,  32b3.,  16a.,   32b.,   32b.  |
-16g4.,  32d.6,  32b.,   16g.,   32a.,   32d.,   32d.,   16e.,   32b3.,  32b3. |
-16g4.,  32b.4,  32d.,   16b.,   32d.,   32d.,   32d.,   16c6.,  32d.,   32d.  ;
+4gb5,   8db6,   8bb5,   4bb5,   8ab5,   8gb5,   8gb5,   4b5,    8bb5,   8bb5  |
+4gb5,   8gb5,   8gb5,   4gb5,   8f5,    8gb5,   8gb5,   4ab5,   8g5,    8g5   |
+4gb4,   8bb4,   8db5,   4db5,   8db5,   8db5,   8db5,   4eb5,   8db5,   8db5  |
+4gb3,   8gb3,   8gb3,   4gb3,   8ab3,   8bb3,   8bb3,   4ab3,   8bb3,    8bb3 ;
 
 
 
 #-na    roll    me,     I       aint    the     sharp - est     tool    in
 
-32a.,   32a.,   16g.,   32g.,   32g.,   32g.,   32g.,   32f#.,  32d#4., 32g.  |
-32c4.,  32c4.,  16e.,   32c.,   32d6.,  32b.,   32d4.,  32d4.,  32f#.,  32e4. |
-32e.,   32e.,   16e4.,  32c4.,  32b3.,  32c4.,  32b.,   32c.,   32a.,   32b.4 |
-32e.,   32e.,   16c.,   32e.,   32d.,   32d.,   32d.,   32a.,   32c.,   32e.  ;
+8ab5,   8ab5,   4gb5,   8gb5,   8db6,   8bb5,   8bb5,   8ab5,   8ab5,   8gb5 |
+8ab5,   8eb5,   4eb5,   8eb5,   8gb5,   8gb5,   8gb5,   8f5,    8f5,    8eb5 |
+8eb5,   8eb5,   4b4,    8b4,    8db5,   8db5,   8db5,   8b4,    8b4,    8bb4 |
+8b3,    8b3,    4eb4,   8b3,    8bb3,   8b3,    8db4,   8db4,   8d4,    8eb4 ;
 
 
 
 #the    she  -  ed,             she     was     loo  -  king    kind    of
 
-32g.,   16c4.,  32a3.,  8p.,    32g.,   32g.,   32g3.,  32g3.,  32g3.,  32f#. |
-32d4.,  16e.,   32d.,   8p.,    32g4.,  32g4.,  32g.,   32g.,   32g.,   32a3. |
-32b.4,  16c.,   32f#4., 8p.,    32b3.,  32a3.,  32b4.,  32b.,   32b.,   32a.  |
-32e.,   16g4.,  32a4.,  8p.,    32d.,   32d.,   32d6.,  32d.,   32d.,   32d.  ;
+8gb5,   4eb5,   8db5,   2p,     8gb5,   8gb5,   8db6,    8bb5,  8bb5,   8ab5 |
+8eb5,   4b4,    8ab4,   2p,     8db5,   8db5,   8gb5,   8gb5,   8gb5,   8f5  |
+8bb4,   4gb4,   8f4,    2p,     8gb4,   8gb4,   8bb4,   8db5,   8db5,   8db5 |
+8db4,   4b3,    8ab3,   2p,     8bb3,   8ab3,   8gb3,   8gb3,   8gb3,   8ab3 ;
 
 
 
 #dumb   with    her     fing  - er      and     her     thumb   in      the
 
-32g.,   32g.,   32g.,   16a4.,  32b.,   32b.,   32a.,   32a3.,  32g.,   32g.  |
-32a.,   32b3.,  32e4.,  16e.,   32g#4., 32g#4., 32c.,   32c.,   32b4.,  32c.  |
-32b3.,  32d.,   32b4.,  16c6.,  32e.,   32e.,   32e.,   32a.,   32c4.,  32c4. |
-32d.,   32d.,   32e.,   16c6.,  32d.,   32d.,   32a4.,  32e.,   32e.,   32e.  ;
+8ab5,   8gb5,   8gb5,   4b5,    8bb5,   8bb5,   8ab5,   8ab5,   8gb5,   8gb5 |
+8gb5,   8gb5,   8eb5,   4eb5,   8eb5,   8eb5,   8eb5,   8eb5,   8eb5,   8eb5 |
+8db5,   8db5,   8bb4,   4ab4,   8db5,   8db5,   8b4,    8b4,    8b4,    8b4  |
+8bb3,   8bb3,   8eb4,   4ab4,   8g4,    8g4,    8ab4,   8ab3,   8b3,    8b3  ;
 
 
 
 #shape  of      an      L       on      her     for  -  head
 
-16g.,   32g.,   32g.,   16a.,   32g.,   32g.,   16a.,   32a4. |
-16d.,   32b.,   32d4.,  16f#.,  32e4.,  32e4.,  16a4.,  32d.  |
-16d6.,  32c4.,  32b.,   16c.,   32b4.,  32b4.,  16f#.,  32e.  |
-16b3.,  32d.,   32d.,   16d#4., 32e.,   32e.,   16c.,   32e.
+4db6,   8bb5,   8bb5,   4ab5,   8gb5,   8gb5,   4ab5,    8eb5  |
+4gb5,   8gb5,   8gb5,   4f5,    8f5,    8eb5,   4eb5,   8b4    |
+4db5,   8db5,   8db5,   4b4,    8bb4,   8bb4,   4b4,     8ab4  |
+4bb3,   8b3,    8db4,   4d4,    8eb4,   8eb4 ,  4ab4,   8ab4
