@@ -25,7 +25,7 @@
 
 
 /**
- * ptttl_sample_generator_t object initialization with sane defaults
+ * ptttl_sample_generator_config_t object initialization with sane defaults
  */
 #define PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT {.sample_rate=44100u, .attack_samples=50u, \
                                                .decay_samples=500u, .amplitude=0.8f}
