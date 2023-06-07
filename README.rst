@@ -227,10 +227,10 @@ semicolon is useful:
 
     #some   bo  -   dy      once    told    me      the     world   was     go -
 
-    4gb5,   8db6,   8bb5,   4bb5,   8ab5,   8gb5,   8gb5,   4b5,    8bb5,   8bb5  |
-    4gb5,   8gb5,   8gb5,   4gb5,   8f5,    8gb5,   8gb5,   4ab5,   8g5,    8g5   |
-    4gb4,   8bb4,   8db5,   4db5,   8db5,   8db5,   8db5,   4eb5,   8db5,   8db5  |
-    4gb3,   8gb3,   8gb3,   4gb3,   8ab3,   8bb3,   8bb3,   4ab3,   8bb3,    8bb3 ;
+    4gb5,   8db6,   8bb5,   4bb5,   8ab5,   8gb5,   8gb5,   4b5,    8bb5,   8bb5 |
+    4gb5,   8gb5,   8gb5,   4gb5,   8f5,    8gb5,   8gb5,   4ab5,   8g5,    8g5  |
+    4gb4,   8bb4,   8db5,   4db5,   8db5,   8db5,   8db5,   4eb5,   8db5,   8db5 |
+    4gb3,   8gb3,   8gb3,   4gb3,   8ab3,   8bb3,   8bb3,   4ab3,   8bb3,   8bb3 ;
 
 
 
@@ -245,7 +245,7 @@ semicolon is useful:
 
     #the    she  -  ed,             she     was     loo  -  king    kind    of
 
-    8gb5,   4eb5,   8db5,   2p,     8gb5,   8gb5,   8db6,    8bb5,  8bb5,   8ab5 |
+    8gb5,   4eb5,   8db5,   2p,     8gb5,   8gb5,   8db6,   8bb5,   8bb5,   8ab5 |
     8eb5,   4b4,    8ab4,   2p,     8db5,   8db5,   8gb5,   8gb5,   8gb5,   8f5  |
     8bb4,   4gb4,   8f4,    2p,     8gb4,   8gb4,   8bb4,   8db5,   8db5,   8db5 |
     8db4,   4b3,    8ab3,   2p,     8bb3,   8ab3,   8gb3,   8gb3,   8gb3,   8ab3 ;
@@ -263,9 +263,9 @@ semicolon is useful:
 
     #shape  of      an      L       on      her     for  -  head
 
-    4db6,   8bb5,   8bb5,   4ab5,   8gb5,   8gb5,   4ab5,    8eb5  |
-    4gb5,   8gb5,   8gb5,   4f5,    8f5,    8eb5,   4eb5,   8b4    |
-    4db5,   8db5,   8db5,   4b4,    8bb4,   8bb4,   4b4,     8ab4  |
+    4db6,   8bb5,   8bb5,   4ab5,   8gb5,   8gb5,   4ab5,   8eb5 |
+    4gb5,   8gb5,   8gb5,   4f5,    8f5,    8eb5,   4eb5,   8b4  |
+    4db5,   8db5,   8db5,   4b4,    8bb4,   8bb4,   4b4,    8ab4 |
     4bb3,   8b3,    8db4,   4d4,    8eb4,   8eb4 ,  4ab4,   8ab4
 
 Usage
