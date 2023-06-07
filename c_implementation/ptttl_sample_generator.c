@@ -18,7 +18,6 @@
 #include "ptttl_sample_generator.h"
 
 #define MAX_SAMPLE_VALUE   (0x7FFF)   ///< Max. value of a signed 16-bit sample
-#define AMPLITUDE          (0.8f)     ///< Amplitude of generated samples, 0.0 through 1.0
 #define VIBRATO_CHUNK_SIZE (200u)     ///< Number of samples between updating vibrato frequency
 
 #define ERROR(error_msg) (_error = error_msg)
@@ -88,7 +87,7 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
 #endif // PTTTL_VIBRATO_ENABLED
 
     // Calculate note time in samples
-    float num_samples = channel->notes[note_index].duration_secs  * (float) generator->sample_rate;
+    float num_samples = channel->notes[note_index].duration_secs  * (float) generator->config.sample_rate;
     note_stream->num_samples = (unsigned int) num_samples;
 }
 
@@ -103,9 +102,10 @@ const char *ptttl_sample_generator_error(void)
 /**
  * @see ptttl_sample_generator.h
  */
-int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator)
+int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
+                                  ptttl_sample_generator_config_t *config)
 {
-    if ((NULL == parsed_ptttl) || (NULL == generator))
+    if ((NULL == parsed_ptttl) || (NULL == generator) || (NULL == config))
     {
         ERROR("NULL pointer passed to function");
         return -1;
@@ -116,6 +116,15 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
         ERROR("Parsed PTTTL object has a channel count of 0");
         return -1;
     }
+
+    if ((config->amplitude > 1.0f) || (config->amplitude < 0.0f))
+    {
+        ERROR("Sample generator amplitude must be between 0.0 - 1.0");
+        return -1;
+    }
+
+    // Copy config data into generator object
+    generator->config = *config;
 
     generator->current_sample = 0u;
 
@@ -157,8 +166,8 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
     unsigned int samples_elapsed = generator->current_sample - stream->start_sample;
     unsigned int samples_remaining = stream->num_samples - samples_elapsed;
 
-    unsigned int attack = generator->attack_samples;
-    unsigned int decay = generator->decay_samples;
+    unsigned int attack = generator->config.attack_samples;
+    unsigned int decay = generator->config.decay_samples;
 
     // Handle case where attack + delay is longer than note length
     if ((attack + decay) > stream->num_samples)
@@ -189,12 +198,12 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
 
         if ((0u != vfreq) || (0u != vvar))
         {
-            float vsine = _generate_sine_point(generator->sample_rate, vfreq, stream->sine_index);
+            float vsine = _generate_sine_point(generator->config.sample_rate, vfreq, stream->sine_index);
             float pitch_change_hz = ((float) vvar) * vsine;
             float note_pitch_hz = note->pitch_hz + pitch_change_hz;
 
             float vsample = sinf(2.0f * M_PI * stream->phasor_state);
-            float phasor_inc = note_pitch_hz / generator->sample_rate;
+            float phasor_inc = note_pitch_hz / generator->config.sample_rate;
             stream->phasor_state += phasor_inc;
             if (stream->phasor_state >= 1.0f)
             {
@@ -207,7 +216,7 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
         {
 #endif // PTTTL_VIBRATO_ENABLED
 
-        raw_sample = _generate_sine_sample(generator->sample_rate, note->pitch_hz, stream->sine_index);
+        raw_sample = _generate_sine_sample(generator->config.sample_rate, note->pitch_hz, stream->sine_index);
 #if PTTTL_VIBRATO_ENABLED
         }
 #endif // PTTTL_VIBRATO_ENABLED
@@ -225,7 +234,7 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
         }
 
         // Set final desired amplitude for channel sample
-        *sample = ((float) raw_sample) * AMPLITUDE;
+        *sample = ((float) raw_sample) * generator->config.amplitude;
     }
 
     // Check if last sample for this note stream

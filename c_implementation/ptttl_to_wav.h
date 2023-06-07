@@ -1,4 +1,4 @@
-/* ptttl_to_wav.c
+/* ptttl_to_wav.h
  *
  * Converts the output of ptttl_parse() into a WAV file.
  * No dynamic memory allocation, and no loading the entire WAV file in memory.

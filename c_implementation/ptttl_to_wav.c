@@ -91,8 +91,10 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
         return -1;
     }
 
-    ptttl_sample_generator_t generator = PTTTL_SAMPLE_GENERATOR_DEFAULT;
-    int ret = ptttl_sample_generator_create(parsed_ptttl, &generator);
+    ptttl_sample_generator_t generator;
+    ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
+
+    int ret = ptttl_sample_generator_create(parsed_ptttl, &generator, &config);
     if (ret < 0)
     {
         _error = ptttl_sample_generator_error();
@@ -143,8 +145,8 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     int32_t framecount = ((int32_t) generator.current_sample) + 1u;
     _default_header.subchunk2_size = (framecount * BITS_PER_SAMPLE) / 8;
     _default_header.chunk_size = (4  + (8 + _default_header.subchunk1_size)) + (8 + _default_header.subchunk2_size);
-    _default_header.sample_rate = generator.sample_rate;
-    _default_header.byte_rate = (generator.sample_rate * BITS_PER_SAMPLE) / 8;
+    _default_header.sample_rate = config.sample_rate;
+    _default_header.byte_rate = (config.sample_rate * BITS_PER_SAMPLE) / 8;
 
     // Write header
     size_t size_written = fwrite(&_default_header, 1u, sizeof(_default_header), fp);

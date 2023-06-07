@@ -27,8 +27,8 @@
 /**
  * ptttl_sample_generator_t object initialization with sane defaults
  */
-#define PTTTL_SAMPLE_GENERATOR_DEFAULT {.current_sample=0u, .sample_rate=44100u,\
-                                        .attack_samples=50u, .decay_samples=500u}
+#define PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT {.sample_rate=44100u, .attack_samples=50u, \
+                                               .decay_samples=500u, .amplitude=0.8f}
 
 
 /**
@@ -46,6 +46,17 @@ typedef struct
 } ptttl_note_stream_t;
 
 /**
+ * Holds configurable parameters for sample generation
+ */
+typedef struct
+{
+    unsigned int sample_rate;     ///< Sampling rate in samples per second (Hz)
+    unsigned int attack_samples;  ///< no. of samples to ramp from 0 to full volume, at note start
+    unsigned int decay_samples;   ///< no. of samples to ramp from full volume to 0, at note end
+    float amplitude;              ///< Amplitude of generated samples between 0.0-1.0, with 1.0 being full volume
+} ptttl_sample_generator_config_t;
+
+/**
  * Represents a sample generator instance created for a specific ptttl_output_t instance
  */
 typedef struct
@@ -53,12 +64,7 @@ typedef struct
     unsigned int current_sample;
     ptttl_note_stream_t note_streams[PTTTL_MAX_CHANNELS_PER_FILE];
     uint8_t channel_finished[PTTTL_MAX_CHANNELS_PER_FILE];
-
-    // Configurable options-- set these before calling ptttl_sample_generator_generate
-
-    unsigned int sample_rate;     ///< Sampling rate in samples per second (Hz)
-    unsigned int attack_samples;  ///< no. of samples to ramp from 0 to full volume, at note start
-    unsigned int decay_samples;   ///< no. of samples to ramp from full volume to 0, at note end
+    ptttl_sample_generator_config_t config;
 } ptttl_sample_generator_t;
 
 /**
@@ -73,12 +79,13 @@ const char *ptttl_sample_generator_error(void);
  *
  * @param parsed_ptttl   Pointer to parsed PTTTL data
  * @param generator      Pointer to generator instance to initialize
- * @param sample_rate    Sample rate, samples per second
+ * @param config         Pointer to sample generator configuration data
  *
  * @return 0 if successful, -1 if an error occurred. Call #ptttl_sample_generator_error
  *         for an error description if -1 is returned.
  */
-int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator);
+int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
+                                  ptttl_sample_generator_config_t *config);
 
 /**
  * Generate the next audio sample for some parsed PTTTL data
