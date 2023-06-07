@@ -846,6 +846,13 @@ static int _parse_note_data(ptttl_parser_readchar_t readchar, ptttl_output_t *ou
     while (0 == result)
     {
         ptttl_output_channel_t *current_channel = &output->channels[current_channel_idx];
+
+        if (PTTTL_MAX_NOTES_PER_CHANNEL <= current_channel->note_count)
+        {
+            ERROR("Maximum note count exceeded for channel");
+            return -1;
+        }
+
         ptttl_output_note_t *current_note = &current_channel->notes[current_channel->note_count];
 
         int ret = _parse_ptttl_note(readchar, settings, current_note);
