@@ -147,22 +147,15 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
 }
 
 /**
- * Generate the next sample for the given note stream on the given channel
+ * Modify the amplitude of a sample based on generator attack/decay settings
  *
- * @param parsed_ptttl   Pointer to parsed PTTTL data
- * @param generator      Pointer to initialized sample generator
- * @param note           Pointer to the ptttl_output_note_t instance to generate a sample for
- * @param stream         Pointer to ptttl_note_stream_t instance to generate a sample for
- * @param channel_idx    Channel index of channel the generated sample is for
- * @param sample         Pointer to location to store generated sample
- *
- * @return 0 if there are more samples remaining for the provided note stream, 1 otherwise
+ * @param generator   Pointer to initialized sample generator object
+ * @param stream      Pointer to note stream object for the current note
+ * @param raw_sample  Pointer to sample to modify
  */
-static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
-                                    ptttl_output_note_t *note, ptttl_note_stream_t *stream,
-                                    unsigned int channel_idx, float *sample)
+static void _apply_attack_decay(ptttl_sample_generator_t *generator, ptttl_note_stream_t *stream,
+                                int32_t *raw_sample)
 {
-    int ret = 0;
     unsigned int samples_elapsed = generator->current_sample - stream->start_sample;
     unsigned int samples_remaining = stream->num_samples - samples_elapsed;
 
@@ -183,6 +176,34 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
         }
     }
 
+    // Modify channel sample amplitude based on attack/decay settings
+    if (samples_elapsed < attack)
+    {
+        *raw_sample *= ((float) samples_elapsed) / ((float) attack);
+    }
+    else if (samples_remaining < decay)
+    {
+        *raw_sample *= ((float) samples_remaining) / ((float) decay);
+    }
+}
+
+/**
+ * Generate the next sample for the given note stream on the given channel
+ *
+ * @param parsed_ptttl   Pointer to parsed PTTTL data
+ * @param generator      Pointer to initialized sample generator
+ * @param note           Pointer to the ptttl_output_note_t instance to generate a sample for
+ * @param stream         Pointer to ptttl_note_stream_t instance to generate a sample for
+ * @param channel_idx    Channel index of channel the generated sample is for
+ * @param sample         Pointer to location to store generated sample
+ *
+ * @return 0 if there are more samples remaining for the provided note stream, 1 otherwise
+ */
+static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
+                                    ptttl_output_note_t *note, ptttl_note_stream_t *stream,
+                                    unsigned int channel_idx, float *sample)
+{
+    int ret = 0;
     // Generate next sample value for this channel
     if (0.0f == note->pitch_hz) // Pitch of 0 indicates pause/rest
     {
@@ -223,15 +244,7 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
 
         stream->sine_index += 1u;
 
-        // Modify channel sample amplitude based on attack/decay settings
-        if (samples_elapsed < attack)
-        {
-            raw_sample *= ((float) samples_elapsed) / ((float) attack);
-        }
-        else if (samples_remaining < decay)
-        {
-            raw_sample *= ((float) samples_remaining) / ((float) decay);
-        }
+        _apply_attack_decay(generator, stream, &raw_sample);
 
         // Set final desired amplitude for channel sample
         *sample = ((float) raw_sample) * generator->config.amplitude;
