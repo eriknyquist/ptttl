@@ -12,8 +12,8 @@
  * Erik Nyquist 2023
  */
 
-#ifndef PTTTL_SAMPLE_GENERATOR
-#define PTTTL_SAMPLE_GENERATOR
+#ifndef PTTTL_SAMPLE_GENERATOR_H
+#define PTTTL_SAMPLE_GENERATOR_H
 
 
 #include "ptttl_parser.h"
@@ -105,4 +105,4 @@ int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_g
     }
 #endif
 
-#endif // PTTTL_SAMPLE_GENERATOR
+#endif // PTTTL_SAMPLE_GENERATOR_H
