@@ -15,7 +15,13 @@
 #ifndef PTTTL_SAMPLE_GENERATOR
 #define PTTTL_SAMPLE_GENERATOR
 
+
 #include "ptttl_parser.h"
+
+
+#ifdef __cplusplus
+    extern "C" {
+#endif
 
 
 /**
@@ -86,5 +92,10 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
  */
 int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
                                     int16_t *sample);
+
+
+#ifdef __cplusplus
+    }
+#endif
 
 #endif // PTTTL_SAMPLE_GENERATOR

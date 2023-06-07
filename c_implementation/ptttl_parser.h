@@ -17,7 +17,13 @@
 #ifndef PTTTL_PARSER_H
 #define PTTTL_PARSER_H
 
+
 #include <stdint.h>
+
+
+#ifdef __cplusplus
+    extern "C" {
+#endif
 
 
 #ifndef PTTTL_MAX_CHANNELS_PER_FILE
@@ -119,5 +125,10 @@ ptttl_parser_error_t ptttl_parser_error(void);
  *          to get a more detailed error message.
  */
 int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output);
+
+
+#ifdef __cplusplus
+    }
+#endif
 
 #endif // PTTTL_PARSER_H

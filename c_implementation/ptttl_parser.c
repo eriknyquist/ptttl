@@ -510,8 +510,8 @@ static int _parse_settings(ptttl_parser_readchar_t readchar, settings_t *setting
     settings->bpm = 0u;
     settings->default_duration = 8u;
     settings->default_octave = 4u;
-    settings->default_vibrato_freq = 0u;
-    settings->default_vibrato_var = 0u;
+    settings->default_vibrato_freq = 7u;
+    settings->default_vibrato_var = 10u;
 
     while (':' != c)
     {

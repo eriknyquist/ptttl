@@ -15,7 +15,14 @@
 #ifndef PTTTL_TO_WAV_H
 #define PTTTL_TO_WAV_H
 
+
 #include "ptttl_parser.h"
+
+
+#ifdef __cplusplus
+    extern "C" {
+#endif
+
 
 /**
  * Return pointer to a string describing the last error that occurred
@@ -36,5 +43,10 @@ const char *ptttl_to_wav_error(void);
  *         an error description if -1 is returned.
  */
 int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename);
+
+
+#ifdef __cplusplus
+    }
+#endif
 
 #endif // PTTTL_TO_WAV_H
