@@ -70,7 +70,7 @@ See API documentation in ``ptttl_config.h`` for more details.
 
 The following table shows various combinations of these 3 settings, along with the
 corresponding size of the ``ptttl_output_t`` struct, to give you an idea of how these
-things affect each other (default settings for ``ptttl_config.h`` are **in bold**):
+things affect each other (row containint default settings for ``ptttl_config.h`` is *in italics*):
 
 +-------------------------------+-------------------------------+-------------------------+---------------------------------+
 |``PTTTL_MAX_CHANNELS_PER_FILE``|``PTTTL_MAX_NOTES_PER_CHANNEL``|``PTTTL_VIBRATO_ENABLED``| ``ptttl_output_t`` size in bytes|
@@ -85,7 +85,7 @@ things affect each other (default settings for ``ptttl_config.h`` are **in bold*
 +-------------------------------+-------------------------------+-------------------------+---------------------------------+
 | 6                             | 64                            | 0                       | 3,356                           |
 +-------------------------------+-------------------------------+-------------------------+---------------------------------+
-| **6**                         | **64**                        | **1**                   | **4,892**                       |
+| *6*                           | *64*                          | *1*                     | *4,892*                         |
 +-------------------------------+-------------------------------+-------------------------+---------------------------------+
 | 1                             | 128                           | 0                       | 1,288                           |
 +-------------------------------+-------------------------------+-------------------------+---------------------------------+
