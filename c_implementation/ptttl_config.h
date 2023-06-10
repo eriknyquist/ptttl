@@ -22,7 +22,7 @@
  * makes the struct larger.
  */
 #ifndef PTTTL_MAX_CHANNELS_PER_FILE
-#define PTTTL_MAX_CHANNELS_PER_FILE  (8u)
+#define PTTTL_MAX_CHANNELS_PER_FILE  (6u)
 #endif // PTTTL_MAX_CHANNELS_PER_FILE
 
 /**
@@ -31,7 +31,7 @@
  * struct larger.
  */
 #ifndef PTTTL_MAX_NOTES_PER_CHANNEL
-#define PTTTL_MAX_NOTES_PER_CHANNEL  (128u)
+#define PTTTL_MAX_NOTES_PER_CHANNEL  (64u)
 #endif // PTTTL_MAX_NOTES_PER_CHANNEL
 
 /**
