@@ -54,7 +54,7 @@ typedef struct
  */
 typedef struct
 {
-    unsigned int note_count;                    ///< Number of notes populated
+    unsigned int note_count;                                 ///< Number of notes populated
     ptttl_output_note_t notes[PTTTL_MAX_NOTES_PER_CHANNEL];  ///< Array of notes for this channel
 } ptttl_output_channel_t;
 
@@ -64,8 +64,8 @@ typedef struct
  */
 typedef struct
 {
-    char name[PTTTL_MAX_NAME_LEN];                    ///< Name field of PTTTL file
-    unsigned int channel_count;                       ///< Number of channels populated
+    char name[PTTTL_MAX_NAME_LEN];                                 ///< Name field of PTTTL file
+    unsigned int channel_count;                                    ///< Number of channels populated
     ptttl_output_channel_t channels[PTTTL_MAX_CHANNELS_PER_FILE];  ///< Array of channels
 } ptttl_output_t;
 

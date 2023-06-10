@@ -10,6 +10,12 @@
 #ifndef PTTTL_CONFIG_H
 #define PTTTL_CONFIG_H
 
+
+#ifdef __cplusplus
+    extern "C" {
+#endif
+
+
 /**
  * Maximum number of channels (note lanes) allowed in a single PTTTL file. This
  * setting will significantly impact the size of the ptttl_output_t struct-- more channels
@@ -45,6 +51,11 @@
 #ifndef PTTTL_VIBRATO_ENABLED
 #define PTTTL_VIBRATO_ENABLED        (1u)
 #endif // PTTTL_VIBRATO_ENABLED
+
+
+#ifdef __cplusplus
+    }
+#endif
 
 
 #endif // PTTTL_CONFIG
