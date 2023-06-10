@@ -60,7 +60,7 @@ Configuration options (``ptttl_config.h``)
 ==========================================
 
 The size of the ``ptttl_output_t`` struct (intermediate representation of RTTTL/PTTTL source)
-is significantly affected by the following symbols defined in ``ptttl_config.h``:
+is fixed at compile time, and is significantly affected by the following symbols defined in ``ptttl_config.h``:
 
 * ``PTTTL_MAX_CHANNELS_PER_FILE``
 * ``PTTTL_MAX_NOTES_PER_CHANNEL``
