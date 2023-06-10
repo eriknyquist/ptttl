@@ -130,6 +130,11 @@
     }                                                \
 }
 
+#ifdef PTTTL_VIBRATO_ENABLED
+// Set vibrato settings for a ptttl_output_note_t instance
+#define SET_VIBRATO(note, freq, var) (note->vibrato_settings = (freq & 0xffffu) | ((var & 0xffffu) << 16u))
+#endif // PTTTL_VIBRATO_ENABLED
+
 // Max. value allowed for note octave
 #define NOTE_OCTAVE_MAX (8u)
 
@@ -656,8 +661,12 @@ static int _parse_note_vibrato(ptttl_parser_readchar_t readchar, settings_t *set
 
     _column += 1;
 
-    uint32_t freq_hz = settings->default_vibrato_freq;
-    uint32_t var_hz = settings->default_vibrato_var;
+#if PTTTL_VIBRATO_ENABLED
+    SET_VIBRATO(output, settings->default_vibrato_freq, settings->default_vibrato_var);
+#endif // PTTTL_VIBRATO_ENABLED
+
+    uint32_t freq_hz;
+    uint32_t var_hz;
 
     // Parse vibrato frequency, if any
     readchar_ret = _readchar_wrapper(readchar, &nextchar);
@@ -702,8 +711,7 @@ static int _parse_note_vibrato(ptttl_parser_readchar_t readchar, settings_t *set
     }
 
 #if PTTTL_VIBRATO_ENABLED
-    output->vibrato_settings = freq_hz & 0xffffu;
-    output->vibrato_settings |= ((var_hz & 0xffffu) << 16u);
+    SET_VIBRATO(output, freq_hz, var_hz);
 #else
     (void) freq_hz;
     (void) var_hz;
