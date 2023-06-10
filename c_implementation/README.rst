@@ -12,16 +12,18 @@ only the file(s) that you need:
   ``stdlib.h``, and ``memset()`` from ``string.h``.
 
 * **ptttl_sample_generator.c**: Reads the output of ``ptttl_parser.c`` and produces
-  16-bit audio samples containing the tones described by the RTTTL/PTTTL source, as sine
-  wave tones. The global attack and decay time for all notes is configurable. The next
-  audio sample is produced only on your request, so there is no need to store a large
-  number of samples in memory. See ``ptttl_sample_generator.h`` for more details.
-  Requires ``stdint.h``, ``memset()`` from ``string.h``, and ``sinf()`` from ``math.h.``.
+  signed 16-bit audio samples containing the tones described by the RTTTL/PTTTL source,
+  as sine wave tones. The attack / decay time of the waveforms generated for notes
+  is configurable. The next audio sample is produced only on your request, so there
+  is no need to store a large number of samples in memory. See ``ptttl_sample_generator.h``
+  for more details. Requires ``stdint.h``, ``memset()`` from ``string.h``, and ``sinf()``
+  from ``math.h.``.
 
 * **ptttl_to_wav.c**: Reads the output of ``ptttl_parser.c`` and produces a .wav file
   containing the tones described by the RTTTL/PTTTL source, as sine wave tones.
   ``ptttl_sample_generator.c`` is used to generate one sample at a time and write it
   to the .wav file immediately, so there is no need to store the entire .wav file in memory.
+  Requires ``stdio.h`` and ``stdint.h``.
 
 
 Additionally, **ptttl_cli.c** is also provided, which implements a sample command line
