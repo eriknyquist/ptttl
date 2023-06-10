@@ -18,7 +18,10 @@
 #include "ptttl_to_wav.h"
 #include "ptttl_sample_generator.h"
 
+
+// Sample width in bits
 #define BITS_PER_SAMPLE (16)
+
 
 /**
  * The header of a wav file Based on:
@@ -65,11 +68,13 @@ static wavfile_header_t _default_header =
     .subchunk2_size = 0
 };
 
-
+// Store an error message for reporting by ptttl_to_wav_error()
 #define ERROR(error_msg) (_error = error_msg)
 
 
+// Store a description of the last error
 static const char *_error = NULL;
+
 
 /**
  * @see ptttl_to_wav.h

@@ -17,12 +17,16 @@
 
 #include "ptttl_sample_generator.h"
 
-#define MAX_SAMPLE_VALUE   (0x7FFF)   ///< Max. value of a signed 16-bit sample
-#define VIBRATO_CHUNK_SIZE (200u)     ///< Number of samples between updating vibrato frequency
 
+// Max positive value of a signed 16-bit sample
+#define MAX_SAMPLE_VALUE   (0x7FFF)
+
+
+// Store an error message for reporting by ptttl_sample_generator_error()
 #define ERROR(error_msg) (_error = error_msg)
 
 
+// Static storage for description of last error
 static const char *_error = NULL;
 
 
