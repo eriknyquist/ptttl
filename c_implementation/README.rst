@@ -23,6 +23,9 @@ only the file(s) that you need:
   ``ptttl_sample_generator.c`` is used to generate one sample at a time and write it
   to the .wav file immediately, so there is no need to store the entire .wav file in memory.
 
+* **ptttl_cli.c** Implements a sample command line tool which uses ``ptttl_parser.c``
+  and ``ptttl_to_wav.c`` to convert RTTTL/PTTTL source to .wav files.
+
 How to use
 ==========
 

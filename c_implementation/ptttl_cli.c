@@ -1,10 +1,21 @@
-// Sample file using ptttl_to_wav.c
+/* ptttl_cli.c
+ *
+ * Sample main.c which implements a command-line tool for converting PTTTL/RTTTL
+ * source into .wav file, illustrating how to use ptttl_parser.c and ptttl_to_wav.c.
+ *
+ * Requires ptttl_parser.c, ptttl_sample_generator.c, and ptttl_to_wav.c
+ *
+ * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
+ *
+ * Erik Nyquist 2023
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include "ptttl_parser.h"
 #include "ptttl_to_wav.h"
 
+// File pointer for RTTTL/PTTTL source file
 static FILE *fp = NULL;
 
 // ptttl_readchar_t callback to read the next PTTTL/RTTTL source character from a file
@@ -18,9 +29,9 @@ static int _ptttl_readchar(char *nextchar)
 
 int main(int argc, char *argv[])
 {
-    if (2 != argc)
+    if (3 != argc)
     {
-        printf("Usage: %s <ptttl or rtttl source file>\n", argv[0]);
+        printf("Usage: %s <PTTTL/RTTTL filename> <output filename>\n", argv[0]);
         return -1;
     }
 
@@ -44,12 +55,12 @@ int main(int argc, char *argv[])
     fclose(fp);
 
     // Convert intermediate representation to .wav file
-    ret = ptttl_to_wav(&output, "test_file.wav");
+    ret = ptttl_to_wav(&output, argv[2]);
     if (ret < 0)
     {
         printf("Error generating WAV file: %s\n", ptttl_to_wav_error());
         return ret;
     }
 
-    printf("Done\n");
+    return 0;
 }
