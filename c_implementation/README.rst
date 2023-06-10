@@ -1,7 +1,7 @@
 Portable C implementation of PTTTL/RTTTL parser
 -----------------------------------------------
 
-This implementation is split into 3 parts, to make it easier for you to take
+This implementation is split into 3 main parts, to make it easier for you to take
 only the file(s) that you need:
 
 * **ptttl_parser.c**: Reads PTTTL or RTTTL source, and produces an intermediate
@@ -23,8 +23,10 @@ only the file(s) that you need:
   ``ptttl_sample_generator.c`` is used to generate one sample at a time and write it
   to the .wav file immediately, so there is no need to store the entire .wav file in memory.
 
-* **ptttl_cli.c** Implements a sample command line tool which uses ``ptttl_parser.c``
-  and ``ptttl_to_wav.c`` to convert RTTTL/PTTTL source to .wav files.
+
+Additionally, **ptttl_cli.c** is also provided, which implements a sample command line
+tool that uses ``ptttl_parser.c`` and ``ptttl_to_wav.c`` to convert RTTTL/PTTTL source
+to .wav files.
 
 How to use
 ==========
