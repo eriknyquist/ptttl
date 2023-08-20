@@ -28,7 +28,7 @@
 }
 
 // Helper macro, checks if a character is whitespace
-#define IS_WHITESPACE(c) (((c) == '\t') || ((c) == ' ') || ((c) == '\v') || ((c) == '\n'))
+#define IS_WHITESPACE(c) (((c) == '\t') || ((c) == ' ') || ((c) == '\v') || ((c) == '\n') || ((c) == '\r'))
 
 // Helper macro, checks if a character is a digit
 #define IS_DIGIT(c) (((c) >= '0') && ((c) <= '9'))
@@ -850,6 +850,7 @@ static int _parse_note_data(ptttl_parser_readchar_t readchar, ptttl_output_t *ou
 {
     int result = 0;
     unsigned int current_channel_idx = 0u;
+    unsigned int first_block = 1u;
 
     while (0 == result)
     {
@@ -884,6 +885,13 @@ static int _parse_note_data(ptttl_parser_readchar_t readchar, ptttl_output_t *ou
         {
             // Channel increment
             current_channel_idx += 1u;
+
+            if (first_block == 1u)
+            {
+                // Channel count is only updated during the first block
+                output->channel_count += 1u;
+            }
+
             if (PTTTL_MAX_CHANNELS_PER_FILE == current_channel_idx)
             {
                 ERROR("Maximum channel count exceeded");
@@ -892,10 +900,9 @@ static int _parse_note_data(ptttl_parser_readchar_t readchar, ptttl_output_t *ou
         }
         else if (';' == next_char)
         {
-            // block end; make sure all blocks have the same number of channels
-            if (0u == output->channel_count)
+            if (first_block == 1u)
             {
-                output->channel_count = current_channel_idx + 1u;
+                first_block = 0u;
             }
             else
             {
@@ -955,6 +962,7 @@ int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output)
     _column = 1u;
 
     (void) memset(output, 0, sizeof(ptttl_output_t));
+    output->channel_count = 1u;
 
     // Read name (first field)
     int ret = _get_next_visible_char(readchar, &output->name[0]);
@@ -1018,12 +1026,6 @@ int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output)
     if (ret < 0)
     {
         return ret;
-    }
-
-    // Edge case for RTTTL or PTTTL with a single note channel
-    if ((0u == output->channel_count) && (0u < output->channels[0].note_count))
-    {
-        output->channel_count = 1u;
     }
 
     return 0;
