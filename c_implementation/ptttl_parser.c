@@ -521,7 +521,7 @@ static int _parse_settings(ptttl_parser_readchar_t readchar, settings_t *setting
         CHECK_READCHAR_RET(result);
 
         result = _parse_option(c, readchar, settings);
-        if (result < 0)
+        if (result != 0)
         {
             return result;
         }
@@ -671,7 +671,7 @@ static int _parse_note_vibrato(ptttl_parser_readchar_t readchar, settings_t *set
     {
         unsigned int freq = 0u;
         int ret = _parse_uint_from_input(readchar, &freq, 1u);
-        if (ret < 0)
+        if (ret != 0)
         {
             return ret;
         }
@@ -691,7 +691,7 @@ static int _parse_note_vibrato(ptttl_parser_readchar_t readchar, settings_t *set
 
         unsigned int var = 0u;
         int ret = _parse_uint_from_input(readchar, &var, 1u);
-        if (ret < 0)
+        if (ret != 0)
         {
             return ret;
         }
@@ -740,7 +740,7 @@ static int _parse_ptttl_note(ptttl_parser_readchar_t readchar, settings_t *setti
     if (IS_DIGIT(nextchar))
     {
         int ret = _parse_uint_from_input(readchar, &duration, 0u);
-        if (ret < 0)
+        if (ret != 0)
         {
             return ret;
         }
@@ -753,7 +753,7 @@ static int _parse_ptttl_note(ptttl_parser_readchar_t readchar, settings_t *setti
     }
 
     int ret = _parse_musical_note(readchar, &output->pitch_hz);
-    if (ret < 0)
+    if (ret != 0)
     {
         return ret;
     }
@@ -995,17 +995,13 @@ int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output)
     // Read PTTTL settings, next section after the name
     settings_t settings;
     ret = _parse_settings(readchar, &settings);
-    if (ret < 0)
+    if (ret != 0)
     {
-        return -1;
+        return ret;
     }
 
     ret = _eat_all_nonvisible_chars(readchar);
-    if (ret != 0)
-    {
-        ERROR("Unexpected EOF encountered");
-        return -1;
-    }
+    CHECK_READCHAR_RET(ret);
 
     CHECK_READCHAR_RET(ret);
 
