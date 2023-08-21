@@ -118,6 +118,7 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     if (0 != ret)
     {
         ERROR("Failed to seek within WAV file for writing");
+        fclose(fp);
         return -1;
     }
 
@@ -129,6 +130,7 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
         if (sizeof(sample) != size_written)
         {
             ERROR("Failed to write to WAV file");
+            fclose(fp);
             return -1;
         }
     }
@@ -136,6 +138,7 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     if (ret < 0)
     {
         _error = ptttl_sample_generator_error();
+        fclose(fp);
         return ret;
     }
 
@@ -144,6 +147,7 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     if (0 != ret)
     {
         ERROR("Failed to seek within WAV file for writing");
+        fclose(fp);
         return -1;
     }
 
@@ -158,6 +162,7 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     if (sizeof(_default_header) != size_written)
     {
         ERROR("Failed to write to WAV file");
+        fclose(fp);
         return -1;
     }
 
