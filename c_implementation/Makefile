@@ -22,7 +22,7 @@ build_objs:
 	$(CC) $(CFLAGS) -c ptttl_cli.c -o $(OBJ_DIR)/ptttl_cli.o
 
 ptttl_cli: build_objs
-	$(CC) $(CFLAGS) $(OBJ_DIR)/ptttl_parser.o $(OBJ_DIR)/ptttl_sample_generator.o $(OBJ_DIR)/ptttl_to_wav.o $(OBJ_DIR)/ptttl_cli.o -o $(OUTPUT_BIN)
+	$(CC) $(CFLAGS) $(OBJ_DIR)/ptttl_parser.o $(OBJ_DIR)/ptttl_sample_generator.o $(OBJ_DIR)/ptttl_to_wav.o $(OBJ_DIR)/ptttl_cli.o -o $(OUTPUT_BIN) -lm
 
 clean:
 	$(RM) $(OBJ_DIR)/ptttl_parser.o

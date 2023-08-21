@@ -28,7 +28,8 @@
 }
 
 // Helper macro, checks if a character is whitespace
-#define IS_WHITESPACE(c) (((c) == '\t') || ((c) == ' ') || ((c) == '\v') || ((c) == '\n') || ((c) == '\r'))
+#define IS_WHITESPACE(c) (((c) == '\t') || ((c) == ' ') || ((c) == '\v') ||  \
+                          ((c) == '\n') || ((c) == '\r') || ((c) == '\f'))
 
 // Helper macro, checks if a character is a digit
 #define IS_DIGIT(c) (((c) >= '0') && ((c) <= '9'))
@@ -228,7 +229,7 @@ static char _saved_char = '\0';
  */
 static note_pitch_e _note_string_to_enum(char *string, int size)
 {
-    if (size > 2)
+    if ((size > 2) || (size < 1))
     {
         return NOTE_INVALID;
     }
@@ -250,7 +251,7 @@ static int _readchar_wrapper(ptttl_parser_readchar_t readchar, char *nextchar)
     {
         _have_saved_char = 0u;
         *nextchar = _saved_char;
-        return 0u;
+        return 0;
     }
 
     return readchar(nextchar);
@@ -264,7 +265,7 @@ static int _readchar_wrapper(ptttl_parser_readchar_t readchar, char *nextchar)
  *
  * @param readchar  Callback function to read next PTTTL source character
  *
- * @return 0 if successful, -1 if EOF was seen
+ * @return 0 if successful, -1 if an error occurred, and 1 if EOF was seen
  */
 static int _eat_all_nonvisible_chars(ptttl_parser_readchar_t readchar)
 {
@@ -327,14 +328,14 @@ static int _eat_all_nonvisible_chars(ptttl_parser_readchar_t readchar)
  * @param input     Pointer to PTTTL input data
  * @param readchar  Callback function to read next PTTTL source character
  *
- * @return 0 if successful, -1 if EOF was encountered before non-whitespace char was found
+ * @return 0 if successful, -1 if and error occurred, and 1 if EOF was encountered before non-whitespace char was found
  */
 static int _get_next_visible_char(ptttl_parser_readchar_t readchar, char *output)
 {
     int ret = _eat_all_nonvisible_chars(readchar);
-    if (ret < 0)
+    if (ret != 0)
     {
-        return -1;
+        return ret;
     }
 
     return _readchar_wrapper(readchar, output);
@@ -441,11 +442,7 @@ static int _parse_option(char opt, ptttl_parser_readchar_t readchar, settings_t 
 
     char equals;
     int result = _get_next_visible_char(readchar, &equals);
-    if (result < 0)
-    {
-        ERROR("Reached EOF before end of settings section");
-        return -1;
-    }
+    CHECK_READCHAR_RET(result);
 
     if ('=' != equals)
     {
@@ -521,11 +518,7 @@ static int _parse_settings(ptttl_parser_readchar_t readchar, settings_t *setting
     while (':' != c)
     {
         int result = _get_next_visible_char(readchar, &c);
-        if (result < 0)
-        {
-            ERROR("Reached EOF before end of settings section");
-            return -1;
-        }
+        CHECK_READCHAR_RET(result);
 
         result = _parse_option(c, readchar, settings);
         if (result < 0)
@@ -535,11 +528,7 @@ static int _parse_settings(ptttl_parser_readchar_t readchar, settings_t *setting
 
         // After parsing option, next visible char should be comma or colon, otherwise error
         result = _get_next_visible_char(readchar, &c);
-        if (result < 0)
-        {
-            ERROR("Reached EOF before end of settings section");
-            return -1;
-        }
+        CHECK_READCHAR_RET(result);
 
         if ((',' != c) && (':' != c))
         {
@@ -564,12 +553,17 @@ static int _parse_musical_note(ptttl_parser_readchar_t readchar, float *note_pit
 {
     // Read musical note name, convert to lowercase if needed
     char notebuf[3];
-    unsigned int notepos = 0u;
+    int notepos = 0;
     int readchar_ret = 0;
     char nextchar = '\0';
 
-    while ((notepos < 2u) && ((readchar_ret = _readchar_wrapper(readchar, &nextchar)) == 0))
+    while (notepos < 2)
     {
+        if ((readchar_ret = _readchar_wrapper(readchar, &nextchar)) != 0)
+        {
+            break;
+        }
+
         if ((nextchar >= 'A') && (nextchar <= 'Z'))
         {
             notebuf[notepos] = nextchar + ' ';
@@ -585,19 +579,19 @@ static int _parse_musical_note(ptttl_parser_readchar_t readchar, float *note_pit
             break;
         }
 
-        notepos += 1u;
+        notepos += 1;
         _column += 1u;
     }
 
     CHECK_READCHAR_RET_EOF(readchar_ret);
 
-    if (notepos == 0u)
+    if (notepos == 0)
     {
         ERROR("Expecting a musical note name");
         return -1;
     }
 
-    if ((notepos == 1u) && (notebuf[0] == 'p'))
+    if ((notepos == 1) && (notebuf[0] == 'p'))
     {
         *note_pitch = 0.0f;
     }
@@ -665,8 +659,8 @@ static int _parse_note_vibrato(ptttl_parser_readchar_t readchar, settings_t *set
     SET_VIBRATO(output, settings->default_vibrato_freq, settings->default_vibrato_var);
 #endif // PTTTL_VIBRATO_ENABLED
 
-    uint32_t freq_hz;
-    uint32_t var_hz;
+    uint32_t freq_hz = 0u;
+    uint32_t var_hz = 0u;
 
     // Parse vibrato frequency, if any
     readchar_ret = _readchar_wrapper(readchar, &nextchar);
@@ -875,11 +869,7 @@ static int _parse_note_data(ptttl_parser_readchar_t readchar, ptttl_output_t *ou
 
         char next_char;
         int result = _get_next_visible_char(readchar, &next_char);
-        if (result < 0)
-        {
-            // EOF was reached
-            break;
-        }
+        CHECK_READCHAR_RET_EOF(result);
 
         if ('|' == next_char)
         {
@@ -925,15 +915,13 @@ static int _parse_note_data(ptttl_parser_readchar_t readchar, ptttl_output_t *ou
         }
 
         result = _eat_all_nonvisible_chars(readchar);
+        if (0 != result)
+        {
+            break;
+        }
     }
 
-    if (0 > result)
-    {
-        ERROR("readchar callback returned -1");
-        return result;
-    }
-
-    return 0;
+    return result;
 }
 
 /**
@@ -966,16 +954,12 @@ int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output)
 
     // Read name (first field)
     int ret = _get_next_visible_char(readchar, &output->name[0]);
-    if (ret < 0)
-    {
-        ERROR("Unexpected EOF encountered");
-        return -1;
-    }
+    CHECK_READCHAR_RET(ret);
 
     unsigned int namepos = 1u;
     int readchar_ret = 0;
     char namechar = '\0';
-    while ((readchar_ret = _readchar_wrapper(readchar, &namechar) == 0))
+    while ((readchar_ret = _readchar_wrapper(readchar, &namechar)) == 0)
     {
         if (':' == namechar)
         {
@@ -1006,6 +990,8 @@ int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output)
         }
     }
 
+    CHECK_READCHAR_RET(readchar_ret);
+
     // Read PTTTL settings, next section after the name
     settings_t settings;
     ret = _parse_settings(readchar, &settings);
@@ -1015,18 +1001,14 @@ int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output)
     }
 
     ret = _eat_all_nonvisible_chars(readchar);
-    if (ret < 0)
+    if (ret != 0)
     {
         ERROR("Unexpected EOF encountered");
         return -1;
     }
 
-    // Read & process all note data
-    ret = _parse_note_data(readchar, output, &settings);
-    if (ret < 0)
-    {
-        return ret;
-    }
+    CHECK_READCHAR_RET(ret);
 
-    return 0;
+    // Read & process all note data
+    return _parse_note_data(readchar, output, &settings);
 }
