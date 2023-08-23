@@ -81,7 +81,8 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
 #endif // PTTTL_VIBRATO_ENABLED
 
     // Calculate note time in samples
-    float num_samples = channel->notes[note_index].duration_secs * (float) generator->config.sample_rate;
+    uint32_t time_ms = PTTTL_NOTE_DURATION(&channel->notes[note_index]);
+    float num_samples = ((float) time_ms) * (((float) generator->config.sample_rate) / 1000.0f);
     note_stream->num_samples = (unsigned int) num_samples;
 }
 
@@ -198,15 +199,24 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
                                     unsigned int channel_idx, float *sample)
 {
     int ret = 0;
+    uint32_t note_number = PTTTL_NOTE_VALUE(note);
+
     // Generate next sample value for this channel
-    if (0.0f == note->pitch_hz) // Pitch of 0 indicates pause/rest
+    if (0u == note_number) // Note number 0 indicates pause/rest
     {
         *sample = 0.0f;
     }
     else
     {
         int32_t raw_sample = 0;
+        float pitch_hz = 0.0f;
 
+        ret = ptttl_parser_note_number_to_pitch(note_number, &pitch_hz);
+        if (ret != 0)
+        {
+            ERROR("Failed to convert note number to pitch");
+            return ret;
+        }
 #if PTTTL_VIBRATO_ENABLED
         uint32_t vfreq = PTTTL_NOTE_VIBRATO_FREQ(note);
         uint32_t vvar = PTTTL_NOTE_VIBRATO_VAR(note);
@@ -215,7 +225,7 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
         {
             float vsine = _generate_sine_point(generator->config.sample_rate, vfreq, stream->sine_index);
             float pitch_change_hz = ((float) vvar) * vsine;
-            float note_pitch_hz = note->pitch_hz + pitch_change_hz;
+            float note_pitch_hz = pitch_hz + pitch_change_hz;
 
             float vsample = sinf(2.0f * M_PI * stream->phasor_state);
             float phasor_inc = note_pitch_hz / generator->config.sample_rate;
@@ -231,7 +241,7 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
         {
 #endif // PTTTL_VIBRATO_ENABLED
 
-        raw_sample = _generate_sine_sample(generator->config.sample_rate, note->pitch_hz, stream->sine_index);
+        raw_sample = _generate_sine_sample(generator->config.sample_rate, pitch_hz, stream->sine_index);
 #if PTTTL_VIBRATO_ENABLED
         }
 #endif // PTTTL_VIBRATO_ENABLED

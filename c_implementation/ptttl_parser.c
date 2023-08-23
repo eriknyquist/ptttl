@@ -133,8 +133,12 @@
 
 #ifdef PTTTL_VIBRATO_ENABLED
 // Set vibrato settings for a ptttl_output_note_t instance
-#define SET_VIBRATO(note, freq, var) (note->vibrato_settings = (freq & 0xffffu) | ((var & 0xffffu) << 16u))
+#define SET_VIBRATO(note, freq, var) ((note)->vibrato_settings = ((freq) & 0xffffu) | (((var) & 0xffffu) << 16u))
 #endif // PTTTL_VIBRATO_ENABLED
+
+// Set note settings for a ptttl_output_note_t instance
+#define SET_NOTE(note, value, duration) ((note)->note_settings = ((value) & 0x7fu) | (((duration) & 0xffffu) << 7u))
+
 
 // Max. value allowed for note octave
 #define NOTE_OCTAVE_MAX (8u)
@@ -163,51 +167,33 @@ typedef struct
  */
 typedef enum
 {
-    NOTE_C = 0,   // C
-    NOTE_CS,      // C sharp
-    NOTE_DB,      // D flat
-    NOTE_D,       // D
-    NOTE_DS,      // D sharp
-    NOTE_EB,      // E flat
-    NOTE_E,       // E
-    NOTE_ES,      // E sharp
-    NOTE_F,       // F
-    NOTE_FS,      // F sharp
-    NOTE_GB,      // G flat
-    NOTE_G,       // G
-    NOTE_GS,      // G sharp
-    NOTE_AB,      // A flat
-    NOTE_A,       // A
-    NOTE_AS,      // A sharp
-    NOTE_BB,      // B flat
-    NOTE_B,       // B
+    NOTE_C = 0,        // C
+    NOTE_CS,           // C sharp
+    NOTE_DB = NOTE_CS, // D flat
+    NOTE_D,            // D
+    NOTE_DS,           // D sharp
+    NOTE_EB = NOTE_DS, // E flat
+    NOTE_E,            // E
+    NOTE_ES,           // E sharp
+    NOTE_F = NOTE_ES,  // F
+    NOTE_FS,           // F sharp
+    NOTE_GB = NOTE_FS, // G flat
+    NOTE_G,            // G
+    NOTE_GS,           // G sharp
+    NOTE_AB = NOTE_GS, // A flat
+    NOTE_A,            // A
+    NOTE_AS,           // A sharp
+    NOTE_BB = NOTE_AS, // B flat
+    NOTE_B,            // B
     NOTE_INVALID, // Unecognized/invalid note
     NOTE_PITCH_COUNT = NOTE_INVALID
 } note_pitch_e;
 
 
-// Maps note_pitch_e enum values to the corresponding pitch in Hz
-static float _note_pitches[NOTE_PITCH_COUNT] =
-{
-    261.625565301f,   // NOTE_C
-    277.182630977f,   // NOTE_CS
-    277.182630977f,   // NOTE_DB
-    293.664767918f,   // NOTE_D
-    311.126983723f,   // NOTE_DS
-    311.126983723f,   // NOTE_EB
-    329.627556913f,   // NOTE_E
-    349.228231433f,   // NOTE_ES
-    349.228231433f,   // NOTE_F
-    369.994422712f,   // NOTE_FS
-    369.994422712f,   // NOTE_GB
-    391.995435982f,   // NOTE_G
-    415.30469758f,    // NOTE_GS
-    415.30469758f,    // NOTE_AB
-    440.0f,           // NOTE_A
-    466.163761518f,   // NOTE_AS
-    466.163761518f,   // NOTE_BB
-    493.883301256f    // NOTE_B
-};
+/* Key number (0-based) of the first key (C) for each octave. Index 0 holds
+ * the key number of the first key for octave 0, index 1 holds the key number
+ * of the first key for octave 1, and so on. */
+static const uint32_t _octave_starts[NOTE_OCTAVE_MAX + 1u] = {0u, 3u, 15u, 27u, 39u, 51u, 63u, 75u, 87u};
 
 // Valid values for note duration
 static unsigned int _valid_note_durations[NOTE_DURATION_COUNT] = {1u, 2u, 4u, 8u, 16u, 32u};
@@ -218,6 +204,38 @@ static ptttl_parser_error_t _error;
 static uint8_t _have_saved_char = 0u;
 static char _saved_char = '\0';
 
+
+/**
+ * Convert note_pitch_e and octave number to a piano key number from 1 through 88.
+ *
+ * @param note     Note pitch enum (assumed to already be validated)
+ * @param octave   Octave number (assumed to already be validated)
+ * @param output   Pointer to location to store output
+ *
+ * @return 0 if successful, -1 if an error occurred
+ */
+static int _note_name_to_number(note_pitch_e note, unsigned int octave, uint32_t *output)
+{
+    uint32_t result = 0u;
+
+    if (octave == 0u)
+    {
+        if (note < NOTE_A)
+        {
+            ERROR("Invalid musical note for octave 0");
+            return -1;
+        }
+
+        result = (uint32_t) (note - NOTE_A);
+    }
+    else
+    {
+        result = (uint32_t) (_octave_starts[octave] + (uint32_t) note);
+    }
+
+    *output = result + 1u;
+    return 0;
+}
 
 /**
  * Find the corresponding note_pitch_e value corresponding to a musical note string
@@ -542,14 +560,14 @@ static int _parse_settings(ptttl_parser_readchar_t readchar, settings_t *setting
 
 /**
  * Parse musical note character(s) at the current input position, and provide the
- * corresponding pitch value in Hz
+ * corresponding note_pitch_e enum
  *
  * @param readchar    Callback function to read next PTTTL source character
- * @param note_pitch  Pointer to location to store note pitch in Hz
+ * @param note_pitch  Pointer to location to store note pitch enum
  *
  * @return 0 if successful, -1 otherwise
  */
-static int _parse_musical_note(ptttl_parser_readchar_t readchar, float *note_pitch)
+static int _parse_musical_note(ptttl_parser_readchar_t readchar, note_pitch_e *note_pitch)
 {
     // Read musical note name, convert to lowercase if needed
     char notebuf[3];
@@ -593,7 +611,7 @@ static int _parse_musical_note(ptttl_parser_readchar_t readchar, float *note_pit
 
     if ((notepos == 1) && (notebuf[0] == 'p'))
     {
-        *note_pitch = 0.0f;
+        *note_pitch = NOTE_INVALID;
     }
     else
     {
@@ -604,7 +622,7 @@ static int _parse_musical_note(ptttl_parser_readchar_t readchar, float *note_pit
             return -1;
         }
 
-        *note_pitch = _note_pitches[enum_val];
+        *note_pitch = enum_val;
     }
 
     return 0;
@@ -752,7 +770,8 @@ static int _parse_ptttl_note(ptttl_parser_readchar_t readchar, settings_t *setti
         }
     }
 
-    int ret = _parse_musical_note(readchar, &output->pitch_hz);
+    note_pitch_e note_pitch = NOTE_C;
+    int ret = _parse_musical_note(readchar, &note_pitch);
     if (ret != 0)
     {
         return ret;
@@ -807,25 +826,27 @@ static int _parse_ptttl_note(ptttl_parser_readchar_t readchar, settings_t *setti
         _have_saved_char = 1u;
     }
 
-    // Set true pitch based on octave, if octave is not 4
-    if (octave < 4u)
+    uint32_t note_number = 0u;
+    if (NOTE_INVALID != note_pitch)
     {
-        output->pitch_hz = output->pitch_hz / (float) _raise_powerof2(4u - octave);
-    }
-    else if (octave > 4u)
-    {
-        output->pitch_hz = output->pitch_hz * (float) _raise_powerof2(octave - 4u);
+        ret = _note_name_to_number(note_pitch, octave, &note_number);
+        if (ret != 0)
+        {
+            return ret;
+        }
     }
 
     // Set note time in seconds based on note duration + BPM
     float whole_time = (60.0f / (float) settings->bpm) * 4.0f;
-    output->duration_secs = whole_time / (float) duration;
+    float duration_secs = whole_time / (float) duration;
 
     // Handle dotted rhythm
     if (dot_seen == 1u)
     {
-        output->duration_secs += (output->duration_secs / 2.0f);
+        duration_secs += (duration_secs / 2.0f);
     }
+
+    SET_NOTE(output, note_number, (uint32_t) (duration_secs * 1000.0f));
 
     return _parse_note_vibrato(readchar, settings, output);
 }
@@ -1008,3 +1029,74 @@ int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output)
     // Read & process all note data
     return _parse_note_data(readchar, output, &settings);
 }
+
+
+/**
+ * @see ptttl_parser.h
+ */
+int ptttl_parser_note_number_to_pitch(uint32_t note_number, float *pitch_hz)
+{
+    if ((0u == note_number) || (88 < note_number) || (NULL == pitch_hz))
+    {
+        return -1;
+    }
+
+    // Maps note_pitch_e enum values to the corresponding pitch in Hz
+    static const float note_pitches[NOTE_PITCH_COUNT] =
+    {
+        261.625565301f,   // NOTE_C
+        277.182630977f,   // NOTE_CS & NOTE_DB
+        293.664767918f,   // NOTE_D
+        311.126983723f,   // NOTE_DS & NOTE_EB
+        329.627556913f,   // NOTE_E
+        349.228231433f,   // NOTE_ES & NOTE_F
+        369.994422712f,   // NOTE_FS & NOTE_GB
+        391.995435982f,   // NOTE_G
+        415.30469758f,    // NOTE_GS & NOTE_AB
+        440.0f,           // NOTE_A
+        466.163761518f,   // NOTE_AS & NOTE_BB
+        493.883301256f    // NOTE_B
+    };
+
+    float result = 0.0f;
+    int octave = (int) NOTE_OCTAVE_MAX;
+
+    // Find the octave that contains this note
+    for (; octave >= 0; octave--)
+    {
+        if ((note_number - 1u) >= _octave_starts[octave])
+        {
+            // Note is in this octave
+            break;
+        }
+    }
+
+    if (octave < 0)
+    {
+        return -1;
+    }
+
+    if (0 == octave)
+    {
+        result = note_pitches[NOTE_A + (note_number - 1u)];
+    }
+    else
+    {
+        unsigned int note_pitch_index = (note_number - 1u) - _octave_starts[octave];
+        result = note_pitches[note_pitch_index];
+    }
+
+    // Set true pitch based on octave, if octave is not 4
+    if (octave < 4)
+    {
+        result = result / (float) _raise_powerof2((unsigned int) (4 - octave));
+    }
+    else if (octave > 4)
+    {
+        result = result * (float) _raise_powerof2((unsigned int) (octave - 4));
+    }
+
+    *pitch_hz = result;
+    return 0;
+}
+
