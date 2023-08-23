@@ -131,20 +131,6 @@ ptttl_parser_error_t ptttl_parser_error(void);
  */
 int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output);
 
-
-/**
- * Convert a piano key note number (1 thorugh 88) to the corresponding pitch
- * in Hz. Not strictly required for normal usage (used internally by ptttl_sample_generator),
- * but a useful tool to have nonetheless.
- *
- * @param note_number Piano key note number from 1 through 88, where 1 is the lowest note
- *                    and 88 is the highest note.
- * @param pitch_hz    Pointer to location to store corresponding pitch in Hz
- *
- * @return 0 if successful, -1 if an invalid note number or NULL pointer was provided
- */
-int ptttl_parser_note_number_to_pitch(uint32_t note_number, float *pitch_hz);
-
 #ifdef __cplusplus
     }
 #endif

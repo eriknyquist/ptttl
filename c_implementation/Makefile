@@ -8,6 +8,7 @@ RM          := rm
 MKDIR       := mkdir
 
 CFLAGS := -Wall -pedantic
+#CFLAGS += -g -O0 -pg -no-pie
 
 default: ptttl_cli
 

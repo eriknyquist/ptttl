@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include "ptttl_sample_generator.h"
+#include "ptttl_common.h"
 
 
 // Max positive value of a signed 16-bit sample
@@ -84,7 +85,90 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
     uint32_t time_ms = PTTTL_NOTE_DURATION(&channel->notes[note_index]);
     float num_samples = ((float) time_ms) * (((float) generator->config.sample_rate) / 1000.0f);
     note_stream->num_samples = (unsigned int) num_samples;
+
+    // Handle case where attack + delay is longer than note length
+    unsigned int attack = generator->config.attack_samples;
+    unsigned int decay = generator->config.decay_samples;
+    if ((attack + decay) > note_stream->num_samples)
+    {
+        unsigned int diff = (attack + decay) - note_stream->num_samples;
+        if (attack > decay)
+        {
+            attack = (attack > diff) ? attack - diff : 0u;
+        }
+        else
+        {
+            decay = (decay > diff) ? decay - diff : 0u;
+        }
+    }
+
+    note_stream->attack = attack;
+    note_stream->decay = decay;
 }
+
+/**
+ * Convert a piano key note number (1 thorugh 88) to the corresponding pitch
+ * in Hz.
+ *
+ * @param note_number Piano key note number from 1 through 88, where 1 is the lowest note
+ *                    and 88 is the highest note.
+ * @param pitch_hz    Pointer to location to store corresponding pitch in Hz
+ */
+static void _note_number_to_pitch(uint32_t note_number, float *pitch_hz)
+{
+    // Maps note_pitch_e enum values to the corresponding pitch in Hz
+    static const float note_pitches[NOTE_PITCH_COUNT] =
+    {
+        261.625565301f,   // NOTE_C
+        277.182630977f,   // NOTE_CS & NOTE_DB
+        293.664767918f,   // NOTE_D
+        311.126983723f,   // NOTE_DS & NOTE_EB
+        329.627556913f,   // NOTE_E
+        349.228231433f,   // NOTE_ES & NOTE_F
+        369.994422712f,   // NOTE_FS & NOTE_GB
+        391.995435982f,   // NOTE_G
+        415.30469758f,    // NOTE_GS & NOTE_AB
+        440.0f,           // NOTE_A
+        466.163761518f,   // NOTE_AS & NOTE_BB
+        493.883301256f    // NOTE_B
+    };
+
+    float result = 0.0f;
+    int octave = (int) NOTE_OCTAVE_MAX;
+
+    // Find the octave that contains this note
+    for (; octave >= 0; octave--)
+    {
+        if ((note_number - 1u) >= _octave_starts[octave])
+        {
+            // Note is in this octave
+            break;
+        }
+    }
+
+    if (0 == octave)
+    {
+        result = note_pitches[NOTE_A + (note_number - 1u)];
+    }
+    else
+    {
+        unsigned int note_pitch_index = (note_number - 1u) - _octave_starts[octave];
+        result = note_pitches[note_pitch_index];
+    }
+
+    // Set true pitch based on octave, if octave is not 4
+    if (octave < 4)
+    {
+        result = result / (float) _raise_powerof2((unsigned int) (4 - octave));
+    }
+    else if (octave > 4)
+    {
+        result = result * (float) _raise_powerof2((unsigned int) (octave - 4));
+    }
+
+    *pitch_hz = result;
+}
+
 
 /**
  * @see ptttl_sample_generator.h
@@ -142,47 +226,6 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
 }
 
 /**
- * Modify the amplitude of a sample based on generator attack/decay settings
- *
- * @param generator   Pointer to initialized sample generator object
- * @param stream      Pointer to note stream object for the current note
- * @param raw_sample  Pointer to sample to modify
- */
-static void _apply_attack_decay(ptttl_sample_generator_t *generator, ptttl_note_stream_t *stream,
-                                int32_t *raw_sample)
-{
-    unsigned int samples_elapsed = generator->current_sample - stream->start_sample;
-    unsigned int samples_remaining = stream->num_samples - samples_elapsed;
-
-    unsigned int attack = generator->config.attack_samples;
-    unsigned int decay = generator->config.decay_samples;
-
-    // Handle case where attack + delay is longer than note length
-    if ((attack + decay) > stream->num_samples)
-    {
-        unsigned int diff = (attack + decay) - stream->num_samples;
-        if (attack > decay)
-        {
-            attack = (attack > diff) ? attack - diff : 0u;
-        }
-        else
-        {
-            decay = (decay > diff) ? decay - diff : 0u;
-        }
-    }
-
-    // Modify channel sample amplitude based on attack/decay settings
-    if (samples_elapsed < attack)
-    {
-        *raw_sample *= ((float) samples_elapsed) / ((float) attack);
-    }
-    else if (samples_remaining < decay)
-    {
-        *raw_sample *= ((float) samples_remaining) / ((float) decay);
-    }
-}
-
-/**
  * Generate the next sample for the given note stream on the given channel
  *
  * @param parsed_ptttl   Pointer to parsed PTTTL data
@@ -211,12 +254,7 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
         int32_t raw_sample = 0;
         float pitch_hz = 0.0f;
 
-        ret = ptttl_parser_note_number_to_pitch(note_number, &pitch_hz);
-        if (ret != 0)
-        {
-            ERROR("Failed to convert note number to pitch");
-            return ret;
-        }
+        _note_number_to_pitch(note_number, &pitch_hz);
 #if PTTTL_VIBRATO_ENABLED
         uint32_t vfreq = PTTTL_NOTE_VIBRATO_FREQ(note);
         uint32_t vvar = PTTTL_NOTE_VIBRATO_VAR(note);
@@ -248,7 +286,19 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
 
         stream->sine_index += 1u;
 
-        _apply_attack_decay(generator, stream, &raw_sample);
+        // Handle attack & decay
+        unsigned int samples_elapsed = generator->current_sample - stream->start_sample;
+        unsigned int samples_remaining = stream->num_samples - samples_elapsed;
+
+        // Modify channel sample amplitude based on attack/decay settings
+        if (samples_elapsed < stream->attack)
+        {
+            raw_sample *= ((float) samples_elapsed) / ((float) stream->attack);
+        }
+        else if (samples_remaining < stream->decay)
+        {
+            raw_sample *= ((float) samples_remaining) / ((float) stream->decay);
+        }
 
         // Set final desired amplitude for channel sample
         *sample = ((float) raw_sample) * generator->config.amplitude;
