@@ -59,17 +59,7 @@ static int32_t _generate_sine_sample(unsigned int sample_rate, float freq, unsig
     float sample_norm = _generate_sine_point(sample_rate, freq, sine_index);
 
     // Convert to 0x0-0x7fff range
-    int32_t sample = (int32_t) (sample_norm * (float) MAX_SAMPLE_VALUE);
-    if (sample < -(MAX_SAMPLE_VALUE))
-    {
-        sample = -MAX_SAMPLE_VALUE;
-    }
-    else if (sample > MAX_SAMPLE_VALUE)
-    {
-        sample = MAX_SAMPLE_VALUE;
-    }
-
-    return sample;
+    return (int32_t) (sample_norm * (float) MAX_SAMPLE_VALUE);
 }
 
 /**
@@ -91,7 +81,7 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
 #endif // PTTTL_VIBRATO_ENABLED
 
     // Calculate note time in samples
-    float num_samples = channel->notes[note_index].duration_secs  * (float) generator->config.sample_rate;
+    float num_samples = channel->notes[note_index].duration_secs * (float) generator->config.sample_rate;
     note_stream->num_samples = (unsigned int) num_samples;
 }
 
@@ -303,16 +293,10 @@ int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_g
         ptttl_output_note_t *note = &parsed_ptttl->channels[i].notes[stream->note_index];
 
         float chan_sample = 0.0f;
-        int channel_finished = _generate_channel_sample(parsed_ptttl, generator, note, stream,
-                                                        i, &chan_sample);
+        generator->channel_finished[i] = _generate_channel_sample(parsed_ptttl, generator, note, stream,
+                                                                  i, &chan_sample);
 
         summed_sample += chan_sample;
-
-        if (1 == channel_finished)
-        {
-            // All notes for this channel finished
-            generator->channel_finished[i] = 1u;
-        }
     }
 
     if (num_channels_provided == 0u)
