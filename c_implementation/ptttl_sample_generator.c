@@ -14,6 +14,7 @@
 
 #include <math.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "ptttl_sample_generator.h"
 #include "ptttl_common.h"
@@ -30,6 +31,24 @@
 // Static storage for description of last error
 static const char *_error = NULL;
 
+
+/**
+ * Calculate the power of 2 for a given exponent
+ *
+ * @param exp  Exponent
+ *
+ * @return Result
+ */
+static inline unsigned int _raise_powerof2(unsigned int exp)
+{
+    unsigned int ret = 1u;
+    for (unsigned int i = 0u; i < exp; i++)
+    {
+        ret *= 2u;
+    }
+
+    return ret;
+}
 
 /**
  * Generate a single point on a sine wave, between 0.0-1.0, for a given sample rate and frequency
@@ -62,6 +81,63 @@ static int32_t _generate_sine_sample(unsigned int sample_rate, float freq, unsig
     // Convert to 0x0-0x7fff range
     return (int32_t) (sample_norm * (float) MAX_SAMPLE_VALUE);
 }
+
+/**
+ * Convert a piano key note number (1 thorugh 88) to the corresponding pitch
+ * in Hz.
+ *
+ * @param note_number Piano key note number from 1 through 88, where 1 is the lowest note
+ *                    and 88 is the highest note.
+ * @param pitch_hz    Pointer to location to store corresponding pitch in Hz
+ */
+static void _note_number_to_pitch(uint32_t note_number, float *pitch_hz)
+{
+    // Maps note_pitch_e enum values to the corresponding pitch in Hz
+    static const float note_pitches[NOTE_PITCH_COUNT] =
+    {
+        261.625565301f,   // NOTE_C
+        277.182630977f,   // NOTE_CS & NOTE_DB
+        293.664767918f,   // NOTE_D
+        311.126983723f,   // NOTE_DS & NOTE_EB
+        329.627556913f,   // NOTE_E
+        349.228231433f,   // NOTE_ES & NOTE_F
+        369.994422712f,   // NOTE_FS & NOTE_GB
+        391.995435982f,   // NOTE_G
+        415.30469758f,    // NOTE_GS & NOTE_AB
+        440.0f,           // NOTE_A
+        466.163761518f,   // NOTE_AS & NOTE_BB
+        493.883301256f    // NOTE_B
+    };
+
+    float result = 0.0f;
+    int octave = (int) NOTE_OCTAVE_MAX;
+
+    // Some nasty arithmetic to do a branchless conversion of note number to octave number
+    octave = ((int) (((note_number - 4u) / 12u) + 1u)) * (int) !(note_number < 3);
+
+    if (0 == octave)
+    {
+        result = note_pitches[NOTE_A + (note_number - 1u)];
+    }
+    else
+    {
+        unsigned int note_pitch_index = (note_number - 1u) - _octave_starts[octave];
+        result = note_pitches[note_pitch_index];
+    }
+
+    // Set true pitch based on octave, if octave is not 4
+    if (octave < 4)
+    {
+        result = result / (float) _raise_powerof2((unsigned int) (4 - octave));
+    }
+    else if (octave > 4)
+    {
+        result = result * (float) _raise_powerof2((unsigned int) (octave - 4));
+    }
+
+    *pitch_hz = result;
+}
+
 
 /**
  * Load a single PTTTL note from a specific channel into a note_stream_t object
@@ -104,71 +180,15 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
 
     note_stream->attack = attack;
     note_stream->decay = decay;
+
+    // Calculate note pitch from piano key number
+    note_stream->note_number = PTTTL_NOTE_VALUE(&channel->notes[note_index]);
+
+    if (0u != note_stream->note_number)
+    {
+        _note_number_to_pitch(note_stream->note_number, &note_stream->pitch_hz);
+    }
 }
-
-/**
- * Convert a piano key note number (1 thorugh 88) to the corresponding pitch
- * in Hz.
- *
- * @param note_number Piano key note number from 1 through 88, where 1 is the lowest note
- *                    and 88 is the highest note.
- * @param pitch_hz    Pointer to location to store corresponding pitch in Hz
- */
-static void _note_number_to_pitch(uint32_t note_number, float *pitch_hz)
-{
-    // Maps note_pitch_e enum values to the corresponding pitch in Hz
-    static const float note_pitches[NOTE_PITCH_COUNT] =
-    {
-        261.625565301f,   // NOTE_C
-        277.182630977f,   // NOTE_CS & NOTE_DB
-        293.664767918f,   // NOTE_D
-        311.126983723f,   // NOTE_DS & NOTE_EB
-        329.627556913f,   // NOTE_E
-        349.228231433f,   // NOTE_ES & NOTE_F
-        369.994422712f,   // NOTE_FS & NOTE_GB
-        391.995435982f,   // NOTE_G
-        415.30469758f,    // NOTE_GS & NOTE_AB
-        440.0f,           // NOTE_A
-        466.163761518f,   // NOTE_AS & NOTE_BB
-        493.883301256f    // NOTE_B
-    };
-
-    float result = 0.0f;
-    int octave = (int) NOTE_OCTAVE_MAX;
-
-    // Find the octave that contains this note
-    for (; octave >= 0; octave--)
-    {
-        if ((note_number - 1u) >= _octave_starts[octave])
-        {
-            // Note is in this octave
-            break;
-        }
-    }
-
-    if (0 == octave)
-    {
-        result = note_pitches[NOTE_A + (note_number - 1u)];
-    }
-    else
-    {
-        unsigned int note_pitch_index = (note_number - 1u) - _octave_starts[octave];
-        result = note_pitches[note_pitch_index];
-    }
-
-    // Set true pitch based on octave, if octave is not 4
-    if (octave < 4)
-    {
-        result = result / (float) _raise_powerof2((unsigned int) (4 - octave));
-    }
-    else if (octave > 4)
-    {
-        result = result * (float) _raise_powerof2((unsigned int) (octave - 4));
-    }
-
-    *pitch_hz = result;
-}
-
 
 /**
  * @see ptttl_sample_generator.h
@@ -242,19 +262,15 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
                                     unsigned int channel_idx, float *sample)
 {
     int ret = 0;
-    uint32_t note_number = PTTTL_NOTE_VALUE(note);
 
     // Generate next sample value for this channel
-    if (0u == note_number) // Note number 0 indicates pause/rest
+    if (0u == stream->note_number) // Note number 0 indicates pause/rest
     {
         *sample = 0.0f;
     }
     else
     {
         int32_t raw_sample = 0;
-        float pitch_hz = 0.0f;
-
-        _note_number_to_pitch(note_number, &pitch_hz);
 #if PTTTL_VIBRATO_ENABLED
         uint32_t vfreq = PTTTL_NOTE_VIBRATO_FREQ(note);
         uint32_t vvar = PTTTL_NOTE_VIBRATO_VAR(note);
@@ -263,7 +279,7 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
         {
             float vsine = _generate_sine_point(generator->config.sample_rate, vfreq, stream->sine_index);
             float pitch_change_hz = ((float) vvar) * vsine;
-            float note_pitch_hz = pitch_hz + pitch_change_hz;
+            float note_pitch_hz = stream->pitch_hz + pitch_change_hz;
 
             float vsample = sinf(2.0f * M_PI * stream->phasor_state);
             float phasor_inc = note_pitch_hz / generator->config.sample_rate;
@@ -279,7 +295,7 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
         {
 #endif // PTTTL_VIBRATO_ENABLED
 
-        raw_sample = _generate_sine_sample(generator->config.sample_rate, pitch_hz, stream->sine_index);
+        raw_sample = _generate_sine_sample(generator->config.sample_rate, stream->pitch_hz, stream->sine_index);
 #if PTTTL_VIBRATO_ENABLED
         }
 #endif // PTTTL_VIBRATO_ENABLED

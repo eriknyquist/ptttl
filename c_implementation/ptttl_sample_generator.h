@@ -42,6 +42,8 @@ typedef struct
     unsigned int note_index;      ///< Index of this note within the ptttl_channel_t->notes array
     unsigned int attack;          ///< Note decay length, in samples
     unsigned int decay;           ///< Note decay length, in samples
+    unsigned int note_number;     ///< Piano key number for this note, 1-88
+    float pitch_hz;               ///< Note pitch in Hz
 #ifdef PTTTL_VIBRATO_ENABLED
     float phasor_state;           ///< Phasor state for vibrato (frequency modulation)
 #endif // PTTTL_VIBRATO_ENABLED

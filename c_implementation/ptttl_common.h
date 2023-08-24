@@ -57,24 +57,5 @@ typedef enum
  * of the first key for octave 1, and so on. */
 static const uint32_t _octave_starts[NOTE_OCTAVE_MAX + 1u] = {0u, 3u, 15u, 27u, 39u, 51u, 63u, 75u, 87u};
 
-
-/**
- * Calculate the power of 2 for a given exponent
- *
- * @param exp  Exponent
- *
- * @return Result
- */
-static inline unsigned int _raise_powerof2(unsigned int exp)
-{
-    unsigned int ret = 1u;
-    for (unsigned int i = 0u; i < exp; i++)
-    {
-        ret *= 2u;
-    }
-
-    return ret;
-}
-
 #endif // PTTTL_COMMON_H
 
