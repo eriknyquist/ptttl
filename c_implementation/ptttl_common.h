@@ -22,6 +22,9 @@
 #endif
 
 
+#include <stdint.h>
+
+
 // Max. value allowed for note octave
 #define NOTE_OCTAVE_MAX (8u)
 

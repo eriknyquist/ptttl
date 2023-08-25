@@ -16,6 +16,7 @@
 #define PTTTL_SAMPLE_GENERATOR_H
 
 
+#include <stdint.h>
 #include "ptttl_parser.h"
 
 

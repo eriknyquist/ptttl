@@ -19,7 +19,6 @@
 
 
 #include <stdint.h>
-
 #include "ptttl_config.h"
 
 
