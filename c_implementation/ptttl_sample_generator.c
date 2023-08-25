@@ -344,48 +344,51 @@ static int _generate_channel_sample(ptttl_output_t *parsed_ptttl, ptttl_sample_g
  * @see ptttl_sample_generator.h
  */
 int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
-                                    int16_t *sample)
+                                    uint32_t *num_samples, int16_t *samples)
 {
-    if ((NULL == parsed_ptttl) || (NULL == generator))
+    if ((NULL == parsed_ptttl) || (NULL == generator) || (NULL == num_samples) || (NULL == samples))
     {
         ERROR("NULL pointer passed to function");
         return -1;
     }
 
-    float summed_sample = 0.0f;
-    unsigned int num_channels_provided = 0u;
+    uint32_t samples_to_generate = *num_samples;
+    *num_samples = 0u;
 
-    // Sum the current state of all channels to generate the next sample
-    for (unsigned int i = 0u; i < parsed_ptttl->channel_count; i++)
+    for (unsigned int samplenum = 0u; samplenum < samples_to_generate; samplenum++)
     {
-        if (1u == generator->channel_finished[i])
+        float summed_sample = 0.0f;
+        unsigned int num_channels_provided = 0u;
+
+        // Sum the current state of all channels to generate the next sample
+        for (unsigned int chan = 0u; chan < parsed_ptttl->channel_count; chan++)
         {
-            // No more samples to generate for this channel
-            continue;
+            if (1u == generator->channel_finished[chan])
+            {
+                // No more samples to generate for this channel
+                continue;
+            }
+
+            num_channels_provided += 1u;
+            ptttl_note_stream_t *stream = &generator->note_streams[chan];
+            ptttl_output_note_t *note = &parsed_ptttl->channels[chan].notes[stream->note_index];
+
+            float chan_sample = 0.0f;
+            generator->channel_finished[chan] = _generate_channel_sample(parsed_ptttl, generator, note, stream,
+                                                                         chan, &chan_sample);
+
+            summed_sample += chan_sample;
         }
 
-        num_channels_provided += 1u;
-        ptttl_note_stream_t *stream = &generator->note_streams[i];
-        ptttl_output_note_t *note = &parsed_ptttl->channels[i].notes[stream->note_index];
+        if (num_channels_provided == 0u)
+        {
+            // Finished-- no samples left on any channel
+            return 1;
+        }
 
-        float chan_sample = 0.0f;
-        generator->channel_finished[i] = _generate_channel_sample(parsed_ptttl, generator, note, stream,
-                                                                  i, &chan_sample);
-
-        summed_sample += chan_sample;
-    }
-
-    if (num_channels_provided == 0u)
-    {
-        // Finished-- no samples left on any channel
-        return 1;
-    }
-
-    generator->current_sample += 1u;
-
-    if (NULL != sample)
-    {
-        *sample = (int16_t) (summed_sample / (float) parsed_ptttl->channel_count);
+        generator->current_sample += 1u;
+        samples[samplenum] = (int16_t) (summed_sample / (float) parsed_ptttl->channel_count);
+        *num_samples += 1u;
     }
 
     return 0;

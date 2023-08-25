@@ -94,15 +94,20 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
 /**
  * Generate the next audio sample for some parsed PTTTL data
  *
- * @param parsed_ptttl   Pointer to parsed PTTTL data
- * @param generator      Pointer to initialized generator object
- * @param sample         Pointer to location to store sample value
+ * @param parsed_ptttl     Pointer to parsed PTTTL data
+ * @param generator        Pointer to initialized generator object
+ * @param num_samples      Pointer to number of samples to generate. If successful,
+ *                         then this pointer is re-used to write out the actual number
+ *                         of samples generated.
+ * @param samples          Pointer to location to store sample values. The caller is
+ *                         expected to provide at least (sizeof(int16_t) * num_samples)
+ *                         bytes of storage for the generated samples.
  *
  * @return 0 if successful, 1 if all samples have been generated, and -1 if an error occurred.
-           Call #ptttl_sample_generator_error for an error description if -1 is returned.
+ *         Call #ptttl_sample_generator_error for an error description if -1 is returned.
  */
 int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
-                                    int16_t *sample);
+                                    uint32_t *num_samples, int16_t *samples);
 
 
 #ifdef __cplusplus

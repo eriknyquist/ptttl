@@ -123,16 +123,26 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     }
 
     // Generate all samples and write to file
-    int16_t sample = 0;
-    while ((ret = ptttl_sample_generator_generate(parsed_ptttl, &generator, &sample)) == 0)
+    const uint32_t sample_buf_len = 256u;
+    int16_t sample_buf[sample_buf_len];
+    uint32_t num_samples = sample_buf_len;
+
+    while ((ret = ptttl_sample_generator_generate(parsed_ptttl, &generator, &num_samples, sample_buf)) != -1)
     {
-        size_t size_written = fwrite(&sample, 1u, sizeof(sample), fp);
-        if (sizeof(sample) != size_written)
+        size_t size_written = fwrite(&sample_buf, sizeof(uint16_t), num_samples, fp);
+        if (num_samples != size_written)
         {
             ERROR("Failed to write to WAV file");
             fclose(fp);
             return -1;
         }
+
+        if (1 == ret)
+        {
+            break;
+        }
+
+        num_samples = sample_buf_len;
     }
 
     if (ret < 0)
