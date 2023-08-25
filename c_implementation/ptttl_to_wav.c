@@ -127,7 +127,7 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     int16_t sample_buf[sample_buf_len];
     uint32_t num_samples = sample_buf_len;
 
-    while ((ret = ptttl_sample_generator_generate(parsed_ptttl, &generator, &num_samples, sample_buf)) != -1)
+    while ((ret = ptttl_sample_generator_generate(&generator, &num_samples, sample_buf)) != -1)
     {
         size_t size_written = fwrite(&sample_buf, sizeof(uint16_t), num_samples, fp);
         if (num_samples != size_written)

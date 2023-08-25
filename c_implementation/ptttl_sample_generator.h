@@ -69,6 +69,7 @@ typedef struct
     ptttl_note_stream_t note_streams[PTTTL_MAX_CHANNELS_PER_FILE];
     uint8_t channel_finished[PTTTL_MAX_CHANNELS_PER_FILE];
     ptttl_sample_generator_config_t config;
+    ptttl_output_t *parsed_ptttl;
 } ptttl_sample_generator_t;
 
 /**
@@ -81,7 +82,10 @@ const char *ptttl_sample_generator_error(void);
 /**
  * Initialize a sample generator instance for a specific ptttl_output_t object
  *
- * @param parsed_ptttl   Pointer to parsed PTTTL data
+ * @param parsed_ptttl   Pointer to parsed PTTTL data. The data at this pointer must remain
+ *                       accessible while you are generating samples; #ptttl_sample_generator_create
+ *                       takes a copy of this pointer, and that pointer is accessed each time
+ *                       #ptttl_sample_generator_generate is invoked.
  * @param generator      Pointer to generator instance to initialize
  * @param config         Pointer to sample generator configuration data
  *
@@ -94,7 +98,6 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
 /**
  * Generate the next audio sample for some parsed PTTTL data
  *
- * @param parsed_ptttl     Pointer to parsed PTTTL data
  * @param generator        Pointer to initialized generator object
  * @param num_samples      Pointer to number of samples to generate. If successful,
  *                         then this pointer is re-used to write out the actual number
@@ -106,7 +109,7 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
  * @return 0 if successful, 1 if all samples have been generated, and -1 if an error occurred.
  *         Call #ptttl_sample_generator_error for an error description if -1 is returned.
  */
-int ptttl_sample_generator_generate(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
+int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator,
                                     uint32_t *num_samples, int16_t *samples);
 
 
