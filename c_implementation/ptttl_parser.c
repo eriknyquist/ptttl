@@ -597,10 +597,10 @@ static int _parse_musical_note(ptttl_parser_readchar_t readchar, note_pitch_e *n
  * return success.
  *
  * @param readchar  Callback function to read next PTTTL source character
- * @param freq_hz   Pointer to location to store parsed vibrato frequency Hz
- * @param freq_var  Pointer to location to store parsed vibrato variance Hz
+ * @param settings  Pointer to PTTTL settings parsed from settings section (contains default vibrato settings)
+ * @param output    Pointer to current output note object (contains final vibrato settings)
  *
- * @return 0 if successful, -1 otherwise
+ * @return 0 if successful, 1 if EOF was encountered, and -1 if an error occurred
  */
 static int _parse_note_vibrato(ptttl_parser_readchar_t readchar, settings_t *settings, ptttl_output_note_t *output)
 {
@@ -685,7 +685,7 @@ static int _parse_note_vibrato(ptttl_parser_readchar_t readchar, settings_t *set
  * @param settings  Pointer to PTTTL settings parsed from settings section
  * @param output    Pointer to location to store output ptttl_output_note_t data
  *
- * @return 0 if successful, -1 otherwise
+ * @return 0 if successful, 1 if EOF was encountered, and -1 if an error occurred
  */
 static int _parse_ptttl_note(ptttl_parser_readchar_t readchar, settings_t *settings, ptttl_output_note_t *output)
 {
@@ -798,10 +798,10 @@ static int _parse_ptttl_note(ptttl_parser_readchar_t readchar, settings_t *setti
 
 /**
  * Parse the entire "data" section from the current input position, and populate
- * the output struct
+ * the note data in the output struct for the intermediate representation
  *
  * @param readchar  Callback function to read next PTTTL source character
- * @param output    Pointer to location to store parsed output
+ * @param output    Pointer to location to store intermediate representation
  * @param settings  Pointer to PTTTL settings parsed from settings section
  *
  * @return 0 if successful, -1 otherwise
