@@ -143,10 +143,9 @@ static void _note_number_to_pitch(uint32_t note_number, float *pitch_hz)
     };
 
     float result = 0.0f;
-    int octave = (int) NOTE_OCTAVE_MAX;
 
     // Some nasty arithmetic to do a branchless conversion of note number to octave number
-    octave = ((int) (((note_number - 3u) / 12u) + 1u)) * (int) !(note_number < 3);
+    int octave = ((int) (((note_number - 3u) / 12u) + 1u)) * (int) !(note_number < 3);
 
     if (0 == octave)
     {
