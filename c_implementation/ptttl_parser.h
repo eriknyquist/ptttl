@@ -64,7 +64,7 @@ typedef struct
      *
      * Bits 16-31 : Vibrato maximum +/- variance from the main pitch, in Hz
      */
-    uint32_t vibrato_settings;  ///< Bits 0-15 is vibrato frequency, and 16-31 is variance, both in Hz
+    uint32_t vibrato_settings;
 #endif // PTTTL_VIBRATO_ENABLED
 } ptttl_output_note_t;
 
