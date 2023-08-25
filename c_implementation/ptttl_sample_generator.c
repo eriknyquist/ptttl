@@ -28,6 +28,18 @@
 #define ERROR(error_msg) (_error = error_msg)
 
 
+// Size of table of pre-computed sine values
+#define SINE_TABLE_SIZE (4096u)
+
+// PI * 2 as a constant, for convenience
+#define TWO_PI (6.28318530718f)
+
+/* Table of pre-computed sine values, allows to implement a slightly faster but
+ * also slightly less accurate sinf() function */
+static float _sine_table[SINE_TABLE_SIZE];
+static int _sine_table_initialized = 0;
+
+
 // Static storage for description of last error
 static const char *_error = NULL;
 
@@ -51,6 +63,29 @@ static inline unsigned int _raise_powerof2(unsigned int exp)
 }
 
 /**
+ * Faster but less accurate implementation of sinf function. Uses values
+ * pre-computed one time by the standard sinf() function.
+ *
+ * @param x  Input value
+ *
+ * @return Computed sine value
+ */
+float fast_sinf(float x)
+{
+    float quotient = x / TWO_PI;
+    x = (x - TWO_PI * (int) quotient) + (TWO_PI * ((int) (x < 0)));
+
+    float index = x * (SINE_TABLE_SIZE / TWO_PI);
+    int index_low = (int)index;
+    int index_high = (index_low + 1) % SINE_TABLE_SIZE;
+    float frac = index - index_low;
+
+    float y = _sine_table[index_low] + frac * (_sine_table[index_high] - _sine_table[index_low]);
+
+    return y;
+}
+
+/**
  * Generate a single point on a sine wave, between 0.0-1.0, for a given sample rate and frequency
  *
  * @param sample_rate  Sampling rate
@@ -61,7 +96,7 @@ static inline unsigned int _raise_powerof2(unsigned int exp)
  */
 static float _generate_sine_point(unsigned int sample_rate, float freq, unsigned int sine_index)
 {
-    return sinf(2.0f * M_PI * freq * (((float) sine_index) / (float) sample_rate));
+    return fast_sinf(2.0f * M_PI * freq * (((float) sine_index) / (float) sample_rate));
 }
 
 /**
@@ -113,7 +148,7 @@ static void _note_number_to_pitch(uint32_t note_number, float *pitch_hz)
     int octave = (int) NOTE_OCTAVE_MAX;
 
     // Some nasty arithmetic to do a branchless conversion of note number to octave number
-    octave = ((int) (((note_number - 4u) / 12u) + 1u)) * (int) !(note_number < 3);
+    octave = ((int) (((note_number - 3u) / 12u) + 1u)) * (int) !(note_number < 3);
 
     if (0 == octave)
     {
@@ -121,7 +156,7 @@ static void _note_number_to_pitch(uint32_t note_number, float *pitch_hz)
     }
     else
     {
-        unsigned int note_pitch_index = (note_number - 1u) - _octave_starts[octave];
+        unsigned int note_pitch_index = note_number - _octave_starts[octave];
         result = note_pitches[note_pitch_index];
     }
 
@@ -240,6 +275,17 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
         }
 
         _load_note_stream(generator, &parsed_ptttl->channels[i], 0u, &generator->note_streams[i]);
+    }
+
+    // Initialize sine table, if not done yet
+    if (!_sine_table_initialized)
+    {
+        for (int i = 0; i < SINE_TABLE_SIZE; ++i)
+        {
+            _sine_table[i] = sinf(TWO_PI * i / SINE_TABLE_SIZE);
+        }
+
+        _sine_table_initialized = 1;
     }
 
     return 0;

@@ -23,8 +23,8 @@ static int _ptttl_readchar(char *nextchar)
 {
     size_t ret = fread(nextchar, 1, 1, fp);
 
-    // Return 0 for success, 1 for EOF, and -1 for error
-    return (1u == ret) ? 0 : 1;
+    // Return 0 for success, 1 for EOF (no error condition)
+    return (int) (1u != ret);
 }
 
 int main(int argc, char *argv[])
