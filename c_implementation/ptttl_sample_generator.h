@@ -73,6 +73,7 @@ typedef struct
     ptttl_output_t *parsed_ptttl;
 } ptttl_sample_generator_t;
 
+
 /**
  * Return pointer to a string describing the last error that occurred
  *
@@ -97,7 +98,7 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
                                   ptttl_sample_generator_config_t *config);
 
 /**
- * Generate the next audio sample(s) for an initialize generator object
+ * Generate the next audio sample(s) for an initialized generator object
  *
  * @param generator        Pointer to initialized generator object
  * @param num_samples      Pointer to number of samples to generate. If successful,

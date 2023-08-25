@@ -126,8 +126,8 @@ ptttl_parser_error_t ptttl_parser_error(void);
  * @param readchar  Callback function to read the next character of PTTTL/RTTTL source text
  # @param output    Pointer to location to store intermediate representation
  *
- * @return  0 if successful, -1 otherwise. If -1, use #ptttl_error_message
- *          to get a more detailed error message.
+ * @return  0 if successful, -1 otherwise. If -1, use #ptttl_parser_error
+ *          to get detailed error information.
  */
 int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output);
 
