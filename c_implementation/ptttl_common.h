@@ -17,6 +17,11 @@
 #define PTTTL_COMMON_H
 
 
+#ifdef __cplusplus
+    extern "C" {
+#endif
+
+
 // Max. value allowed for note octave
 #define NOTE_OCTAVE_MAX (8u)
 
@@ -56,6 +61,12 @@ typedef enum
  * the key number of the first key for octave 0, index 1 holds the key number
  * of the first key for octave 1, and so on. */
 static const uint32_t _octave_starts[NOTE_OCTAVE_MAX + 1u] = {0u, 3u, 15u, 27u, 39u, 51u, 63u, 75u, 87u};
+
+
+#ifdef __cplusplus
+    }
+#endif
+
 
 #endif // PTTTL_COMMON_H
 
