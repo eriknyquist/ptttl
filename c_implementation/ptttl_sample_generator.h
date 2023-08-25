@@ -97,7 +97,7 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
                                   ptttl_sample_generator_config_t *config);
 
 /**
- * Generate the next audio sample for some parsed PTTTL data
+ * Generate the next audio sample(s) for an initialize generator object
  *
  * @param generator        Pointer to initialized generator object
  * @param num_samples      Pointer to number of samples to generate. If successful,

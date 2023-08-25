@@ -83,14 +83,14 @@ typedef struct
  */
 typedef struct
 {
-    char name[PTTTL_MAX_NAME_LEN];                                 ///< Name field of PTTTL file
+    char name[PTTTL_MAX_NAME_LEN];                                 ///< Name field of PTTTL/RTTTL file
     unsigned int channel_count;                                    ///< Number of channels populated
     ptttl_output_channel_t channels[PTTTL_MAX_CHANNELS_PER_FILE];  ///< Array of channels
 } ptttl_output_t;
 
 
 /**
- * Holds information about a failure to parse input PTTTL text
+ * Holds information about a failure to parse input PTTTL/RTTTL text
  */
 typedef struct
 {
@@ -101,9 +101,9 @@ typedef struct
 
 
 /**
- * Callback function to fetch the next character of PTTTL source
+ * Callback function to fetch the next character of PTTTL/RTTTL source
  *
- * @param input_char   Pointer to location to store fetched PTTTL source character
+ * @param input_char   Pointer to location to store fetched PTTTL/RTTTL source character
  *
  * @return 0 if successful, 1 if no more characters remain, and -1 if an error
  *         occurred (causes parsing to halt early)
@@ -120,10 +120,11 @@ ptttl_parser_error_t ptttl_parser_error(void);
 
 
 /**
- * Convert a ptttl_input_t struct to a ptttl_output_t struct
+ * Parse PTTTL/RTTTL source text to create an intermediate representation that can be
+ * used to generate audio data.
  *
- * @param input              Pointer to input data
- * @param readchar           Callback function to read the next PTTTL source character
+ * @param readchar  Callback function to read the next character of PTTTL/RTTTL source text
+ # @param output    Pointer to location to store intermediate representation
  *
  * @return  0 if successful, -1 otherwise. If -1, use #ptttl_error_message
  *          to get a more detailed error message.
