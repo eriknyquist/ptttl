@@ -18,6 +18,7 @@
 
 #include "ptttl_sample_generator.h"
 #include "ptttl_common.h"
+#include "ptttl_config.h"
 
 
 // Max positive value of a signed 16-bit sample
@@ -28,15 +29,12 @@
 #define ERROR(error_msg) (_error = error_msg)
 
 
-// Size of table of pre-computed sine values
-#define SINE_TABLE_SIZE (4096u)
-
 // PI * 2 as a constant, for convenience
 #define TWO_PI (6.28318530718f)
 
-/* Table of pre-computed sine values, allows to implement a slightly faster but
- * also slightly less accurate sinf() function */
-static float _sine_table[SINE_TABLE_SIZE];
+/* Table of pre-computed sine values, allows to implement a faster but
+ * less accurate sinf() function */
+static float _sine_table[PTTTL_SINE_TABLE_SIZE];
 static int _sine_table_initialized = 0;
 
 
@@ -75,9 +73,9 @@ float fast_sinf(float x)
     float quotient = x / TWO_PI;
     x = (x - TWO_PI * (int) quotient) + (TWO_PI * ((int) (x < 0)));
 
-    float index = x * (SINE_TABLE_SIZE / TWO_PI);
+    float index = x * (PTTTL_SINE_TABLE_SIZE / TWO_PI);
     int index_low = (int)index;
-    int index_high = (index_low + 1) % SINE_TABLE_SIZE;
+    int index_high = (index_low + 1) % PTTTL_SINE_TABLE_SIZE;
     float frac = index - index_low;
 
     float y = _sine_table[index_low] + frac * (_sine_table[index_high] - _sine_table[index_low]);
@@ -281,9 +279,9 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
     // Initialize sine table, if not done yet
     if (!_sine_table_initialized)
     {
-        for (int i = 0; i < SINE_TABLE_SIZE; ++i)
+        for (int i = 0; i < PTTTL_SINE_TABLE_SIZE; ++i)
         {
-            _sine_table[i] = sinf(TWO_PI * i / SINE_TABLE_SIZE);
+            _sine_table[i] = sinf(TWO_PI * i / PTTTL_SINE_TABLE_SIZE);
         }
 
         _sine_table_initialized = 1;
