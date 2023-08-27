@@ -49,7 +49,7 @@ static const char *_error = NULL;
  *
  * @return Result
  */
-static inline unsigned int _raise_powerof2(unsigned int exp)
+static unsigned int _raise_powerof2(unsigned int exp)
 {
     unsigned int ret = 1u;
     for (unsigned int i = 0u; i < exp; i++)
@@ -68,19 +68,15 @@ static inline unsigned int _raise_powerof2(unsigned int exp)
  *
  * @return Computed sine value
  */
-float fast_sinf(float x)
+static float fast_sinf(float x)
 {
     float quotient = x / TWO_PI;
     x = (x - TWO_PI * (int) quotient) + (TWO_PI * ((int) (x < 0)));
 
     float index = x * (PTTTL_SINE_TABLE_SIZE / TWO_PI);
     int index_low = (int)index;
-    int index_high = (index_low + 1) % PTTTL_SINE_TABLE_SIZE;
-    float frac = index - index_low;
 
-    float y = _sine_table[index_low] + frac * (_sine_table[index_high] - _sine_table[index_low]);
-
-    return y;
+    return _sine_table[index_low];
 }
 
 /**
@@ -180,7 +176,7 @@ static void _note_number_to_pitch(uint32_t note_number, float *pitch_hz)
  * @param note_stream  Pointer to note stream object to populate
  */
 static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_channel_t *channel,
-                             unsigned int note_index, ptttl_note_stream_t *note_stream)
+                              unsigned int note_index, ptttl_note_stream_t *note_stream)
 {
     note_stream->sine_index = 0u;
     note_stream->note_index = note_index;
