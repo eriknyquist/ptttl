@@ -13,14 +13,18 @@ melodies, and is a superset of Nokia's
 it to enable polyphony and vibrato.
 
 
-API documentation
-#################
+Python reference implementation
+###############################
 
+A reference implementation in python is provided for general purpose applications.
+
+API documentation
+==================
 API documentation `can be found here <https://ptttl.readthedocs.io/>`_
 
 
 Install
-#######
+=======
 
 Install from pip
 
@@ -28,9 +32,6 @@ Install from pip
 
     pip install -r ptttl
 
-
-Usage
-#####
 
 Converting PTTTL/RTTTL files to .wav files from the command line
 ================================================================
@@ -68,12 +69,12 @@ Converting PTTTL/RTTTL files to .wav in a python script
    ...
    >>> ptttl_to_wav(ptttl_source, 'output.wav')
 
-Why?
-####
 
-I needed a good way to store simple tones and melodies for some project.
-RTTTL looked pretty good but only works for monophonic melodies.
-I needed polyphony.
+C reference implementation
+==========================
+
+A reference implemention written in C is provided, which is suitable for use in
+embedded applications. See ``c_implementation/README.rst`` for more details.
 
 PTTTL format
 ############
@@ -95,8 +96,9 @@ contents.
 *default values* section
 ========================
 
-The very first statement is the *default value* section and is the same as
-the section of the same name from the RTTTL format.
+The very first statement is the *default values* section, and it is the same as
+the *default values* section from the RTTTL format, except with two additional
+vibrato-related settings:
 
 ::
 
@@ -165,18 +167,16 @@ Valid values for note octave are between **0** and **8**.
 Vibrato
 -------
 
-Optionally, vibrato maybe enabled and configured for an individual note. This is
-done by adding a ``v`` at the end of the note, and optionally a frequency and variance
-value seperated by a ``-`` character. For example:
+Optionally, vibrato may be enabled and configured for an individual note. This is
+done by appending a ``v`` to the end of the note, and optionally frequency and variance
+values seperated by a ``-`` character. For example:
 
 * ``4c#v`` refers to a C# quarter note with vibrato enabled, using default settings
-* ``4c#v10`` refers to a C# quarter note with vibrato enabled, using a vibrato frequency of 10Hz,
-   and the default value for vibrato variance
 * ``4c#v10-15`` refers to a C# quarter note with vibrato enabled, using a vibrato frequency of 10Hz,
   with a maximum vibrato variance of 15Hz from the main pitch.
 
 Example
-=======
+-------
 
 Consider the following PTTTL string:
 
@@ -210,14 +210,15 @@ PTTTL:
 In order to keep things readable for large PTTTL files with multiple
 concurrent tracks, a semicolon character ``;`` can be used further break up
 melodies into more practical blocks. Just as the veritcal pipe character ``|``
-seperates *concurrent* tracks within a single melody, the semicolon character
-seperates multiple *sequential* melodies within a single data section. Melodies
-seperated by semicolons will be stitched together, one after the other, in the
-final output.
+seperates *concurrent* tracks within a single polyphonic melody, the semicolon
+character seperates multiple *sequential* polyphonic melodies within a single
+data section. Blocks of notes seperated by semicolons will be "stitched together",
+or concatenated, in the final output.
 
 The semicolon does not affect any of the timings or pitch of the generated
-tones; it just makes the PTTTL source a bit more readable. Have a look at this
-larger PTTTL file, with 4 simultaneous melodies, for a good example of why the
+tones; it just makes the PTTTL source a bit more readable, and gives you more
+options for organizing the lines when writing music. Have a look at this larger 
+PTTTL file, with 4 simultaneous melodies, for a good example of why the
 semicolon is useful:
 
 ::
@@ -268,19 +269,3 @@ semicolon is useful:
     4db5,   8db5,   8db5,   4b4,    8bb4,   8bb4,   4b4,    8ab4 |
     4bb3,   8b3,    8db4,   4d4,    8eb4,   8eb4 ,  4ab4,   8ab4
 
-Usage
------
-
-Install from pip
-
-::
-
-    pip install -r ptttl
-
-Convert a PTTTL file into audible tones in a .wav file:
-
-::
-
-   python -m ptttl input.ptttl -f output.wav
-
-API documentation `can be found here <https://ptttl.readthedocs.io/>`_
