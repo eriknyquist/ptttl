@@ -1,4 +1,4 @@
-.. toctree:: Table of Contents
+.. contents:: Table of Contents
 
 Polyphonic Tone Transfer Language
 #################################
