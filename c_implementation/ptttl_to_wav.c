@@ -122,8 +122,8 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
         return -1;
     }
 
-    // Generate all samples and write to file
-    const uint32_t sample_buf_len = 256u;
+    // Generate 1k samples at a time and write to file, until all samples are generated
+    const uint32_t sample_buf_len = 1024;
     int16_t sample_buf[sample_buf_len];
     uint32_t num_samples = sample_buf_len;
 
