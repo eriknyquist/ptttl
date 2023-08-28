@@ -29,6 +29,7 @@
 #define ERROR(error_msg) (_error = error_msg)
 
 
+#if PTTTL_FAST_SINE_ENABLED
 // PI * 2 as a constant, for convenience
 #define TWO_PI (6.28318530718f)
 
@@ -36,7 +37,7 @@
  * less accurate sinf() function */
 static float _sine_table[PTTTL_SINE_TABLE_SIZE];
 static int _sine_table_initialized = 0;
-
+#endif // PTTTL_FAST_SINE_ENABLED
 
 // Static storage for description of last error
 static const char *_error = NULL;
@@ -60,6 +61,7 @@ static unsigned int _raise_powerof2(unsigned int exp)
     return ret;
 }
 
+#if PTTTL_FAST_SINE_ENABLED
 /**
  * Faster but less accurate implementation of sinf function. Uses values
  * pre-computed one time by the standard sinf() function.
@@ -78,6 +80,7 @@ static float fast_sinf(float x)
 
     return _sine_table[index_low];
 }
+#endif // PTTTL_FAST_SINE_ENABLED
 
 /**
  * Generate a single point on a sine wave, between 0.0-1.0, for a given sample rate and frequency
@@ -90,7 +93,12 @@ static float fast_sinf(float x)
  */
 static float _generate_sine_point(unsigned int sample_rate, float freq, unsigned int sine_index)
 {
-    return fast_sinf(2.0f * M_PI * freq * (((float) sine_index) / (float) sample_rate));
+    float sine_state = 2.0f * M_PI * freq * (((float) sine_index) / (float) sample_rate);
+#if PTTTL_FAST_SINE_ENABLED
+    return fast_sinf(sine_state);
+#else
+    return sinf(sine_state);
+#endif // PTTTL_FAST_SINE_ENABLED
 }
 
 /**
@@ -271,6 +279,7 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
         _load_note_stream(generator, &parsed_ptttl->channels[i], 0u, &generator->note_streams[i]);
     }
 
+#if PTTTL_FAST_SINE_ENABLED
     // Initialize sine table, if not done yet
     if (!_sine_table_initialized)
     {
@@ -281,6 +290,7 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
 
         _sine_table_initialized = 1;
     }
+#endif // PTTTL_FAST_SINE_ENABLED
 
     return 0;
 }
@@ -320,7 +330,12 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_o
             float pitch_change_hz = ((float) vvar) * vsine;
             float note_pitch_hz = stream->pitch_hz + pitch_change_hz;
 
+#if PTTTL_FAST_SINE_ENABLED
+            float vsample = fast_sinf(2.0f * M_PI * stream->phasor_state);
+#else
             float vsample = sinf(2.0f * M_PI * stream->phasor_state);
+#endif // PTTTL_FAST_SINE_ENABLED
+
             float phasor_inc = note_pitch_hz / generator->config.sample_rate;
             stream->phasor_state += phasor_inc;
             if (stream->phasor_state >= 1.0f)
