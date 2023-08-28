@@ -25,10 +25,14 @@ only the file(s) that you need:
   to the .wav file immediately, so there is no need to store the entire .wav file in memory.
   Requires ``stdio.h`` and ``stdint.h``.
 
+Some additional files, that are not required for normal usage but may be useful for
+reference and/or development & testing, are also provided:
 
-Additionally, **ptttl_cli.c** is also provided, which implements a sample command line
-tool that uses ``ptttl_parser.c`` and ``ptttl_to_wav.c`` to convert RTTTL/PTTTL source
-to .wav files.
+* **ptttl_cli.c**: Implements a sample command-line ool that uses ``ptttl_parser.c`` and
+``ptttl_to_wav.c`` to convert RTTTL/PTTTL source to .wav files.
+
+* **afl_fuzz_harness.c**: Implements a "harness" to fuzz the ``ptttl_parse()`` function
+  using `AFL++<https://github.com/AFLplusplus/AFLplusplus>`_
 
 How to use
 ==========
