@@ -1,6 +1,10 @@
 Portable C implementation of PTTTL/RTTTL parser
 -----------------------------------------------
 
+This is a reference implementation of a PTTTL/RTTTL parser in pure C, suitable for embedded
+applications (no dynamic memory allocation, low static memory usage, configurable trade-offs
+for performance vs. memory usage).
+
 This implementation is split into 3 main parts, to make it easier for you to take
 only the file(s) that you need:
 

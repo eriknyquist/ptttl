@@ -76,7 +76,9 @@ C reference implementation
 ==========================
 
 A reference implemention written in C is provided, which is suitable for use in
-embedded applications. See ``c_implementation/README.rst`` for more details.
+embedded applications, under the ``c_implementation`` directory.
+
+`See the README for the C implementation <c_implementation/README.rst> here`_.
 
 PTTTL format
 ############
