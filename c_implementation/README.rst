@@ -32,10 +32,33 @@ reference and/or development & testing, are also provided:
 ``ptttl_to_wav.c`` to convert RTTTL/PTTTL source to .wav files.
 
 * **afl_fuzz_harness.c**: Implements a "harness" to fuzz the ``ptttl_parse()`` function
-  using `AFL++<https://github.com/AFLplusplus/AFLplusplus>`_
+  using `AFL++ <https://github.com/AFLplusplus/AFLplusplus>`_
 
-How to use
-==========
+Building the sample applications
+--------------------------------
+
+`ptttl_cli`
+###########
+
+Build the `ptttl_cli` application using `make` (it's the default target):
+
+::
+
+    make
+
+
+`afl_fuzz_harness`
+##################
+
+Build the `afl_fuzz_harness` application using the `afl_fuzz_harness` target:
+
+::
+
+    make afl_fuzz_harness
+
+
+How to incorporate into your own applications
+=============================================
 
 There are two supported scenarios...
 
@@ -62,8 +85,8 @@ You want to read PTTTL/RTTTL text and generate a .wav file
 * Use ``ptttl_to_wav.c`` to convert intermediate representation to .wav file
   (See ``ptttl_to_wav.h`` for API documentation)
 
-Configuration options (``ptttl_config.h``)
-==========================================
+Configuration options (``ptttl_config.h``) and how they affect `ptttl_output_t` size
+====================================================================================
 
 The size of the ``ptttl_output_t`` struct (intermediate representation of RTTTL/PTTTL source)
 is fixed at compile time, and is significantly affected by the following symbols defined in ``ptttl_config.h``:
