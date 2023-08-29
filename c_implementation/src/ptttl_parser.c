@@ -484,7 +484,7 @@ static int _parse_option(char opt, ptttl_parser_readchar_t readchar, settings_t 
  * @param readchar  Callback function to read next PTTTL source character
  * @param settings  Pointer to location to store parsed settings
  *
- * @return 0 if successful, 1 otherwise
+ * @return 0 if successful, -1 otherwise
  */
 static int _parse_settings(ptttl_parser_readchar_t readchar, settings_t *settings)
 {
@@ -961,14 +961,13 @@ int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output)
     ret = _parse_settings(readchar, &settings);
     if (ret != 0)
     {
-        return ret;
+        return -1;
     }
 
     ret = _eat_all_nonvisible_chars(readchar);
     CHECK_READCHAR_RET(ret);
 
-    CHECK_READCHAR_RET(ret);
-
     // Read & process all note data
-    return _parse_note_data(readchar, output, &settings);
+    ret = _parse_note_data(readchar, output, &settings);
+    return (ret >= 0) ? 0 : -1;
 }

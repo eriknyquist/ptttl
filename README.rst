@@ -83,8 +83,8 @@ embedded applications, under the ``c_implementation`` directory.
 PTTTL format
 ############
 
-Valid RTTTL strings are also valid PTTTL strings. A parser that properly handles
-PTTTL can also handle RTTTL.
+Because PTTTL is a superset of RTTTL, valid RTTTL strings are also valid PTTTL strings.
+A parser that properly handles PTTTL can also handle RTTTL.
 
 A PTTTL string is made up of three colon-seperated sections; **name** section,
 **default values** section, and **data** section.

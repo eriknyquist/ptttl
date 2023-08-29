@@ -31,6 +31,9 @@ ptttl_cli:
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_cli.c -o $(OBJ_DIR)/ptttl_cli.o
 	$(CC) $(CFLAGS) $(OBJ_DIR)/ptttl_parser.o $(OBJ_DIR)/ptttl_sample_generator.o $(OBJ_DIR)/ptttl_to_wav.o $(OBJ_DIR)/ptttl_cli.o -o $(CLI_BIN) -lm
 
+debug: CFLAGS += -O0 -g -fanalyzer -fsanitize=address -fsanitize=undefined
+debug: ptttl_cli
+
 afl_fuzz_harness: CC=$(AFL_CC)
 afl_fuzz_harness: CFLAGS += -O2
 afl_fuzz_harness:
