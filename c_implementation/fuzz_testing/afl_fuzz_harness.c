@@ -9,18 +9,22 @@
  * Erik Nyquist 2023
  */
 
-#include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "ptttl_parser.h"
 
 
-__AFL_FUZZ_INIT();
+__AFL_FUZZ_INIT()
+__AFL_COVERAGE()
+__AFL_COVERAGE_START_OFF()
 
 
 static int buflen = 0;
 static int bufpos = 0;
 
 static unsigned char *testcase_buf = NULL;
+
 
 // ptttl_readchar_t callback to read the next PTTTL/RTTTL source character from stdin
 static int _ptttl_readchar(char *nextchar)
@@ -32,6 +36,7 @@ static int _ptttl_readchar(char *nextchar)
 
     if (bufpos == (buflen - 1))
     {
+        // Last char of input for this testcase- reset buffer position and return EOF
         bufpos = 0;
         ret = 1;
     }
@@ -56,20 +61,24 @@ int main(int argc, char *argv[])
     {
         buflen = __AFL_FUZZ_TESTCASE_LEN;
         testcase_buf = buf;
+        bufpos = 0;
 
-        if (buflen == 0)
+        if (buflen < 5)
         {
             continue;
         }
 
         // Parse PTTTL/RTTTL source and produce intermediate representation
-        ptttl_output_t output;
+        ptttl_output_t output = {0};
+
+        __AFL_COVERAGE_ON();
         int ret = ptttl_parse(_ptttl_readchar, &output);
-        if (ret < 0)
+        __AFL_COVERAGE_OFF();
+
+        if (ret != 0)
         {
             ptttl_parser_error_t err = ptttl_parser_error();
             printf("Error in %s (line %d, column %d): %s\n", argv[1], err.line, err.column, err.error_message);
-            return -1;
         }
     }
 
