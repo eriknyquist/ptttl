@@ -24,8 +24,6 @@ make_build_dir:
 	$(MKDIR) $(BUILD_DIR)
 	$(MKDIR) $(OBJ_DIR)
 
-build_ptttl_objs:
-
 ptttl_cli:
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_parser.c -o $(OBJ_DIR)/ptttl_parser.o
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_sample_generator.c -o $(OBJ_DIR)/ptttl_sample_generator.o
