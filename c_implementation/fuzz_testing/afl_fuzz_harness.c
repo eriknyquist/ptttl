@@ -61,9 +61,13 @@ int main(int argc, char *argv[])
     {
         buflen = __AFL_FUZZ_TESTCASE_LEN;
         testcase_buf = buf;
+
+        /* Reset bufpos to 0-- if ptttl_parse bailed out early on an error,
+         * then ptttl_readchar may not have done this */
         bufpos = 0;
 
-        if (buflen < 5)
+        // Empty input will break _ptttl_readchar, and is not useful to test anyway
+        if (buflen == 0)
         {
             continue;
         }

@@ -159,9 +159,9 @@ typedef struct
 
 
 // Valid values for note duration
-static unsigned int _valid_note_durations[NOTE_DURATION_COUNT] = {1u, 2u, 4u, 8u, 16u, 32u};
+static const unsigned int _valid_note_durations[NOTE_DURATION_COUNT] = {1u, 2u, 4u, 8u, 16u, 32u};
 
-// Holds information about lastg error encountered
+// Holds information about last error encountered
 static ptttl_parser_error_t _error;
 
 static uint8_t _have_saved_char = 0u;
@@ -903,9 +903,6 @@ ptttl_parser_error_t ptttl_parser_error(void)
  */
 int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output)
 {
-    _line = 0u;
-    _column = 0u;
-
     if ((NULL == readchar) || (NULL == output))
     {
         ERROR("NULL pointer provided");
@@ -914,6 +911,7 @@ int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output)
 
     _line = 1u;
     _column = 1u;
+    _have_saved_char = 0u;
 
     (void) memset(output, 0, sizeof(ptttl_output_t));
     output->channel_count = 1u;
