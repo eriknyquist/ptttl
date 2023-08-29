@@ -73,7 +73,7 @@ Converting PTTTL/RTTTL files to .wav in a python script
 
 
 C reference implementation
-==========================
+##########################
 
 A reference implemention written in C is provided, which is suitable for use in
 embedded applications, under the ``c_implementation`` directory.
