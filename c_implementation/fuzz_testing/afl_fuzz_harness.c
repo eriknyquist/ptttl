@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "ptttl_parser.h"
+#include "ptttl_to_wav.h"
 
 
 __AFL_FUZZ_INIT()
@@ -27,7 +28,7 @@ static unsigned char *testcase_buf = NULL;
 
 
 // ptttl_readchar_t callback to read the next PTTTL/RTTTL source character from stdin
-static int _ptttl_readchar(char *nextchar)
+static int _read(char *nextchar)
 {
     int ret = 0;
 
@@ -47,6 +48,17 @@ static int _ptttl_readchar(char *nextchar)
 
     // Return 0 for success, 1 for EOF (no error condition)
     return ret;
+}
+
+static int _seek(uint32_t position)
+{
+    if (buflen > (int) position)
+    {
+        return 1;
+    }
+
+    bufpos = (int) position;
+    return 0;
 }
 
 int main(int argc, char *argv[])
@@ -73,17 +85,13 @@ int main(int argc, char *argv[])
         }
 
         // Parse PTTTL/RTTTL source and produce intermediate representation
-        ptttl_output_t output = {0};
+        ptttl_parser_t parser;
+        ptttl_parser_input_iface_t iface = {.read=_read, .seek=_seek};
 
         __AFL_COVERAGE_ON();
-        int ret = ptttl_parse(_ptttl_readchar, &output);
+        (void) ptttl_parse_init(&parser, iface);
+        (void) ptttl_to_wav(&parser, "afl_test.wav");
         __AFL_COVERAGE_OFF();
-
-        if (ret != 0)
-        {
-            ptttl_parser_error_t err = ptttl_parser_error();
-            printf("Error in %s (line %d, column %d): %s\n", argv[1], err.line, err.column, err.error_message);
-        }
     }
 
     return 0;

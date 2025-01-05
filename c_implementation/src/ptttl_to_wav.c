@@ -68,18 +68,24 @@ static wavfile_header_t _default_header =
     .subchunk2_size = 0
 };
 
-// Store an error message for reporting by ptttl_to_wav_error()
-#define ERROR(error_msg) (_error = error_msg)
-
 
 // Store a description of the last error
-static const char *_error = NULL;
+static ptttl_parser_error_t _error = {.line = 0u, .column = 0u};
+
+
+// Helper macro, stores information about an error, which can be retrieved by ptttl_to_wav_error()
+#define ERROR(_parser, _msg)                                \
+{                                                           \
+    _error.error_message = _msg;                            \
+    _error.line = _parser->active_stream->line;             \
+    _error.column = _parser->active_stream->column;         \
+}
 
 
 /**
  * @see ptttl_to_wav.h
  */
-const char *ptttl_to_wav_error(void)
+const ptttl_parser_error_t ptttl_to_wav_error(void)
 {
     return _error;
 }
@@ -88,18 +94,22 @@ const char *ptttl_to_wav_error(void)
 /**
  * @see ptttl_to_wav.h
  */
-int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
+int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename)
 {
-    if ((NULL == parsed_ptttl) || (NULL == wav_filename))
+    if (NULL == parser)
     {
-        ERROR("NULL pointer passed to function");
         return -1;
+    }
+
+    if (NULL == wav_filename)
+    {
+        ERROR(parser, "NULL pointer passed to function");
     }
 
     ptttl_sample_generator_t generator;
     ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
 
-    int ret = ptttl_sample_generator_create(parsed_ptttl, &generator, &config);
+    int ret = ptttl_sample_generator_create(parser, &generator, &config);
     if (ret < 0)
     {
         _error = ptttl_sample_generator_error();
@@ -109,7 +119,7 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     FILE *fp = fopen(wav_filename, "wb");
     if (NULL == fp)
     {
-        ERROR("Unable to open WAV file for writing");
+        ERROR(parser, "Unable to open WAV file for writing");
         return -1;
     }
 
@@ -117,7 +127,7 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     ret = fseek(fp, sizeof(wavfile_header_t), SEEK_SET);
     if (0 != ret)
     {
-        ERROR("Failed to seek within WAV file for writing");
+        ERROR(parser, "Failed to seek within WAV file for writing");
         fclose(fp);
         return -1;
     }
@@ -132,7 +142,7 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
         size_t size_written = fwrite(&sample_buf, sizeof(uint16_t), num_samples, fp);
         if (num_samples != size_written)
         {
-            ERROR("Failed to write to WAV file");
+            ERROR(parser, "Failed to write to WAV file");
             fclose(fp);
             return -1;
         }
@@ -156,7 +166,7 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     ret = fseek(fp, 0u, SEEK_SET);
     if (0 != ret)
     {
-        ERROR("Failed to seek within WAV file for writing");
+        ERROR(parser, "Failed to seek within WAV file for writing");
         fclose(fp);
         return -1;
     }
@@ -171,7 +181,7 @@ int ptttl_to_wav(ptttl_output_t *parsed_ptttl, const char *wav_filename)
     size_t size_written = fwrite(&_default_header, 1u, sizeof(_default_header), fp);
     if (sizeof(_default_header) != size_written)
     {
-        ERROR("Failed to write to WAV file");
+        ERROR(parser, "Failed to write to WAV file");
         fclose(fp);
         return -1;
     }

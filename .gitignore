@@ -1,2 +1,3 @@
 doc/build/*
 *.pyc
+c_implementation/afl_findings/*

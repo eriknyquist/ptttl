@@ -26,8 +26,12 @@
 
 
 // Store an error message for reporting by ptttl_sample_generator_error()
-#define ERROR(error_msg) (_error = error_msg)
-
+#define ERROR(_parser, _msg)                                \
+{                                                           \
+    _error.error_message = _msg;                            \
+    _error.line = _parser->active_stream->line;             \
+    _error.column = _parser->active_stream->column;         \
+}
 
 #if PTTTL_FAST_SINE_ENABLED
 // PI * 2 as a constant, for convenience
@@ -40,7 +44,7 @@ static int _sine_table_initialized = 0;
 #endif // PTTTL_FAST_SINE_ENABLED
 
 // Static storage for description of last error
-static const char *_error = NULL;
+static ptttl_parser_error_t _error = {.line = 0u, .column = 0u};
 
 
 /**
@@ -179,22 +183,19 @@ static void _note_number_to_pitch(uint32_t note_number, float *pitch_hz)
  * Load a single PTTTL note from a specific channel into a note_stream_t object
  *
  * @param generator    Pointer to initialized sample generator
- * @param channel      Pointer to channel containing PTTTL note to load
- * @param note_index   Index of note within channel
+ * @param note         Pointer to parsed note object
  * @param note_stream  Pointer to note stream object to populate
  */
-static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_channel_t *channel,
-                              unsigned int note_index, ptttl_note_stream_t *note_stream)
+static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_note_t *note,
+                              ptttl_note_stream_t *note_stream)
 {
     note_stream->sine_index = 0u;
-    note_stream->note_index = note_index;
     note_stream->start_sample = generator->current_sample;
-#ifdef PTTTL_VIBRATO_ENABLED
+
     note_stream->phasor_state = 0.0f;
-#endif // PTTTL_VIBRATO_ENABLED
 
     // Calculate note time in samples
-    uint32_t time_ms = PTTTL_NOTE_DURATION(&channel->notes[note_index]);
+    uint32_t time_ms = PTTTL_NOTE_DURATION(note);
     float num_samples = ((float) time_ms) * (((float) generator->config.sample_rate) / 1000.0f);
     note_stream->num_samples = (unsigned int) num_samples;
 
@@ -214,11 +215,12 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
         }
     }
 
+    note_stream->note = *note;
     note_stream->attack = attack;
     note_stream->decay = decay;
 
     // Calculate note pitch from piano key number
-    note_stream->note_number = PTTTL_NOTE_VALUE(&channel->notes[note_index]);
+    note_stream->note_number = PTTTL_NOTE_VALUE(note);
 
     if (0u != note_stream->note_number)
     {
@@ -229,7 +231,7 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
 /**
  * @see ptttl_sample_generator.h
  */
-const char *ptttl_sample_generator_error(void)
+ptttl_parser_error_t ptttl_sample_generator_error(void)
 {
     return _error;
 }
@@ -237,46 +239,52 @@ const char *ptttl_sample_generator_error(void)
 /**
  * @see ptttl_sample_generator.h
  */
-int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
+int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator_t *generator,
                                   ptttl_sample_generator_config_t *config)
 {
-    if ((NULL == parsed_ptttl) || (NULL == generator) || (NULL == config))
+    if (NULL == parser)
     {
-        ERROR("NULL pointer passed to function");
         return -1;
     }
 
-    if (0u == parsed_ptttl->channel_count)
+    if ((NULL == generator) || (NULL == config))
     {
-        ERROR("Parsed PTTTL object has a channel count of 0");
+        ERROR(parser, "NULL pointer passed to function");
+        return -1;
+    }
+
+    if (0u == parser->channel_count)
+    {
+        ERROR(parser, "PTTTL parser object has a channel count of 0");
         return -1;
     }
 
     if ((config->amplitude > 1.0f) || (config->amplitude < 0.0f))
     {
-        ERROR("Sample generator amplitude must be between 0.0 - 1.0");
+        ERROR(parser, "Sample generator amplitude must be between 0.0 - 1.0");
         return -1;
     }
 
     // Copy config data into generator object
     generator->config = *config;
-    generator->parsed_ptttl = parsed_ptttl;
+    generator->parser = parser;
 
     generator->current_sample = 0u;
 
     memset(generator->channel_finished, 0, sizeof(generator->channel_finished));
 
     // Populate note streams for initial note on all channels
-    for (unsigned int i = 0u; i < parsed_ptttl->channel_count; i++)
+    for (uint32_t chan = 0u; chan < parser->channel_count; chan++)
     {
-        // Verify all channels have at least 1 note, while we're at it
-        if (0u == parsed_ptttl->channels[i].note_count)
+        ptttl_output_note_t note;
+        int ret = ptttl_parse_next(generator->parser, chan, &note);
+        if (ret != 0)
         {
-            ERROR("Channel has a note count of 0");
-            return -1;
+            _error = ptttl_parser_error(generator->parser);
+            return ret;
         }
 
-        _load_note_stream(generator, &parsed_ptttl->channels[i], 0u, &generator->note_streams[i]);
+        _load_note_stream(generator, &note, &generator->note_streams[chan]);
     }
 
 #if PTTTL_FAST_SINE_ENABLED
@@ -304,7 +312,8 @@ int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_gen
  * @param channel_idx    Channel index of channel the generated sample is for
  * @param sample         Pointer to location to store generated sample
  *
- * @return 0 if there are more samples remaining for the provided note stream, 1 otherwise
+ * @return 0 if there are more samples remaining for the provided note stream,
+             1 if no more samples, -1 if an error occurred
  */
 static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_output_note_t *note,
                                     ptttl_note_stream_t *stream, unsigned int channel_idx,
@@ -320,7 +329,6 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_o
     else
     {
         int32_t raw_sample = 0;
-#if PTTTL_VIBRATO_ENABLED
         uint32_t vfreq = PTTTL_NOTE_VIBRATO_FREQ(note);
         uint32_t vvar = PTTTL_NOTE_VIBRATO_VAR(note);
 
@@ -347,12 +355,8 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_o
         }
         else
         {
-#endif // PTTTL_VIBRATO_ENABLED
-
-        raw_sample = _generate_sine_sample(generator->config.sample_rate, stream->pitch_hz, stream->sine_index);
-#if PTTTL_VIBRATO_ENABLED
+            raw_sample = _generate_sine_sample(generator->config.sample_rate, stream->pitch_hz, stream->sine_index);
         }
-#endif // PTTTL_VIBRATO_ENABLED
 
         stream->sine_index += 1u;
 
@@ -377,17 +381,16 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_o
     // Check if last sample for this note stream
     if ((generator->current_sample - stream->start_sample) >= stream->num_samples)
     {
-        if (stream->note_index >= generator->parsed_ptttl->channels[channel_idx].note_count)
+        // Load the next note for this channel
+        ptttl_output_note_t note;
+        ret = ptttl_parse_next(generator->parser, channel_idx, &note);
+        if (ret == 0)
         {
-            // All notes for this channel finished
-            ret = 1u;
+            _load_note_stream(generator, &note, &generator->note_streams[channel_idx]);
         }
-        else
+        else if (ret < 0)
         {
-            // Load the next note for this channel
-            stream->note_index += 1u;
-            _load_note_stream(generator, &generator->parsed_ptttl->channels[channel_idx],
-                              stream->note_index, &generator->note_streams[channel_idx]);
+            _error = ptttl_parser_error(generator->parser);
         }
     }
 
@@ -400,9 +403,14 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_o
 int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_t *num_samples,
                                     int16_t *samples)
 {
-    if ((NULL == generator) || (NULL == num_samples) || (NULL == samples))
+    if (NULL == generator)
     {
-        ERROR("NULL pointer passed to function");
+        return -1;
+    }
+
+    if ((NULL == num_samples) || (NULL == samples))
+    {
+        ERROR(generator->parser, "NULL pointer passed to function");
         return -1;
     }
 
@@ -415,7 +423,7 @@ int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_
         unsigned int num_channels_provided = 0u;
 
         // Sum the current state of all channels to generate the next sample
-        for (unsigned int chan = 0u; chan < generator->parsed_ptttl->channel_count; chan++)
+        for (unsigned int chan = 0u; chan < generator->parser->channel_count; chan++)
         {
             if (1u == generator->channel_finished[chan])
             {
@@ -425,11 +433,16 @@ int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_
 
             num_channels_provided += 1u;
             ptttl_note_stream_t *stream = &generator->note_streams[chan];
-            ptttl_output_note_t *note = &generator->parsed_ptttl->channels[chan].notes[stream->note_index];
 
             float chan_sample = 0.0f;
-            generator->channel_finished[chan] = _generate_channel_sample(generator, note, stream,
-                                                                         chan, &chan_sample);
+            int ret = _generate_channel_sample(generator, &stream->note, stream,
+                                               chan, &chan_sample);
+            if (ret < 0)
+            {
+                return ret;
+            }
+
+            generator->channel_finished[chan] = ret;
 
             summed_sample += chan_sample;
         }
@@ -441,7 +454,7 @@ int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_
         }
 
         generator->current_sample += 1u;
-        samples[samplenum] = (int16_t) (summed_sample / (float) generator->parsed_ptttl->channel_count);
+        samples[samplenum] = (int16_t) (summed_sample / (float) generator->parser->channel_count);
         *num_samples += 1u;
     }
 

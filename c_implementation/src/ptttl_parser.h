@@ -27,13 +27,11 @@
 #endif
 
 
-#if PTTTL_VIBRATO_ENABLED
 // Read vibrato frequency from vibrato settings
 #define PTTTL_NOTE_VIBRATO_FREQ(note) (((note)->vibrato_settings) & 0xffffu)
 
 // Read vibrato variance from vibrato settings
 #define PTTTL_NOTE_VIBRATO_VAR(note)  ((((note)->vibrato_settings) >> 16u) & 0xffffu)
-#endif // PTTTL_VIBRATO_ENABLED
 
 // Read the musical note value from note settings
 #define PTTTL_NOTE_VALUE(note) (((note)->note_settings) & 0x7fu)
@@ -58,35 +56,58 @@ typedef struct
      */
     uint32_t note_settings;
 
-#if PTTTL_VIBRATO_ENABLED
     /**
      * Bits 0-15  : Vibrato frequency in Hz
      *
      * Bits 16-31 : Vibrato maximum +/- variance from the main pitch, in Hz
      */
     uint32_t vibrato_settings;
-#endif // PTTTL_VIBRATO_ENABLED
 } ptttl_output_note_t;
 
+
 /**
- * Represents a single channel (sequence of notes)
+ * Tracks current position in input text for a single PTTTL channel
  */
 typedef struct
 {
-    unsigned int note_count;                                 ///< Number of notes populated
-    ptttl_output_note_t notes[PTTTL_MAX_NOTES_PER_CHANNEL];  ///< Array of notes for this channel
-} ptttl_output_channel_t;
+    uint32_t position;       ///< Current position in input text stream
+    uint32_t line;           ///< Current line number in input text
+    uint32_t column;         ///< Current column number in input text
+    uint8_t have_saved_char; ///< 1 if a character has been read but not yet used
+    char saved_char;         ///< Unused character
+} ptttl_parser_input_stream_t;
 
 
 /**
- * Holds processed PTTTL data as a sequence of channel_t objects
+ * Holds function pointers that make up an interface for reading PTTTL source
+ * from various locations (e.g. from memory, or from a file)
  */
 typedef struct
 {
-    char name[PTTTL_MAX_NAME_LEN];                                 ///< Name field of PTTTL/RTTTL file
-    unsigned int channel_count;                                    ///< Number of channels populated
-    ptttl_output_channel_t channels[PTTTL_MAX_CHANNELS_PER_FILE];  ///< Array of channels
-} ptttl_output_t;
+    /**
+     * Callback function to fetch the next character of PTTTL/RTTTL source
+     *
+     * @param input_char   Pointer to location to store fetched PTTTL/RTTTL source character
+     *
+     * @return 0 if successful, 1 if no more characters remain, and -1 if an error
+     *         occurred (causes parsing to halt early)
+     */
+    int (*read)(char *input_char);
+
+    /**
+     * Callback function to seek to an absolute position within the input text
+     *
+     * @param position   0-based position to seek to. For example, if the position is 0,
+     *                   then the next 'read' call should return the first character of the
+     *                   input text, and if the position is 23, then the next 'read' call
+     *                   should return the 24th character of the input text, and so on.
+     *
+     * @return 0 if successful, 1 if an invalid position was provided, and -1 if an error
+     *         occurred (causes parsing to halt early)
+     */
+    int (*seek)(uint32_t position);
+
+} ptttl_parser_input_iface_t;
 
 
 /**
@@ -101,14 +122,34 @@ typedef struct
 
 
 /**
- * Callback function to fetch the next character of PTTTL/RTTTL source
- *
- * @param input_char   Pointer to location to store fetched PTTTL/RTTTL source character
- *
- * @return 0 if successful, 1 if no more characters remain, and -1 if an error
- *         occurred (causes parsing to halt early)
+ * Represents a single channel being parsed in the input text
  */
-typedef int (*ptttl_parser_readchar_t)(char *input_char);
+typedef struct
+{
+    uint32_t channel_idx;
+    ptttl_parser_input_stream_t stream;
+} ptttl_parser_channel_t;
+
+
+/**
+ * Tracks current position in input text for all channels
+ */
+typedef struct
+{
+    char name[PTTTL_MAX_NAME_LEN];              ///< Name from the "settings" section
+    unsigned int bpm;                           ///< BPM from the "settings" section
+    unsigned int default_duration;              ///< Default note duration from the "settings" section
+    unsigned int default_octave;                ///< Default octave from the "settings" section
+    unsigned int default_vibrato_freq;          ///< Default vibrato frequency from the "settings" section
+    unsigned int default_vibrato_var;           ///< Default vibrato variance from the "settings" section
+    ptttl_parser_error_t error;                 ///< Last parsing error that occurred
+    uint32_t channel_count;                     ///< Total number of channels present in input text
+    ptttl_parser_input_stream_t *active_stream; ///< Input stream currently being parsed
+    ptttl_parser_input_stream_t stream;         ///< Input stream used for 'settings' section
+    ptttl_parser_channel_t channels[PTTTL_MAX_CHANNELS_PER_FILE];
+    ptttl_parser_input_iface_t iface;           ///< Input interface for reading PTTTL source
+} ptttl_parser_t;
+
 
 
 /**
@@ -116,20 +157,35 @@ typedef int (*ptttl_parser_readchar_t)(char *input_char);
  *
  * @return  Object describing the error that occurred
  */
-ptttl_parser_error_t ptttl_parser_error(void);
+ptttl_parser_error_t ptttl_parser_error(ptttl_parser_t *state);
 
 
 /**
- * Parse PTTTL/RTTTL source text to create an intermediate representation that can be
- * used to generate audio data.
+ * Initializes the PTTTL parser for a particular PTTTL/RTTTL input text. Must be called
+ * once before attempting to parse a PTTTL/RTTTL input text with #ptttl_parse_next.
  *
- * @param readchar  Callback function to read the next character of PTTTL/RTTTL source text
- # @param output    Pointer to location to store intermediate representation
+ * @param parser  Pointer to parser object to initialize
+ * @param iface   Input interface for reading PTTTL/RTTTL source text
  *
  * @return  0 if successful, -1 otherwise. If -1, use #ptttl_parser_error
  *          to get detailed error information.
  */
-int ptttl_parse(ptttl_parser_readchar_t readchar, ptttl_output_t *output);
+int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface);
+
+
+/**
+ * Read PTTTL/RTTTL source text for the next note of the specified channel, and produce
+ * an intermediate representation of the note that can be used to generate audio data.
+ *
+ * @param parser    Pointer to initialized parser object
+ * @param channel   Channel number to get next note for. Channel numbers are in the same order
+ *                  that the channel occurs in the PTTTL/RTTTL source text, starting from 0.
+ * @param note      Pointer to location to store intermediate representation of PTTTL/RTTTL note
+ *
+ * @return  0 if successful, -1 otherwise. If -1, use #ptttl_parser_error
+ *          to get detailed error information.
+ */
+int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel, ptttl_output_note_t *note);
 
 #ifdef __cplusplus
     }

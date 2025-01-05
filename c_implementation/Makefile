@@ -6,7 +6,7 @@ FUZZ_DIR       := fuzz_testing
 OBJ_DIR        := $(BUILD_DIR)/obj
 
 PTTTL_CLI_PROG := ptttl_cli
-FUZZ_PROG      := afl_fuzz_parser
+FUZZ_PROG      := afl_fuzz_harness
 CLI_BIN        := $(BUILD_DIR)/$(PTTTL_CLI_PROG)
 FUZZ_BIN       := $(BUILD_DIR)/$(FUZZ_PROG)
 
@@ -38,8 +38,10 @@ afl_fuzz_harness: CC=$(AFL_CC)
 afl_fuzz_harness: CFLAGS += -O2
 afl_fuzz_harness:
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_parser.c -o $(OBJ_DIR)/ptttl_parser.o
-	$(AFL_CC) $(CFLAGS) -c $(FUZZ_DIR)/afl_fuzz_harness.c -o $(OBJ_DIR)/afl_fuzz_harness.o
-	$(AFL_CC) $(CFLAGS) $(OBJ_DIR)/ptttl_parser.o $(OBJ_DIR)/afl_fuzz_harness.o -o $(FUZZ_BIN)
+	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_sample_generator.c -o $(OBJ_DIR)/ptttl_sample_generator.o
+	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_to_wav.c -o $(OBJ_DIR)/ptttl_to_wav.o
+	$(CC) $(CFLAGS) -c $(FUZZ_DIR)/afl_fuzz_harness.c -o $(OBJ_DIR)/afl_fuzz_harness.o
+	$(CC) $(CFLAGS) $(OBJ_DIR)/ptttl_parser.o $(OBJ_DIR)/ptttl_sample_generator.o $(OBJ_DIR)/ptttl_to_wav.o $(OBJ_DIR)/afl_fuzz_harness.o -o $(FUZZ_BIN) -lm
 
 clean:
 	$(RM) $(OBJ_DIR)/ptttl_parser.o

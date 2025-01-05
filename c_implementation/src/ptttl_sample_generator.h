@@ -37,17 +37,15 @@
  */
 typedef struct
 {
+    ptttl_output_note_t note;     ///< Parsed note object for this stream
     unsigned int sine_index;      ///< Monotonically increasing index for sinf() function, note pitch
     unsigned int start_sample;    ///< The sample index on which this note started
     unsigned int num_samples;     ///< Number of samples this note runs for
-    unsigned int note_index;      ///< Index of this note within the ptttl_channel_t->notes array
     unsigned int attack;          ///< Note decay length, in samples
     unsigned int decay;           ///< Note decay length, in samples
     unsigned int note_number;     ///< Piano key number for this note, 1-88
     float pitch_hz;               ///< Note pitch in Hz
-#ifdef PTTTL_VIBRATO_ENABLED
     float phasor_state;           ///< Phasor state for vibrato (frequency modulation)
-#endif // PTTTL_VIBRATO_ENABLED
 } ptttl_note_stream_t;
 
 /**
@@ -70,7 +68,7 @@ typedef struct
     ptttl_note_stream_t note_streams[PTTTL_MAX_CHANNELS_PER_FILE];
     uint8_t channel_finished[PTTTL_MAX_CHANNELS_PER_FILE];
     ptttl_sample_generator_config_t config;
-    ptttl_output_t *parsed_ptttl;
+    ptttl_parser_t *parser;
 } ptttl_sample_generator_t;
 
 
@@ -79,22 +77,19 @@ typedef struct
  *
  * @return Pointer to error string, or NULL if no error occurred
  */
-const char *ptttl_sample_generator_error(void);
+ptttl_parser_error_t ptttl_sample_generator_error(void);
 
 /**
  * Initialize a sample generator instance for a specific ptttl_output_t object
  *
- * @param parsed_ptttl   Pointer to parsed PTTTL data. The data at this pointer must remain
- *                       accessible while you are generating samples; #ptttl_sample_generator_create
- *                       takes a copy of this pointer, and that pointer is accessed each time
- *                       #ptttl_sample_generator_generate is invoked.
+ * @param parser         Pointer to parsed initialized PTTTL parser object
  * @param generator      Pointer to generator instance to initialize
  * @param config         Pointer to sample generator configuration data
  *
  * @return 0 if successful, -1 if an error occurred. Call #ptttl_sample_generator_error
  *         for an error description if -1 is returned.
  */
-int ptttl_sample_generator_create(ptttl_output_t *parsed_ptttl, ptttl_sample_generator_t *generator,
+int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator_t *generator,
                                   ptttl_sample_generator_config_t *config);
 
 /**
