@@ -70,7 +70,7 @@ static wavfile_header_t _default_header =
 
 
 // Store a description of the last error
-static ptttl_parser_error_t _error = {.line = 0u, .column = 0u};
+static ptttl_parser_error_t _error = {.line = 0u, .column = 0u, .error_message=NULL};
 
 
 // Helper macro, stores information about an error, which can be retrieved by ptttl_to_wav_error()

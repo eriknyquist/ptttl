@@ -25,11 +25,12 @@
 
 
 /**
- * Return pointer to a string describing the last error that occurred
+ * Return error info after ptttl_to_wav has returned -1
  *
- * @return Pointer to error string, or NULL if no error occurred
+ * @return  Object describing the error that occurred. error_message field will be NULL
+ *          if no error has occurred.
  */
-const ptttl_parser_error_t ptttl_to_wav_error(void);
+ptttl_parser_error_t ptttl_to_wav_error(void);
 
 /**
  * Generate samples for some parsed PTTTL data and write them directly to a .wav file.

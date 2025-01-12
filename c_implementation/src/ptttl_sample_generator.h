@@ -73,16 +73,18 @@ typedef struct
 
 
 /**
- * Return pointer to a string describing the last error that occurred
+ * Return error info describing the last error that occurred
  *
- * @return Pointer to error string, or NULL if no error occurred
+ * @return  Object describing the error that occurred. error_message field will be NULL
+ *          if no error has occurred.
  */
 ptttl_parser_error_t ptttl_sample_generator_error(void);
+
 
 /**
  * Initialize a sample generator instance for a specific ptttl_output_t object
  *
- * @param parser         Pointer to parsed initialized PTTTL parser object
+ * @param parser         Pointer to initialized PTTTL parser object
  * @param generator      Pointer to generator instance to initialize
  * @param config         Pointer to sample generator configuration data
  *

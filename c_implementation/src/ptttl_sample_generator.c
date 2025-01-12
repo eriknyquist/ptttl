@@ -44,7 +44,7 @@ static int _sine_table_initialized = 0;
 #endif // PTTTL_FAST_SINE_ENABLED
 
 // Static storage for description of last error
-static ptttl_parser_error_t _error = {.line = 0u, .column = 0u};
+static ptttl_parser_error_t _error = {.line = 0u, .column = 0u, .error_message=NULL};
 
 
 /**

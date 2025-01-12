@@ -807,6 +807,9 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
     parser->stream.position = 0u;
     parser->stream.have_saved_char = 0u;
     parser->channel_count = 0u;
+    parser->error.line = 0;
+    parser->error.column = 0;
+    parser->error.error_message = NULL;
 
     if ((NULL == iface.read) || (NULL == iface.seek))
     {

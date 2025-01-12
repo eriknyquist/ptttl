@@ -153,9 +153,10 @@ typedef struct
 
 
 /**
- * Get pointer to error message after ptttl_parse has returned -1
+ * Return error info after ptttl_parse has returned -1
  *
- * @return  Object describing the error that occurred
+ * @return  Object describing the error that occurred. error_message field will be NULL
+ *          if no error has occurred.
  */
 ptttl_parser_error_t ptttl_parser_error(ptttl_parser_t *state);
 
