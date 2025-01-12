@@ -35,7 +35,7 @@ reference and/or development & testing, are also provided:
 * **ptttl_cli.c**: Implements a sample command-line tool that uses ``ptttl_parser.c`` and
   ``ptttl_to_wav.c`` to convert RTTTL/PTTTL source to .wav files.
 
-* **afl_fuzz_harness.c**: Implements a "harness" to fuzz the ``ptttl_parse()`` function
+* **afl_fuzz_harness.c**: Implements a "harness" to fuzz the ``ptttl_to_wav()`` function
   using `AFL++ <https://github.com/AFLplusplus/AFLplusplus>`_
 
 Building the sample applications
@@ -83,53 +83,38 @@ You want to read PTTTL/RTTTL text and generate a .wav file
 * Compile ``ptttl_parser.c``, ``ptttl_sample_generator.c`` and ``ptttl_to_wav.c``
   along with your project
 
-* Use ``ptttl_parser.c`` to convert your PTTTL/RTTTL source to intermediate representation
-  (See ``ptttl_parser.h`` for API documentation)
-
-* Use ``ptttl_to_wav.c`` to convert intermediate representation to .wav file
+* Use ``ptttl_to_wav.c`` to convert PTTTL/RTTTL source to .wav file
   (See ``ptttl_to_wav.h`` for API documentation)
 
 Configuration options (``ptttl_config.h``) and how they affect `ptttl_output_t` size
 ====================================================================================
 
-The size of the ``ptttl_output_t`` struct (intermediate representation of RTTTL/PTTTL source)
-is fixed at compile time, and is significantly affected by the following symbols defined in ``ptttl_config.h``:
+The sizes of the ``ptttl_parser_t`` struct and ``ptttl_sample_generator_t`` struct
+are fixed at compile time, and are significantly affected by the following symbol defined in ``ptttl_config.h``:
 
 * ``PTTTL_MAX_CHANNELS_PER_FILE``
-* ``PTTTL_MAX_NOTES_PER_CHANNEL``
-* ``PTTTL_VIBRATO_ENABLED``
 
 See API documentation in ``ptttl_config.h`` for more details.
 
-The following table shows various combinations of these 3 settings, along with the
-corresponding size of the ``ptttl_output_t`` struct, to give you an idea of how these
-things affect each other:
+The following table shows various values of ``PTTTL_MAX_CHANNELS_PER_FILE``, along with the
+corresponding size of the ``ptttl_parser_t`` and ``ptttl_sample_generator_t`` structs, to give you an idea
+of how much memory you'll need:
 
-+-------------------------------+-------------------------------+-------------------------+--------------------------------+
-|``PTTTL_MAX_CHANNELS_PER_FILE``|``PTTTL_MAX_NOTES_PER_CHANNEL``|``PTTTL_VIBRATO_ENABLED``|``ptttl_output_t`` size in bytes|
-+===============================+===============================+=========================+================================+
-| 1                             | 64                            | 0                       | 520                            |
-+-------------------------------+-------------------------------+-------------------------+--------------------------------+
-| 1                             | 64                            | 1                       | 776                            |
-+-------------------------------+-------------------------------+-------------------------+--------------------------------+
-| 4                             | 64                            | 0                       | 1,300                          |
-+-------------------------------+-------------------------------+-------------------------+--------------------------------+
-| 4                             | 64                            | 1                       | 2,324                          |
-+-------------------------------+-------------------------------+-------------------------+--------------------------------+
-| 6                             | 64                            | 0                       | 1,820                          |
-+-------------------------------+-------------------------------+-------------------------+--------------------------------+
-| 6 (default)                   | 64 (default)                  | 1 (default)             | 3,356 (default)                |
-+-------------------------------+-------------------------------+-------------------------+--------------------------------+
-| 1                             | 128                           | 0                       | 776                            |
-+-------------------------------+-------------------------------+-------------------------+--------------------------------+
-| 1                             | 128                           | 1                       | 1,288                          |
-+-------------------------------+-------------------------------+-------------------------+--------------------------------+
-| 4                             | 128                           | 0                       | 2,324                          |
-+-------------------------------+-------------------------------+-------------------------+--------------------------------+
-| 4                             | 128                           | 1                       | 4,372                          |
-+-------------------------------+-------------------------------+-------------------------+--------------------------------+
-| 6                             | 128                           | 0                       | 3,356                          |
-+-------------------------------+-------------------------------+-------------------------+--------------------------------+
-| 6                             | 128                           | 1                       | 6,428                          |
-+-------------------------------+-------------------------------+-------------------------+--------------------------------+
++-------------------------------+--------------------------------+------------------------------------------+
+|``PTTTL_MAX_CHANNELS_PER_FILE``|``ptttl_parser_t`` size in bytes|``ptttl_sample_generator_t`` size in bytes|
++===============================+================================+==========================================+
+| 1                             | 368                            | 72                                       |
++-------------------------------+--------------------------------+------------------------------------------+
+| 2                             | 384                            | 112                                      |
++-------------------------------+--------------------------------+------------------------------------------+
+| 4                             | 424                            | 192                                      |
++-------------------------------+--------------------------------+------------------------------------------+
+| 8                             | 504                            | 360                                      |
++-------------------------------+--------------------------------+------------------------------------------+
+| 16 (default)                  | 664                            | 688                                      |
++-------------------------------+--------------------------------+------------------------------------------+
+| 32                            | 984                            | 1344                                     |
++-------------------------------+--------------------------------+------------------------------------------+
+| 64                            | 1624                           | 2656                                     |
++-------------------------------+--------------------------------+------------------------------------------+
 
