@@ -86,15 +86,14 @@ You want to read PTTTL/RTTTL text and generate a .wav file
 * Use ``ptttl_to_wav.c`` to convert PTTTL/RTTTL source to .wav file
   (See ``ptttl_to_wav.h`` for API documentation)
 
-Configuration options (``ptttl_config.h``) and how they affect `ptttl_output_t` size
-====================================================================================
+``PTTTL_MAX_CHANNELS_PER_FILE`` setting and how it affects memory requirements
+==============================================================================
 
 The sizes of the ``ptttl_parser_t`` struct and ``ptttl_sample_generator_t`` struct
-are fixed at compile time, and are significantly affected by the following symbol defined in ``ptttl_config.h``:
+are fixed at compile time, and are significantly affected by the ``PTTTL_MAX_CHANNELS_PER_FILE``
+build option.
 
-* ``PTTTL_MAX_CHANNELS_PER_FILE``
-
-See API documentation in ``ptttl_config.h`` for more details.
+See API documentation in ``ptttl_parser.h`` for more details.
 
 The following table shows various values of ``PTTTL_MAX_CHANNELS_PER_FILE``, along with the
 corresponding size of the ``ptttl_parser_t`` and ``ptttl_sample_generator_t`` structs, to give you an idea

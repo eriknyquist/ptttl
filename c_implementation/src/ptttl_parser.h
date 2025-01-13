@@ -19,12 +19,31 @@
 
 
 #include <stdint.h>
-#include "ptttl_config.h"
 
 
 #ifdef __cplusplus
     extern "C" {
 #endif
+
+
+/**
+ * Maximum number of channels (note lanes) allowed in a single PTTTL file. This
+ * setting will significantly impact the size of the ptttl_output_t struct-- more channels
+ * makes the struct larger.
+ */
+#ifndef PTTTL_MAX_CHANNELS_PER_FILE
+#define PTTTL_MAX_CHANNELS_PER_FILE  (16u)
+#endif // PTTTL_MAX_CHANNELS_PER_FILE
+
+
+/**
+ * Maximum size of the name (first colon-separated field in a PTTTL or RTTTL file).
+ * This name is stored directly in the ptttl_output_t struct, so changing this size
+ * directly affects the size of the ptttl_output_t struct.
+ */
+#ifndef PTTTL_MAX_NAME_LEN
+#define PTTTL_MAX_NAME_LEN           (256u)
+#endif // PTTTL_MAX_NAME_LEN
 
 
 // Read vibrato frequency from vibrato settings

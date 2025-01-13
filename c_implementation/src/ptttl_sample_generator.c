@@ -12,13 +12,11 @@
  * Erik Nyquist 2023
  */
 
-#include <math.h>
 #include <string.h>
 #include <stdio.h>
 
 #include "ptttl_sample_generator.h"
 #include "ptttl_common.h"
-#include "ptttl_config.h"
 
 
 // Max positive value of a signed 16-bit sample
@@ -32,16 +30,6 @@
     _error.line = _parser->active_stream->line;             \
     _error.column = _parser->active_stream->column;         \
 }
-
-#if PTTTL_FAST_SINE_ENABLED
-// PI * 2 as a constant, for convenience
-#define TWO_PI (6.28318530718f)
-
-/* Table of pre-computed sine values, allows to implement a faster but
- * less accurate sinf() function */
-static float _sine_table[PTTTL_SINE_TABLE_SIZE];
-static int _sine_table_initialized = 0;
-#endif // PTTTL_FAST_SINE_ENABLED
 
 // Static storage for description of last error
 static ptttl_parser_error_t _error = {.line = 0u, .column = 0u, .error_message=NULL};
@@ -65,26 +53,21 @@ static unsigned int _raise_powerof2(unsigned int exp)
     return ret;
 }
 
-#if PTTTL_FAST_SINE_ENABLED
+
 /**
- * Faster but less accurate implementation of sinf function. Uses values
- * pre-computed one time by the standard sinf() function.
- *
- * @param x  Input value
- *
- * @return Computed sine value
+ * Fast sine approximation copied from:
+ * https://github.com/skeeto/scratch/blob/master/misc/rtttl.c
+ * x is in turns (0..1), not radians (0..2*pi)
  */
 static float fast_sinf(float x)
 {
-    float quotient = x / TWO_PI;
-    x = (x - TWO_PI * (int) quotient) + (TWO_PI * ((int) (x < 0)));
-
-    float index = x * (PTTTL_SINE_TABLE_SIZE / TWO_PI);
-    int index_low = (int)index;
-
-    return _sine_table[index_low];
+    x  = x < 0 ? 0.5f - x : x;
+    x -= 0.500f + (float)(int)x;
+    x *= 16.00f * ((x < 0 ? -x : x) - 0.50f);
+    x += 0.225f * ((x < 0 ? -x : x) - 1.00f) * x;
+    return x;
 }
-#endif // PTTTL_FAST_SINE_ENABLED
+
 
 /**
  * Generate a single point on a sine wave, between 0.0-1.0, for a given sample rate and frequency
@@ -97,13 +80,10 @@ static float fast_sinf(float x)
  */
 static float _generate_sine_point(unsigned int sample_rate, float freq, unsigned int sine_index)
 {
-    float sine_state = 2.0f * M_PI * freq * (((float) sine_index) / (float) sample_rate);
-#if PTTTL_FAST_SINE_ENABLED
+    float sine_state = freq * (((float) sine_index) / (float) sample_rate);
     return fast_sinf(sine_state);
-#else
-    return sinf(sine_state);
-#endif // PTTTL_FAST_SINE_ENABLED
 }
+
 
 /**
  * Generate a single sine wave sample between 0-65535 for a given sample rate and frequency
@@ -287,19 +267,6 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
         _load_note_stream(generator, &note, &generator->note_streams[chan]);
     }
 
-#if PTTTL_FAST_SINE_ENABLED
-    // Initialize sine table, if not done yet
-    if (!_sine_table_initialized)
-    {
-        for (int i = 0; i < PTTTL_SINE_TABLE_SIZE; ++i)
-        {
-            _sine_table[i] = sinf(TWO_PI * i / PTTTL_SINE_TABLE_SIZE);
-        }
-
-        _sine_table_initialized = 1;
-    }
-#endif // PTTTL_FAST_SINE_ENABLED
-
     return 0;
 }
 
@@ -338,11 +305,7 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_o
             float pitch_change_hz = ((float) vvar) * vsine;
             float note_pitch_hz = stream->pitch_hz + pitch_change_hz;
 
-#if PTTTL_FAST_SINE_ENABLED
-            float vsample = fast_sinf(2.0f * M_PI * stream->phasor_state);
-#else
-            float vsample = sinf(2.0f * M_PI * stream->phasor_state);
-#endif // PTTTL_FAST_SINE_ENABLED
+            float vsample = fast_sinf(stream->phasor_state);
 
             float phasor_inc = note_pitch_hz / generator->config.sample_rate;
             stream->phasor_state += phasor_inc;
