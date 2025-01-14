@@ -867,13 +867,12 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
         ret = _eat_all_nonvisible_chars(parser);
         if (0 == ret)
         {
-            ptttl_parser_channel_t *chan = &parser->channels[parser->channel_count];
-            chan->stream.position = parser->active_stream->position;
-            chan->stream.line = parser->active_stream->line;
-            chan->stream.column = parser->active_stream->column;
-            chan->stream.have_saved_char = parser->active_stream->have_saved_char;
-            chan->stream.saved_char = parser->active_stream->saved_char;
-            chan->channel_idx = parser->channel_count;
+            ptttl_parser_input_stream_t *chan = &parser->channels[parser->channel_count];
+            chan->position = parser->active_stream->position;
+            chan->line = parser->active_stream->line;
+            chan->column = parser->active_stream->column;
+            chan->have_saved_char = parser->active_stream->have_saved_char;
+            chan->saved_char = parser->active_stream->saved_char;
 
             parser->channel_count += 1u;
 
@@ -962,7 +961,7 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
 /**
  * @see ptttl_parser.h
  */
-int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel, ptttl_output_note_t *note)
+int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_note_t *note)
 {
     if (NULL == parser)
     {
@@ -975,14 +974,14 @@ int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel, ptttl_output_note
         return -1;
     }
 
-    if (channel >= parser->channel_count)
+    if (channel_idx >= parser->channel_count)
     {
         ERROR(parser, "Invalid channel requested");
         return -1;
     }
 
-    ptttl_parser_channel_t *chan = &parser->channels[channel];
-    parser->active_stream = &chan->stream;
+    ptttl_parser_input_stream_t *chan = &parser->channels[channel_idx];
+    parser->active_stream = chan;
     int ret = _seek_wrapper(parser, parser->active_stream->position);
     CHECK_IFACE_RET_EOF(parser, ret);
 
@@ -1002,7 +1001,7 @@ int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel, ptttl_output_note
     {
         if ('|' == next_char)
         {
-            ret = _jump_to_next_block(parser, chan->channel_idx, 1u);
+            ret = _jump_to_next_block(parser, channel_idx, 1u);
             if (ret == 1)
             {
                 return 0;
@@ -1010,7 +1009,7 @@ int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel, ptttl_output_note
         }
         else if (';' == next_char)
         {
-            ret = _jump_to_next_block(parser, chan->channel_idx, 0u);
+            ret = _jump_to_next_block(parser, channel_idx, 0u);
             if (ret == 1)
             {
                 return 0;

@@ -11,7 +11,7 @@ CLI_BIN        := $(BUILD_DIR)/$(PTTTL_CLI_PROG)
 FUZZ_BIN       := $(BUILD_DIR)/$(FUZZ_PROG)
 
 RM             := rm -f
-MKDIR          := mkdir
+MKDIR          := mkdir -p
 
 CFLAGS := -Wall -pedantic -I$(SRC_DIR)
 #CFLAGS += -g -O0 -pg -no-pie
@@ -24,7 +24,7 @@ make_build_dir:
 	$(MKDIR) $(BUILD_DIR)
 	$(MKDIR) $(OBJ_DIR)
 
-ptttl_cli:
+ptttl_cli: make_build_dir
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_parser.c -o $(OBJ_DIR)/ptttl_parser.o
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_sample_generator.c -o $(OBJ_DIR)/ptttl_sample_generator.o
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_to_wav.c -o $(OBJ_DIR)/ptttl_to_wav.o
@@ -36,7 +36,7 @@ debug: ptttl_cli
 
 afl_fuzz_harness: CC=$(AFL_CC)
 afl_fuzz_harness: CFLAGS += -O2
-afl_fuzz_harness:
+afl_fuzz_harness: make_build_dir
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_parser.c -o $(OBJ_DIR)/ptttl_parser.o
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_sample_generator.c -o $(OBJ_DIR)/ptttl_sample_generator.o
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_to_wav.c -o $(OBJ_DIR)/ptttl_to_wav.o

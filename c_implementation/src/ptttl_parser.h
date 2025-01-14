@@ -141,16 +141,6 @@ typedef struct
 
 
 /**
- * Represents a single channel being parsed in the input text
- */
-typedef struct
-{
-    uint32_t channel_idx;
-    ptttl_parser_input_stream_t stream;
-} ptttl_parser_channel_t;
-
-
-/**
  * Tracks current position in input text for all channels
  */
 typedef struct
@@ -165,7 +155,7 @@ typedef struct
     uint32_t channel_count;                     ///< Total number of channels present in input text
     ptttl_parser_input_stream_t *active_stream; ///< Input stream currently being parsed
     ptttl_parser_input_stream_t stream;         ///< Input stream used for 'settings' section
-    ptttl_parser_channel_t channels[PTTTL_MAX_CHANNELS_PER_FILE];
+    ptttl_parser_input_stream_t channels[PTTTL_MAX_CHANNELS_PER_FILE];
     ptttl_parser_input_iface_t iface;           ///< Input interface for reading PTTTL source
 } ptttl_parser_t;
 
@@ -197,15 +187,15 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface);
  * Read PTTTL/RTTTL source text for the next note of the specified channel, and produce
  * an intermediate representation of the note that can be used to generate audio data.
  *
- * @param parser    Pointer to initialized parser object
- * @param channel   Channel number to get next note for. Channel numbers are in the same order
- *                  that the channel occurs in the PTTTL/RTTTL source text, starting from 0.
- * @param note      Pointer to location to store intermediate representation of PTTTL/RTTTL note
+ * @param parser       Pointer to initialized parser object
+ * @param channel_idx  Channel number to get next note for. Channel numbers are in the same order
+ *                     that the channel occurs in the PTTTL/RTTTL source text, starting from 0.
+ * @param note         Pointer to location to store intermediate representation of PTTTL/RTTTL note
  *
  * @return  0 if successful, -1 otherwise. If -1, use #ptttl_parser_error
  *          to get detailed error information.
  */
-int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel, ptttl_output_note_t *note);
+int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_note_t *note);
 
 #ifdef __cplusplus
     }
