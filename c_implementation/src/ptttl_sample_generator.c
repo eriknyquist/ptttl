@@ -5,15 +5,14 @@
  *
  * Requires ptttl_parser.c
  *
- * Requires stdint.h, memset() from string.h, and sinf from math.h
+ * Requires stdint.h and memset() from string.h
  *
  * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
  *
- * Erik Nyquist 2023
+ * Erik Nyquist 2025
  */
 
 #include <string.h>
-#include <stdio.h>
 
 #include "ptttl_sample_generator.h"
 #include "ptttl_common.h"
@@ -104,7 +103,7 @@ static int32_t _generate_sine_sample(unsigned int sample_rate, float freq, unsig
 }
 
 /**
- * Convert a piano key note number (1 thorugh 88) to the corresponding pitch
+ * Convert a piano key note number (1 through 88) to the corresponding pitch
  * in Hz.
  *
  * @param note_number Piano key note number from 1 through 88, where 1 is the lowest note

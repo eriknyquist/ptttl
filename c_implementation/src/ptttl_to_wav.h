@@ -9,7 +9,7 @@
  *
  * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
  *
- * Erik Nyquist 2023
+ * Erik Nyquist 2025
  */
 
 #ifndef PTTTL_TO_WAV_H

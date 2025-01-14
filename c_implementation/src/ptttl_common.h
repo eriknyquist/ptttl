@@ -1,17 +1,10 @@
 /* ptttl_common.h
  *
- * Parser for RTTTL (Ring Tone Text Transfer Language) and PTTTL (Polyphonic Tone
- * Text Transfer Language, superset of RTTTL which supports polyphony)
- *
- * Converts a PTTTL or RTTTL source file into a ptttl_output_t object, which is
- * an intermediate representation that can be processed by ptttl_sample_generator.c
- * to obtain the audio samples directly, or ptttl_to_wav.c to create a .wav file.
- *
- * Requires stdint.h, strtoul() from stdlib.h, and memset() from string.h.
+ * Data/types common across several ptttl source files
  *
  * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
  *
- * Erik Nyquist 2023
+ * Erik Nyquist 2025
  */
 #ifndef PTTTL_COMMON_H
 #define PTTTL_COMMON_H

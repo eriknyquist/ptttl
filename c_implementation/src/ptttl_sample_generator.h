@@ -5,11 +5,11 @@
  *
  * Requires ptttl_parser.c
  *
- * Requires stdint.h, memset() from string.h, and sinf from math.h
+ * Requires stdint.h and memset() from string.h
  *
  * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
  *
- * Erik Nyquist 2023
+ * Erik Nyquist 2025
  */
 
 #ifndef PTTTL_SAMPLE_GENERATOR_H
