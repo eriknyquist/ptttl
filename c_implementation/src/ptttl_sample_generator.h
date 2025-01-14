@@ -37,7 +37,8 @@
  */
 typedef struct
 {
-    ptttl_output_note_t note;     ///< Parsed note object for this stream
+    uint32_t vibrato_frequency;   ///< Vibrato frequency, in HZ
+    uint32_t vibrato_variance;    ///< Vibrato variance, in HZ
     unsigned int sine_index;      ///< Monotonically increasing index for sinf() function, note pitch
     unsigned int start_sample;    ///< The sample index on which this note started
     unsigned int num_samples;     ///< Number of samples this note runs for

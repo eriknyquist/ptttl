@@ -195,9 +195,10 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
         }
     }
 
-    note_stream->note = *note;
     note_stream->attack = attack;
     note_stream->decay = decay;
+    note_stream->vibrato_frequency = PTTTL_NOTE_VIBRATO_FREQ(note);
+    note_stream->vibrato_variance = PTTTL_NOTE_VIBRATO_VAR(note);
 
     // Calculate note pitch from piano key number
     note_stream->note_number = PTTTL_NOTE_VALUE(note);
@@ -274,7 +275,6 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
  * Generate the next sample for the given note stream on the given channel
  *
  * @param generator      Pointer to initialized sample generator
- * @param note           Pointer to the ptttl_output_note_t instance to generate a sample for
  * @param stream         Pointer to ptttl_note_stream_t instance to generate a sample for
  * @param channel_idx    Channel index of channel the generated sample is for
  * @param sample         Pointer to location to store generated sample
@@ -282,9 +282,8 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
  * @return 0 if there are more samples remaining for the provided note stream,
              1 if no more samples, -1 if an error occurred
  */
-static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_output_note_t *note,
-                                    ptttl_note_stream_t *stream, unsigned int channel_idx,
-                                    float *sample)
+static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_note_stream_t *stream,
+                                    unsigned int channel_idx, float *sample)
 {
     int ret = 0;
 
@@ -296,13 +295,12 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_o
     else
     {
         int32_t raw_sample = 0;
-        uint32_t vfreq = PTTTL_NOTE_VIBRATO_FREQ(note);
-        uint32_t vvar = PTTTL_NOTE_VIBRATO_VAR(note);
 
-        if ((0u != vfreq) || (0u != vvar))
+        if ((0u != stream->vibrato_frequency) || (0u != stream->vibrato_variance))
         {
-            float vsine = _generate_sine_point(generator->config.sample_rate, vfreq, stream->sine_index);
-            float pitch_change_hz = ((float) vvar) * vsine;
+            float vsine = _generate_sine_point(generator->config.sample_rate, stream->vibrato_frequency,
+                                               stream->sine_index);
+            float pitch_change_hz = ((float) stream->vibrato_variance) * vsine;
             float note_pitch_hz = stream->pitch_hz + pitch_change_hz;
 
             float vsample = fast_sinf(stream->phasor_state);
@@ -398,8 +396,7 @@ int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_
             ptttl_note_stream_t *stream = &generator->note_streams[chan];
 
             float chan_sample = 0.0f;
-            int ret = _generate_channel_sample(generator, &stream->note, stream,
-                                               chan, &chan_sample);
+            int ret = _generate_channel_sample(generator, stream, chan, &chan_sample);
             if (ret < 0)
             {
                 return ret;
