@@ -3,9 +3,9 @@
  * Parser for RTTTL (Ring Tone Text Transfer Language) and PTTTL (Polyphonic Tone
  * Text Transfer Language, superset of RTTTL which supports polyphony)
  *
- * Converts a PTTTL or RTTTL source file into a ptttl_output_t object, which is
- * an intermediate representation that can be processed by ptttl_sample_generator.c
- * to obtain the audio samples directly, or ptttl_to_wav.c to create a .wav file.
+ * Converts a PTTTL or RTTTL source file into a stream of ptttl_output_note_t objects,
+ * which is an intermediate representation that can be processed by ptttl_sample_generator.c
+ * to obtain PCM audio samples.
  *
  * Requires stdint.h, strtoul() from stdlib.h, and memset() from string.h.
  *

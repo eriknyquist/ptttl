@@ -3,9 +3,9 @@
  * Parser for RTTTL (Ring Tone Text Transfer Language) and PTTTL (Polyphonic Tone
  * Text Transfer Language, superset of RTTTL which supports polyphony)
  *
- * Converts a PTTTL or RTTTL source file into a ptttl_output_t object, which is
- * an intermediate representation that can be processed by ptttl_sample_generator.c
- * to obtain the audio samples directly, or ptttl_to_wav.c to create a .wav file.
+ * Converts a PTTTL or RTTTL source file into a stream of ptttl_output_note_t objects,
+ * which is an intermediate representation that can be processed by ptttl_sample_generator.c
+ * to obtain PCM audio samples.
  *
  * Requires stdint.h, strtoul() from stdlib.h, and memset() from string.h.
  *
@@ -28,8 +28,8 @@
 
 /**
  * Maximum number of channels (note lanes) allowed in a single PTTTL file. This
- * setting will significantly impact the size of the ptttl_output_t struct-- more channels
- * makes the struct larger.
+ * setting will significantly affect the size of the ptttl_parser_t and ptttl_sample_generator_t
+ * structs-- more channels makes them larger.
  */
 #ifndef PTTTL_MAX_CHANNELS_PER_FILE
 #define PTTTL_MAX_CHANNELS_PER_FILE  (16u)
@@ -38,8 +38,8 @@
 
 /**
  * Maximum size of the name (first colon-separated field in a PTTTL or RTTTL file).
- * This name is stored directly in the ptttl_output_t struct, so changing this size
- * directly affects the size of the ptttl_output_t struct.
+ * This name is stored directly in the ptttl_parser_t struct, so changing this size
+ * directly affects the size of the ptttl_parser_t struct.
  */
 #ifndef PTTTL_MAX_NAME_LEN
 #define PTTTL_MAX_NAME_LEN           (256u)

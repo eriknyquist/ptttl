@@ -1,6 +1,6 @@
 /* ptttl_sample_generator.h
  *
- * Converts the output of ptttl_parse() into a stream of signed 16-bit audio samples
+ * Converts the output of ptttl_parse_next() into a stream of signed 16-bit audio samples
  * suitable for a WAV file. Samples can be obtained one at a time, at your leisure.
  *
  * Requires ptttl_parser.c
@@ -61,7 +61,7 @@ typedef struct
 } ptttl_sample_generator_config_t;
 
 /**
- * Represents a sample generator instance created for a specific ptttl_output_t instance
+ * Represents a sample generator instance created for a specific PTTTL/RTTTL source text
  */
 typedef struct
 {
@@ -83,7 +83,7 @@ ptttl_parser_error_t ptttl_sample_generator_error(void);
 
 
 /**
- * Initialize a sample generator instance for a specific ptttl_output_t object
+ * Initialize a sample generator instance for a specific PTTTL/RTTTL source text
  *
  * @param parser         Pointer to initialized PTTTL parser object
  * @param generator      Pointer to generator instance to initialize
