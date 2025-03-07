@@ -1,0 +1,4 @@
+Default vibrato variance setting respected:
+d=1,o=1,b=200,v=7,f=7:
+
+2a3v,2a3v7-30,2a3v7-100

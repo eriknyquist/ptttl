@@ -1,0 +1,5 @@
+Invalid note vibrato variance (too high):
+d=1,o=1,b=180,v=7,f=7:
+
+8c4v65535-65535, 8d4, 8e4, 8f4, 8g4, 8f4, 8e4, 8d4, 8c4 |
+4a3v65535-65536,      4b3,      4a3,      4b3,      8a3

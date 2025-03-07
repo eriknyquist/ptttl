@@ -1,0 +1,8 @@
+# Expected error message:
+Invalid note duration (must be 1, 2, 4, 8, 16 or 32)
+
+# Expected line number:
+2
+
+# Expected column number:
+4

@@ -1,0 +1,5 @@
+Invalid default octave setting:
+d=1,o=9,b=180:
+
+8c4, 8d4, 8e4, 8f4, 8g4, 8f4, 8e4, 8d4, 8c4 |
+4a3,      4b3,      4a3,      4b3,      8a3

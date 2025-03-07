@@ -1,0 +1,8 @@
+# Expected error message:
+Invalid octave (must be 0 through 8)
+
+# Expected line number:
+2
+
+# Expected column number:
+7

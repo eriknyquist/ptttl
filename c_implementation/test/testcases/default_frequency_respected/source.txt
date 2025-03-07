@@ -1,0 +1,4 @@
+Default vibrato frequency setting respected:
+d=1,o=1,b=200,v=7,f=7:
+
+2a3v,2a3v14-7,2a3v20-7
