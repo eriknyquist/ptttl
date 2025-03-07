@@ -1,0 +1,8 @@
+# Expected error message:
+Invalid musical note for octave 0
+
+# Expected line number:
+4
+
+# Expected column number:
+23

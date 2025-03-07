@@ -1,0 +1,8 @@
+# Expected error message:
+Malformed settings section (did you forget a comma?)
+
+# Expected line number:
+2
+
+# Expected column number:
+9

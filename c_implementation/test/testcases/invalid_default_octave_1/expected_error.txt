@@ -1,0 +1,8 @@
+# Expected error message:
+Expected a numerical digit
+
+# Expected line number:
+2
+
+# Expected column number:
+7

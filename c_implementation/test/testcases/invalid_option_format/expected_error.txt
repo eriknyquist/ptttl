@@ -1,0 +1,8 @@
+# Expected error message:
+Invalid option setting
+
+# Expected line number:
+2
+
+# Expected column number:
+5

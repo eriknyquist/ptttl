@@ -21,11 +21,13 @@
 
 
 // Helper macro, stores information about an error, which can be retrieved by ptttl_parser_error()
-#define ERROR(_parser, _msg)                                \
-{                                                           \
-    _parser->error.error_message = _msg;                    \
-    _parser->error.line = _parser->active_stream->line;     \
-    _parser->error.column = _parser->active_stream->column; \
+#define ERROR(_parser, _msg)                                       \
+{                                                                  \
+    _parser->error.error_message = _msg;                           \
+    _parser->error.line = _parser->active_stream->line;            \
+    _parser->error.column = (_parser->active_stream->column > 0) ? \
+                             _parser->active_stream->column :      \
+                             _parser->active_stream->column + 1;   \
 }
 
 // Helper macro, checks if a character is whitespace
@@ -139,18 +141,12 @@
     if ('\n' == _char)                       \
     {                                        \
         _parser->active_stream->line += 1;   \
-        _parser->active_stream->column = 1;  \
+        _parser->active_stream->column = 0;  \
     }                                        \
     else                                     \
     {                                        \
         _parser->active_stream->column += 1; \
     }                                        \
-}
-
-#define SAVE_CHAR(_parser, _nextchar)               \
-{                                                   \
-    _parser->active_stream->saved_char = _nextchar; \
-    _parser->active_stream->have_saved_char = 1u;   \
 }
 
 
@@ -241,6 +237,30 @@ static int _readchar_wrapper(ptttl_parser_t *parser, char *nextchar)
     return ret;
 }
 
+static int _read_next_char(ptttl_parser_t *parser, char *nextchar)
+{
+    int ret = _readchar_wrapper(parser, nextchar);
+    ADVANCE_LINE_COLUMN(parser, *nextchar);
+    return ret;
+}
+
+static int _peek_next_char(ptttl_parser_t *parser, char *nextchar)
+{
+    int ret = 0;
+    if (1 == parser->active_stream->have_saved_char)
+    {
+        *nextchar = parser->active_stream->saved_char;
+    }
+    else
+    {
+        ret = _readchar_wrapper(parser, nextchar);
+        parser->active_stream->have_saved_char = 1u;
+        parser->active_stream->saved_char = *nextchar;
+    }
+
+    return ret;
+}
+
 static int _seek_wrapper(ptttl_parser_t *parser, uint32_t position)
 {
     int ret = parser->iface.seek(position);
@@ -269,39 +289,40 @@ static int _eat_all_nonvisible_chars(ptttl_parser_t *parser)
     int readchar_ret = 0;
     uint8_t in_comment = 0u;
 
-    while ((readchar_ret = _readchar_wrapper(parser, &nextchar)) == 0)
+    while ((readchar_ret = _peek_next_char(parser, &nextchar)) == 0)
     {
         if (1u == in_comment)
         {
+            (void) _read_next_char(parser, &nextchar);
             if ('\n' == nextchar)
             {
                 in_comment = 0u;
             }
             else
             {
-                parser->active_stream->column += 1u;
                 continue;
             }
         }
 
-        if (IS_WHITESPACE(nextchar))
-        {
-            ADVANCE_LINE_COLUMN(parser, nextchar);
-        }
-        else
+        if (!IS_WHITESPACE(nextchar))
         {
             if ('#' == nextchar)
             {
+                (void) _read_next_char(parser, &nextchar);
                 in_comment = 1u;
-                parser->active_stream->column += 1u;
             }
             else
             {
-                SAVE_CHAR(parser, nextchar);
                 return 0;
             }
         }
+        else
+        {
+            (void) _read_next_char(parser, &nextchar);
+        }
     }
+
+    CHECK_IFACE_RET_EOF(parser, readchar_ret);
 
     return readchar_ret;
 }
@@ -325,7 +346,7 @@ static int _get_next_visible_char(ptttl_parser_t *parser, char *output)
         return ret;
     }
 
-    return _readchar_wrapper(parser, output);
+    return _read_next_char(parser, output);
 }
 
 /**
@@ -345,10 +366,11 @@ static int _parse_uint_from_input(ptttl_parser_t *parser, unsigned int *output,
     int readchar_ret = 0;
     char nextchar = '\0';
 
-    while ((readchar_ret = _readchar_wrapper(parser, &nextchar)) == 0)
+    while ((readchar_ret = _peek_next_char(parser, &nextchar)) == 0)
     {
         if (IS_DIGIT(nextchar))
         {
+            (void) _read_next_char(parser, &nextchar);
             if (pos == (sizeof(buf) - 1))
             {
                 ERROR(parser, "Integer is too long");
@@ -356,12 +378,10 @@ static int _parse_uint_from_input(ptttl_parser_t *parser, unsigned int *output,
             }
 
             buf[pos] = nextchar;
-            parser->active_stream->column += 1;
             pos += 1;
         }
         else
         {
-            SAVE_CHAR(parser, nextchar);
             buf[pos] = '\0';
             break;
         }
@@ -378,7 +398,8 @@ static int _parse_uint_from_input(ptttl_parser_t *parser, unsigned int *output,
 
     if (0 == pos)
     {
-        ERROR(parser, "Expected an integer");
+        (void) _read_next_char(parser, &nextchar);
+        ERROR(parser, "Expected a numerical digit");
         return -1;
     }
 
@@ -431,6 +452,7 @@ static int _parse_option(char opt, ptttl_parser_t *parser)
 
     if ('=' != equals)
     {
+        if (parser->active_stream->column > 1) parser->active_stream->column -= 1;
         ERROR(parser, "Invalid option setting");
         return -1;
     }
@@ -468,11 +490,22 @@ static int _parse_option(char opt, ptttl_parser_t *parser)
             break;
         case 'f':
             ret = _parse_uint_from_input(parser, &parser->default_vibrato_freq, 0u);
+            if (parser->default_vibrato_freq > 0xffffu)
+            {
+                ERROR(parser, "Vibrato frequency too high (maximum is 65,535)");
+                return -1;
+            }
             break;
         case 'v':
             ret = _parse_uint_from_input(parser, &parser->default_vibrato_var, 0u);
+            if (parser->default_vibrato_var > 0xffffu)
+            {
+                ERROR(parser, "Vibrato variance too high (maximum is 65,535)");
+                return -1;
+            }
             break;
         default:
+            if (parser->active_stream->column > 1) parser->active_stream->column -= 1;
             ERROR(parser, "Unrecognized option key");
             return -1;
             break;
@@ -516,7 +549,7 @@ static int _parse_settings(ptttl_parser_t *parser)
 
         if ((',' != c) && (':' != c))
         {
-            ERROR(parser, "Invalid settings section");
+            ERROR(parser, "Malformed settings section (did you forget a comma?)");
             return -1;
         }
     }
@@ -543,33 +576,38 @@ static int _parse_musical_note(ptttl_parser_t *parser, note_pitch_e *note_pitch)
 
     while (notepos < 2)
     {
-        if ((readchar_ret = _readchar_wrapper(parser, &nextchar)) != 0)
+        if ((readchar_ret = _peek_next_char(parser, &nextchar)) != 0)
         {
             break;
         }
 
-        if ((nextchar >= 'A') && (nextchar <= 'Z'))
+        if ((nextchar >= 'A') && (nextchar <= 'G'))
         {
+            (void) _read_next_char(parser, &nextchar);
             notebuf[notepos] = nextchar + ' ';
         }
-        else if (((nextchar >= 'a') && (nextchar <= 'z')) || (nextchar == '#'))
+        else if (((nextchar >= 'a') && (nextchar <= 'g')) || (nextchar == '#'))
         {
+            (void) _read_next_char(parser, &nextchar);
             notebuf[notepos] = nextchar;
         }
         else
         {
-            SAVE_CHAR(parser, nextchar);
             break;
         }
 
         notepos += 1;
-        parser->active_stream->column += 1u;
     }
 
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
 
     if (notepos == 0)
     {
+        if (notepos == 0)
+        {
+            (void) _read_next_char(parser, &nextchar);
+        }
+
         ERROR(parser, "Expecting a musical note name");
         return -1;
     }
@@ -608,16 +646,15 @@ static int _parse_note_vibrato(ptttl_parser_t *parser, ptttl_output_note_t *outp
     int readchar_ret = 0;
     char nextchar = '\0';
 
-    readchar_ret = _readchar_wrapper(parser, &nextchar);
+    readchar_ret = _peek_next_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
     if ('v' != nextchar)
     {
-        SAVE_CHAR(parser, nextchar);
         SET_VIBRATO(output, 0, 0);
         return 0;
     }
 
-    parser->active_stream->column += 1;
+    (void) _read_next_char(parser, &nextchar);
 
     SET_VIBRATO(output, parser->default_vibrato_freq, parser->default_vibrato_var);
 
@@ -625,9 +662,8 @@ static int _parse_note_vibrato(ptttl_parser_t *parser, ptttl_output_note_t *outp
     uint32_t var_hz = 0u;
 
     // Parse vibrato frequency, if any
-    readchar_ret = _readchar_wrapper(parser, &nextchar);
+    readchar_ret = _peek_next_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
-    SAVE_CHAR(parser, nextchar);
     if (IS_DIGIT(nextchar))
     {
         unsigned int freq = 0u;
@@ -644,12 +680,17 @@ static int _parse_note_vibrato(ptttl_parser_t *parser, ptttl_output_note_t *outp
         return 0;
     }
 
-    readchar_ret = _readchar_wrapper(parser, &nextchar);
+    if (freq_hz > 0xffffu)
+    {
+        ERROR(parser, "Vibrato frequency too high (maximum is 65,535)");
+        return -1;
+    }
+
+    readchar_ret = _peek_next_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
     if ('-' == nextchar)
     {
-        parser->active_stream->column += 1;
-
+        (void) _read_next_char(parser, &nextchar);
         unsigned int var = 0u;
         int ret = _parse_uint_from_input(parser, &var, 1u);
         if (ret != 0)
@@ -659,9 +700,11 @@ static int _parse_note_vibrato(ptttl_parser_t *parser, ptttl_output_note_t *outp
 
         var_hz = (uint32_t) var;
     }
-    else
+
+    if (var_hz > 0xffffu)
     {
-        SAVE_CHAR(parser, nextchar);
+        ERROR(parser, "Vibrato variance too high (maximum is 65,535)");
+        return -1;
     }
 
     SET_VIBRATO(output, freq_hz, var_hz);
@@ -686,9 +729,8 @@ static int _parse_ptttl_note(ptttl_parser_t *parser, ptttl_output_note_t *output
     unsigned int duration = parser->default_duration;
 
     char nextchar = '\0';
-    int readchar_ret = _readchar_wrapper(parser, &nextchar);
+    int readchar_ret = _peek_next_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
-    SAVE_CHAR(parser, nextchar);
 
     if (IS_DIGIT(nextchar))
     {
@@ -713,49 +755,36 @@ static int _parse_ptttl_note(ptttl_parser_t *parser, ptttl_output_note_t *output
     }
 
     // Check for dot after note letter
-    readchar_ret = _readchar_wrapper(parser, &nextchar);
+    readchar_ret = _peek_next_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
     if ('.' == nextchar)
     {
+        (void) _read_next_char(parser, &nextchar);
         dot_seen = 1u;
-        parser->active_stream->column += 1u;
-    }
-    else
-    {
-        SAVE_CHAR(parser, nextchar);
     }
 
     // Read octave, if it exists
     unsigned int octave = parser->default_octave;
-    readchar_ret = _readchar_wrapper(parser, &nextchar);
+    readchar_ret = _peek_next_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
     if (IS_DIGIT(nextchar))
     {
+        (void) _read_next_char(parser, &nextchar);
         octave = ((unsigned int) nextchar) - 48u;
         if (NOTE_OCTAVE_MAX < octave)
         {
             ERROR(parser, "Invalid octave (must be 0 through 8)");
             return -1;
         }
-
-        parser->active_stream->column += 1;
-    }
-    else
-    {
-        SAVE_CHAR(parser, nextchar);
     }
 
     // Check for dot again after octave
-    readchar_ret = _readchar_wrapper(parser, &nextchar);
+    readchar_ret = _peek_next_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
     if ('.' == nextchar)
     {
+        (void) _read_next_char(parser, &nextchar);
         dot_seen = 1u;
-        parser->active_stream->column += 1u;
-    }
-    else
-    {
-        SAVE_CHAR(parser, nextchar);
     }
 
     uint32_t note_number = 0u;
@@ -803,7 +832,7 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
     }
 
     parser->stream.line = 1u;
-    parser->stream.column = 1u;
+    parser->stream.column = 0u;
     parser->stream.position = 0u;
     parser->stream.have_saved_char = 0u;
     parser->channel_count = 0u;
@@ -827,11 +856,10 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
     unsigned int namepos = 1u;
     int readchar_ret = 0;
     char namechar = '\0';
-    while ((readchar_ret = _readchar_wrapper(parser, &namechar)) == 0)
+    while ((readchar_ret = _read_next_char(parser, &namechar)) == 0)
     {
         if (':' == namechar)
         {
-            parser->active_stream->column += 1u;
             parser->name[namepos] = '\0';
             break;
         }
@@ -842,8 +870,6 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
                 ERROR(parser, "Name too long, see PTTTL_MAX_NAME_LEN in ptttl_parser.h");
                 return -1;
             }
-
-            ADVANCE_LINE_COLUMN(parser, namechar);
 
             parser->name[namepos] = namechar;
             namepos += 1u;
@@ -879,8 +905,6 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
             char nextchar = '\0';
             while ((ret = _get_next_visible_char(parser, &nextchar)) == 0)
             {
-                ADVANCE_LINE_COLUMN(parser, nextchar);
-
                 if ('|' == nextchar)
                 {
                     if (PTTTL_MAX_CHANNELS_PER_FILE == parser->channel_count)
@@ -929,7 +953,10 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
     }
 
     ret = _eat_all_nonvisible_chars(parser);
-    CHECK_IFACE_RET_EOF(parser, ret);
+    if (ret != 0)
+    {
+        return ret;
+    }
 
     if (0u == channel_idx)
     {
@@ -951,10 +978,7 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
         }
     }
 
-    ret = _eat_all_nonvisible_chars(parser);
-    CHECK_IFACE_RET_EOF(parser, ret);
-
-    return 0;
+    return _eat_all_nonvisible_chars(parser);
 }
 
 
@@ -995,6 +1019,7 @@ int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_
     ret = _get_next_visible_char(parser, &next_char);
     if (ret == 1)
     {
+        parser->active_stream->have_saved_char = 0u;
         return 0;
     }
     else if (ret == 0)
@@ -1004,6 +1029,7 @@ int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_
             ret = _jump_to_next_block(parser, channel_idx, 1u);
             if (ret == 1)
             {
+                parser->active_stream->have_saved_char = 0u;
                 return 0;
             }
         }
@@ -1012,6 +1038,7 @@ int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_
             ret = _jump_to_next_block(parser, channel_idx, 0u);
             if (ret == 1)
             {
+                parser->active_stream->have_saved_char = 0u;
                 return 0;
             }
         }
@@ -1020,8 +1047,14 @@ int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_
             ret = _eat_all_nonvisible_chars(parser);
             if (ret == 1)
             {
+                parser->active_stream->have_saved_char = 0u;
                 return 0;
             }
+        }
+        else
+        {
+            ERROR(parser, "Expecting '|', ';', ',', or note vibrato settings");
+            return -1;
         }
     }
 

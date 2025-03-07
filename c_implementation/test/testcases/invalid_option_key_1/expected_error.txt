@@ -1,0 +1,8 @@
+# Expected error message:
+Unrecognized option key
+
+# Expected line number:
+1
+
+# Expected column number:
+11
