@@ -71,10 +71,7 @@ You want to read PTTTL/RTTTL text and generate audio samples at a specific sampl
 
 * Compile ``ptttl_parser.c`` and ``ptttl_sample_generator.c`` along with your project
 
-* Use ``ptttl_parser.c`` to convert your PTTTL/RTTTL source to intermediate representation
-  (See ``ptttl_parser.h`` for API documentation)
-
-* Use ``ptttl_sample_generator.c`` to convert intermediate representation to samples
+* Use ``ptttl_sample_generator.c`` to convert PTTTL/RTTTL source to audio samples
   (See ``ptttl_sample_generator.h`` for API documentation)
 
 You want to read PTTTL/RTTTL text and generate a .wav file
