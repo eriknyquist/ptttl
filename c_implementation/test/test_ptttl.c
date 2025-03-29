@@ -9,12 +9,15 @@
 static const char* _testcase_dirs[] =
 {
     "test/testcases/polyphonic_success",
+    "test/testcases/polyphonic_success_hightempo",
     "test/testcases/invalid_option_key_1",
     "test/testcases/invalid_option_key_2",
     "test/testcases/different_note_lengths",
     "test/testcases/invalid_note_length_line_start",
     "test/testcases/invalid_note_length_line_middle",
-    "test/testcases/invalid_note_letter",
+    "test/testcases/invalid_note_letter_1",
+    "test/testcases/invalid_note_letter_2",
+    "test/testcases/invalid_note_letter_3",
     "test/testcases/invalid_default_duration_1",
     "test/testcases/invalid_default_duration_2",
     "test/testcases/invalid_default_duration_3",
@@ -34,14 +37,15 @@ static const char* _testcase_dirs[] =
     "test/testcases/extra_option_comma",
     "test/testcases/missing_option_comma",
     "test/testcases/default_variance_respected",
-    "test/testcases/default_frequency_respected"
+    "test/testcases/default_frequency_respected",
+    "test/testcases/all_piano_keys"
 };
 
 #define NUM_TESTCASES (sizeof(_testcase_dirs) / sizeof(_testcase_dirs[0]))
 
 #define SAMPLE_CHUNK_SIZE (1024)
 
-#define SAMPLE_BUF_SIZE (250000)
+#define SAMPLE_BUF_SIZE (2500000)
 static int16_t _input_sample_buf[SAMPLE_BUF_SIZE];
 static int16_t _output_sample_buf[SAMPLE_BUF_SIZE];
 
@@ -380,6 +384,7 @@ static int _run_testcase(const char *testcase_dir)
 int main(void)
 {
     int failures = 0;
+    int tests = 0;
 
     for (int i = 0; i < NUM_TESTCASES; i++)
     {
@@ -412,8 +417,27 @@ int main(void)
 
         // Run the test case
         int result = _run_testcase(testcase_dir);
-        printf("Test %s: %s\n", testcase_name, (result == 0) ? "PASSED" : "FAILED");
-        failures += result;
+        tests += 1;
+        printf("Test %s ", testcase_name);
+        if (result == 0)
+        {
+            printf("PASSED\n");
+        }
+        else
+        {
+            failures += 1;
+            printf("FAILED\n");
+        }
+    }
+
+    printf("\nRan %d tests, ", tests);
+    if (failures == 0)
+    {
+        printf("All OK\n\n");
+    }
+    else
+    {
+        printf("%d failures\n\n", failures);
     }
 
     return failures;

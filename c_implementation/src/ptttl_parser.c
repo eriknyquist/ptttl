@@ -581,12 +581,13 @@ static int _parse_musical_note(ptttl_parser_t *parser, note_pitch_e *note_pitch)
             break;
         }
 
-        if ((nextchar >= 'A') && (nextchar <= 'G'))
+        if (((nextchar >= 'A') && (nextchar <= 'G')) || (nextchar == 'P'))
         {
             (void) _read_next_char(parser, &nextchar);
             notebuf[notepos] = nextchar + ' ';
         }
-        else if (((nextchar >= 'a') && (nextchar <= 'g')) || (nextchar == '#'))
+        else if (((nextchar >= 'a') && (nextchar <= 'g'))
+                 || (nextchar == 'p') || (nextchar == '#'))
         {
             (void) _read_next_char(parser, &nextchar);
             notebuf[notepos] = nextchar;
@@ -603,11 +604,7 @@ static int _parse_musical_note(ptttl_parser_t *parser, note_pitch_e *note_pitch)
 
     if (notepos == 0)
     {
-        if (notepos == 0)
-        {
-            (void) _read_next_char(parser, &nextchar);
-        }
-
+        (void) _read_next_char(parser, &nextchar);
         ERROR(parser, "Expecting a musical note name");
         return -1;
     }
