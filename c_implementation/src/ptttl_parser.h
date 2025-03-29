@@ -162,7 +162,7 @@ typedef struct
 
 
 /**
- * Return error info after ptttl_parse has returned -1
+ * Return error info after #ptttl_parse_init or #ptttl_parse_next has returned -1
  *
  * @return  Object describing the error that occurred. error_message field will be NULL
  *          if no error has occurred.
@@ -192,8 +192,9 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface);
  *                     that the channel occurs in the PTTTL/RTTTL source text, starting from 0.
  * @param note         Pointer to location to store intermediate representation of PTTTL/RTTTL note
  *
- * @return  0 if successful, -1 otherwise. If -1, use #ptttl_parser_error
- *          to get detailed error information.
+ * @return  0 if successful, 1 if there are no more notes available for the given channel,
+ *          and -1 if parsing error occurred. If -1, use #ptttl_parser_error to get detailed
+ *          error information.
  */
 int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_note_t *note);
 
