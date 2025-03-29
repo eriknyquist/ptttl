@@ -35,10 +35,13 @@ static const char* _testcase_dirs[] =
     "test/testcases/invalid_note_vibrato_freq_format",
     "test/testcases/invalid_note_vibrato_var_format",
     "test/testcases/extra_option_comma",
+    "test/testcases/extra_note_comma",
     "test/testcases/missing_option_comma",
+    "test/testcases/missing_note_comma",
     "test/testcases/default_variance_respected",
     "test/testcases/default_frequency_respected",
-    "test/testcases/all_piano_keys"
+    "test/testcases/all_piano_keys",
+    "test/testcases/double_flat_note"
 };
 
 #define NUM_TESTCASES (sizeof(_testcase_dirs) / sizeof(_testcase_dirs[0]))
