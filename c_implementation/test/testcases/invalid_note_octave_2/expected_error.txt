@@ -1,0 +1,8 @@
+# Expected error message:
+Expecting '|', ';', ',', or note vibrato settings
+
+# Expected line number:
+33
+
+# Expected column number:
+61

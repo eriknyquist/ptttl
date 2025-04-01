@@ -438,10 +438,16 @@ static unsigned int _valid_note_duration(unsigned int duration)
  *
  * @return 0 if successful, -1 otherwise
  */
-static int _parse_option(char opt, ptttl_parser_t *parser)
+static int _parse_option(char opt, ptttl_parser_t *parser, uint8_t option_expected)
 {
     if (':' == opt)
     {
+        if (option_expected)
+        {
+            ERROR(parser, "Expected another option setting");
+            return -1;
+        }
+
         // End of settings section
         return 0;
     }
@@ -525,8 +531,9 @@ static int _parse_option(char opt, ptttl_parser_t *parser)
 static int _parse_settings(ptttl_parser_t *parser)
 {
     char c = '\0';
+    uint8_t expecting_another_option = 0u;
 
-    parser->bpm = 0u;
+    parser->bpm = 123u;
     parser->default_duration = 8u;
     parser->default_octave = 4u;
     parser->default_vibrato_freq = 7u;
@@ -537,20 +544,29 @@ static int _parse_settings(ptttl_parser_t *parser)
         int result = _get_next_visible_char(parser, &c);
         CHECK_IFACE_RET(parser, result);
 
-        result = _parse_option(c, parser);
+        result = _parse_option(c, parser, expecting_another_option);
         if (result != 0)
         {
             return result;
         }
 
-        // After parsing option, next visible char should be comma or colon, otherwise error
-        result = _get_next_visible_char(parser, &c);
-        CHECK_IFACE_RET(parser, result);
+        expecting_another_option = 0u;
 
-        if ((',' != c) && (':' != c))
+        if (':' != c)
         {
-            ERROR(parser, "Malformed settings section (did you forget a comma?)");
-            return -1;
+            // After parsing option, next visible char should be comma or colon, otherwise error
+            result = _get_next_visible_char(parser, &c);
+            CHECK_IFACE_RET(parser, result);
+
+            if (',' == c)
+            {
+                expecting_another_option = 1u;
+            }
+            else if (':' != c)
+            {
+                ERROR(parser, "Malformed settings section (did you forget a comma?)");
+                return -1;
+            }
         }
     }
 

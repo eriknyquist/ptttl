@@ -1,0 +1,8 @@
+# Expected error message:
+Unexpected EOF encountered
+
+# Expected line number:
+2
+
+# Expected column number:
+1

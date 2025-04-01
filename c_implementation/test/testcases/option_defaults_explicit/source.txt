@@ -1,0 +1,4 @@
+Default values for unset options, but configured explicitly:
+d=8,o=4,b=123,v=10,f=7:
+
+cv,dv,ev,4fv
