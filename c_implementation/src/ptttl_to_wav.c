@@ -85,7 +85,7 @@ static ptttl_parser_error_t _error = {.line = 0u, .column = 0u, .error_message=N
 /**
  * @see ptttl_to_wav.h
  */
-const ptttl_parser_error_t ptttl_to_wav_error(void)
+ptttl_parser_error_t ptttl_to_wav_error(void)
 {
     return _error;
 }

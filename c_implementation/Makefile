@@ -40,7 +40,7 @@ debug: ptttl_cli
 
 afl_fuzz_harness: CC=$(AFL_CC)
 afl_fuzz_harness: CFLAGS += -O2
-afl_fuzz_harness: make_build_dir
+afl_fuzz_harness: make_build_dirs
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_parser.c -o $(OBJ_DIR)/ptttl_parser.o
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_sample_generator.c -o $(OBJ_DIR)/ptttl_sample_generator.o
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_to_wav.c -o $(OBJ_DIR)/ptttl_to_wav.o

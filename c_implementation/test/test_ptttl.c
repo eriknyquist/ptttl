@@ -40,6 +40,7 @@ static const char* _testcase_dirs[] =
     "test/testcases/extra_option_comma",
     "test/testcases/extra_option_comma_end",
     "test/testcases/extra_note_comma",
+    "test/testcases/extra_note_comma_end",
     "test/testcases/missing_option_comma",
     "test/testcases/missing_note_comma",
     "test/testcases/default_variance_respected",
