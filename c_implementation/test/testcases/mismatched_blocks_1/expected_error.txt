@@ -2,7 +2,7 @@
 Unexpected end of block (all blocks must have the same channel count)
 
 # Expected line number:
-27
+7
 
 # Expected column number:
-79
+45

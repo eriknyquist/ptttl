@@ -988,6 +988,11 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
             {
                 break;
             }
+            else if (';' == nextchar)
+            {
+                ERROR(parser, "Unexpected end of block (all blocks must have the same channel count)");
+                return -1;
+            }
         }
     }
 

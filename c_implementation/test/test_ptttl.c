@@ -52,7 +52,9 @@ static const char* _testcase_dirs[] =
     "test/testcases/empty_1",
     "test/testcases/empty_2",
     "test/testcases/option_defaults_explicit",
-    "test/testcases/option_defaults_implicit"
+    "test/testcases/option_defaults_implicit",
+    "test/testcases/mismatched_blocks_1",
+    "test/testcases/mismatched_blocks_2"
 };
 
 #define NUM_TESTCASES (sizeof(_testcase_dirs) / sizeof(_testcase_dirs[0]))
