@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "ptttl_parser.h"
 #include "ptttl_common.h"
 
@@ -403,7 +404,24 @@ static int _parse_uint_from_input(ptttl_parser_t *parser, unsigned int *output,
         return -1;
     }
 
-    *output = (unsigned int) strtoul(buf, NULL, 0);
+    char *endptr = NULL;
+    unsigned long lval = 0;
+    lval = strtoul(buf, &endptr, 0);
+
+    if ((endptr == NULL) || (*endptr != '\0'))
+    {
+        ERROR(parser, "Invalid integer (too large?)");
+        return -1;
+    }
+
+    if ((ULONG_MAX == lval) || (UINT_MAX < lval))
+    {
+        ERROR(parser, "Integer is too large");
+        return -1;
+    }
+
+    *output = (unsigned int) lval;
+
     return 0;
 }
 

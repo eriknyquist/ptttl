@@ -22,6 +22,9 @@ static const char* _testcase_dirs[] =
     "test/testcases/invalid_default_duration_2",
     "test/testcases/invalid_default_duration_3",
     "test/testcases/invalid_default_duration_4",
+    "test/testcases/invalid_pause_duration_1",
+    "test/testcases/invalid_pause_duration_2",
+    "test/testcases/invalid_pause_duration_3",
     "test/testcases/invalid_default_octave_1",
     "test/testcases/invalid_default_octave_2",
     "test/testcases/invalid_default_octave_3",
@@ -54,7 +57,10 @@ static const char* _testcase_dirs[] =
     "test/testcases/option_defaults_explicit",
     "test/testcases/option_defaults_implicit",
     "test/testcases/mismatched_blocks_1",
-    "test/testcases/mismatched_blocks_2"
+    "test/testcases/mismatched_blocks_2",
+    "test/testcases/malformed_pause_1",
+    "test/testcases/malformed_pause_2",
+    "test/testcases/bpm_too_large"
 };
 
 #define NUM_TESTCASES (sizeof(_testcase_dirs) / sizeof(_testcase_dirs[0]))
