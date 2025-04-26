@@ -46,32 +46,39 @@ typedef struct
     int32_t subchunk2_size;
 } wavfile_header_t;
 
-/**
- * WAV header data with all fixed/known values populated
- */
-static wavfile_header_t _default_header =
-{
-    .chunk_id = {'R', 'I', 'F', 'F'},
-    .chunk_size = 0,
-    .format = {'W', 'A', 'V', 'E'},
-
-    .subchunk1_id = {'f', 'm', 't', ' '},
-    .subchunk1_size = BITS_PER_SAMPLE,
-    .audio_format = 1,
-    .num_channels = 1,
-    .sample_rate = 0u,
-    .byte_rate = 0u,
-    .block_align = BITS_PER_SAMPLE / 8,
-    .bits_per_sample = BITS_PER_SAMPLE,
-
-    .subchunk2_id = {'d', 'a', 't', 'a'},
-    .subchunk2_size = 0
-};
-
 
 // Store a description of the last error
 static ptttl_parser_error_t _error = {.line = 0u, .column = 0u, .error_message=NULL};
 
+
+#if defined(__BYTE_ORDER__)
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+static int _big_endian = 1;
+#else
+static int _big_endian = 0;
+#endif
+#else
+static int _big_endian; // Set at runtime
+#endif
+
+// Macros to swap byte order if native order is big-endian
+#if defined(__BYTE_ORDER__)
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    // CPU is big endian
+    #define cpu_to_le32(val)  __builtin_bswap32(val)
+    #define cpu_to_le16(val)  __builtin_bswap16(val)
+#else
+    // CPU is little endian
+    #define cpu_to_le32(val) val
+    #define cpu_to_le16(val) val
+#endif
+#else
+    // __BYTE_ORDER__ not defined
+    #define cpu_to_le32(val) (_big_endian) ? __builtin_bswap32(val) : val
+    #define cpu_to_le16(val) (_big_endian) ? __builtin_bswap16(val) : val
+#endif
+
+// Swaps byte order of a signed 16-bit value if native order is big-endian
 
 // Helper macro, stores information about an error, which can be retrieved by ptttl_to_wav_error()
 #define ERROR(_parser, _msg)                                \
@@ -81,6 +88,37 @@ static ptttl_parser_error_t _error = {.line = 0u, .column = 0u, .error_message=N
     _error.column = _parser->active_stream->column;         \
 }
 
+static void _prepare_header(wavfile_header_t *output,
+                            int32_t framecount, uint32_t samplerate)
+{
+    int32_t subchunk2_size = (framecount * BITS_PER_SAMPLE) / 8;
+
+    output->chunk_id[0] = 'R';
+    output->chunk_id[1] = 'I';
+    output->chunk_id[2] = 'F';
+    output->chunk_id[3] = 'F';
+    output->chunk_size = cpu_to_le32((4  + (8 + BITS_PER_SAMPLE)) + (8 + subchunk2_size));
+    output->format[0] = 'W';
+    output->format[1] = 'A';
+    output->format[2] = 'V';
+    output->format[3] = 'E';
+    output->subchunk1_id[0] = 'f';
+    output->subchunk1_id[1] = 'm';
+    output->subchunk1_id[2] = 't';
+    output->subchunk1_id[3] = ' ';
+    output->subchunk1_size = cpu_to_le32(BITS_PER_SAMPLE);
+    output->subchunk2_size = cpu_to_le32(subchunk2_size);
+    output->audio_format = cpu_to_le16(1);
+    output->num_channels = cpu_to_le16(1);
+    output->sample_rate = cpu_to_le32((int32_t)samplerate);
+    output->byte_rate = cpu_to_le32((int32_t)((samplerate * BITS_PER_SAMPLE) / 8));
+    output->block_align = cpu_to_le16(BITS_PER_SAMPLE / 8);
+    output->bits_per_sample = cpu_to_le16(BITS_PER_SAMPLE);
+    output->subchunk2_id[0] = 'd';
+    output->subchunk2_id[1] = 'a';
+    output->subchunk2_id[2] = 't';
+    output->subchunk2_id[3] = 'a';
+}
 
 /**
  * @see ptttl_to_wav.h
@@ -105,6 +143,10 @@ int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename)
     {
         ERROR(parser, "NULL pointer passed to function");
     }
+
+#if !defined(__BYTE_ORDER__)
+    _big_endian = !(*(char *)(int[]){1});
+#endif
 
     ptttl_sample_generator_t generator;
     ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
@@ -139,6 +181,14 @@ int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename)
 
     while ((ret = ptttl_sample_generator_generate(&generator, &num_samples, sample_buf)) != -1)
     {
+        if (_big_endian)
+        {
+            for (uint32_t i = 0; i < num_samples; i++)
+            {
+                sample_buf[i] = cpu_to_le16(sample_buf[i]);
+            }
+        }
+
         size_t size_written = fwrite(&sample_buf, sizeof(uint16_t), num_samples, fp);
         if (num_samples != size_written)
         {
@@ -171,15 +221,13 @@ int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename)
         return -1;
     }
 
+    wavfile_header_t header;
     int32_t framecount = ((int32_t) generator.current_sample) + 1u;
-    _default_header.subchunk2_size = (framecount * BITS_PER_SAMPLE) / 8;
-    _default_header.chunk_size = (4  + (8 + _default_header.subchunk1_size)) + (8 + _default_header.subchunk2_size);
-    _default_header.sample_rate = config.sample_rate;
-    _default_header.byte_rate = (config.sample_rate * BITS_PER_SAMPLE) / 8;
+    _prepare_header(&header, framecount, config.sample_rate);
 
     // Write header
-    size_t size_written = fwrite(&_default_header, 1u, sizeof(_default_header), fp);
-    if (sizeof(_default_header) != size_written)
+    size_t size_written = fwrite(&header, 1u, sizeof(header), fp);
+    if (sizeof(header) != size_written)
     {
         ERROR(parser, "Failed to write to WAV file");
         fclose(fp);
