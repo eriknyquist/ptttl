@@ -92,6 +92,7 @@ typedef struct
     uint32_t position;       ///< Current position in input text stream
     uint32_t line;           ///< Current line number in input text
     uint32_t column;         ///< Current column number in input text
+    uint32_t block;          ///< Current block number, starting from 0
     uint8_t have_saved_char; ///< 1 if a character has been read but not yet used
     char saved_char;         ///< Unused character
 } ptttl_parser_input_stream_t;
