@@ -71,6 +71,15 @@ static const char* _testcase_dirs[] =
 static int16_t _input_sample_buf[SAMPLE_BUF_SIZE];
 static int16_t _output_sample_buf[SAMPLE_BUF_SIZE];
 
+// Number of times the "read" iface callback was called (reset per testcase)
+static int _char_read_count = 0;
+
+// Furthest input file position the parser advanced to (reset per testcase)
+static int _high_watermark = 0;
+
+// Current position in input file (reset per testcase)
+static int _input_pos = 0;
+
 
 // File pointer for RTTTL/PTTTL source file
 static FILE *_src_fp = NULL;
@@ -79,6 +88,13 @@ static FILE *_src_fp = NULL;
 static int _read(char *nextchar)
 {
     size_t ret = fread(nextchar, 1, 1, _src_fp);
+    _char_read_count++;
+    _input_pos++;
+
+    if (_input_pos > _high_watermark)
+    {
+        _high_watermark = _input_pos;
+    }
 
     // Return 0 for success, 1 for EOF (no error condition)
     return (int) (1u != ret);
@@ -93,6 +109,7 @@ static int _seek(uint32_t position)
         return 1;
     }
 
+    _input_pos = (int) position;
     return ret;
 }
 
@@ -392,6 +409,7 @@ static int _run_testcase(const char *testcase_dir)
     if (NULL != fp)
     {
         printf("Encountered no error, but an error was expected as per %s\n", error_path);
+        fclose(fp);
         return -1;
     }
 
@@ -440,16 +458,20 @@ int main(void)
         // Run the test case
         int result = _run_testcase(testcase_dir);
         tests += 1;
-        printf("Test %s ", testcase_name);
-        if (result == 0)
-        {
-            printf("PASSED\n");
-        }
-        else
+
+        float _overread_percentage = ((float) _char_read_count) / (((float) _high_watermark) / 100.0f);
+        char passfail_str[128];
+        (void) snprintf(passfail_str, sizeof(passfail_str), "Test %s %s",testcase_name, (result == 0) ? "PASSED" : "FAILED");
+        printf("%-50s %d/%d : %.2f%%\n", passfail_str, _high_watermark, _char_read_count, _overread_percentage);
+
+        if (result != 0)
         {
             failures += 1;
-            printf("FAILED\n");
         }
+
+        _char_read_count = 0;
+        _high_watermark = 0;
+        _input_pos = 0;
     }
 
     printf("\nRan %d tests, ", tests);
