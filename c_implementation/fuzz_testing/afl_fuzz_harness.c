@@ -30,24 +30,17 @@ static unsigned char *testcase_buf = NULL;
 // ptttl_readchar_t callback to read the next PTTTL/RTTTL source character from stdin
 static int _read(char *nextchar)
 {
-    int ret = 0;
+    if (bufpos >= buflen)
+    {
+        return 1;
+    }
 
     // Provide next character from stdin buf
     *nextchar = (char) testcase_buf[bufpos];
-
-    if (bufpos == (buflen - 1))
-    {
-        // Last char of input for this testcase- reset buffer position and return EOF
-        bufpos = 0;
-        ret = 1;
-    }
-    else
-    {
-        bufpos++;
-    }
+    bufpos++;
 
     // Return 0 for success, 1 for EOF (no error condition)
-    return ret;
+    return 0;
 }
 
 static int _seek(uint32_t position)

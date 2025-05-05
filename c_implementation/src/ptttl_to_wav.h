@@ -27,10 +27,12 @@
 /**
  * Return error info after ptttl_to_wav has returned -1
  *
+ * @param   Pointer to initialized parser object
+ *
  * @return  Object describing the error that occurred. error_message field will be NULL
  *          if no error has occurred.
  */
-ptttl_parser_error_t ptttl_to_wav_error(void);
+ptttl_parser_error_t ptttl_to_wav_error(ptttl_parser_t *parser);
 
 /**
  * Generate samples for some parsed PTTTL data and write them directly to a .wav file.

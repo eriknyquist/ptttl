@@ -76,10 +76,12 @@ typedef struct
 /**
  * Return error info describing the last error that occurred
  *
+ * @param   Pointer to initialized parser object
+ *
  * @return  Object describing the error that occurred. error_message field will be NULL
  *          if no error has occurred.
  */
-ptttl_parser_error_t ptttl_sample_generator_error(void);
+ptttl_parser_error_t ptttl_sample_generator_error(ptttl_parser_t *parser);
 
 
 /**

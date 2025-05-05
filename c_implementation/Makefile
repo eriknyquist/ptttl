@@ -47,6 +47,10 @@ afl_fuzz_harness: make_build_dirs
 	$(CC) $(CFLAGS) -c $(FUZZ_DIR)/afl_fuzz_harness.c -o $(OBJ_DIR)/afl_fuzz_harness.o
 	$(CC) $(CFLAGS) $(OBJ_DIR)/ptttl_parser.o $(OBJ_DIR)/ptttl_sample_generator.o $(OBJ_DIR)/ptttl_to_wav.o $(OBJ_DIR)/afl_fuzz_harness.o -o $(FUZZ_BIN)
 
+fuzz: afl_fuzz_harness
+fuzz:
+	export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1 && afl-fuzz -t 2000 -i $(FUZZ_DIR)/testcase_corpus/ -o $(FUZZ_DIR)/afl_findings -- $(FUZZ_BIN)
+
 test: CFLAGS += -O0 -g3 -fsanitize=address -fsanitize=undefined
 test: make_build_dirs
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_parser.c -o $(TEST_OBJ_DIR)/ptttl_parser.o

@@ -23,15 +23,12 @@
 
 
 // Store an error message for reporting by ptttl_sample_generator_error()
-#define ERROR(_parser, _msg)                                \
-{                                                           \
-    _error.error_message = _msg;                            \
-    _error.line = _parser->active_stream->line;             \
-    _error.column = _parser->active_stream->column;         \
+#define ERROR(_parser, _msg)                                        \
+{                                                                   \
+    _parser->error.error_message = _msg;                            \
+    _parser->error.line = _parser->active_stream->line;             \
+    _parser->error.column = _parser->active_stream->column;         \
 }
-
-// Static storage for description of last error
-static ptttl_parser_error_t _error = {.line = 0u, .column = 0u, .error_message=NULL};
 
 
 /**
@@ -211,9 +208,15 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
 /**
  * @see ptttl_sample_generator.h
  */
-ptttl_parser_error_t ptttl_sample_generator_error(void)
+ptttl_parser_error_t ptttl_sample_generator_error(ptttl_parser_t *parser)
 {
-    return _error;
+    if (parser == NULL)
+    {
+        ptttl_parser_error_t ret = {NULL, 0, 0};
+        return ret;
+    }
+
+    return parser->error;
 }
 
 /**
@@ -260,7 +263,6 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
         int ret = ptttl_parse_next(generator->parser, chan, &note);
         if (ret != 0)
         {
-            _error = ptttl_parser_error(generator->parser);
             return ret;
         }
 
@@ -347,10 +349,6 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_n
         if (ret == 0)
         {
             _load_note_stream(generator, &note, &generator->note_streams[channel_idx]);
-        }
-        else if (ret < 0)
-        {
-            _error = ptttl_parser_error(generator->parser);
         }
     }
 

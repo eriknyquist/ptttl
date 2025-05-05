@@ -882,12 +882,10 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
     parser->active_stream = &parser->stream;
 
     // Read name (first field)
-    int ret = _get_next_visible_char(parser, &parser->name[0]);
-    CHECK_IFACE_RET(parser, ret);
-
-    unsigned int namepos = 1u;
+    unsigned int namepos = 0u;
     int readchar_ret = 0;
     char namechar = '\0';
+    int ret = 0;
     while ((readchar_ret = _read_next_char(parser, &namechar)) == 0)
     {
         if (':' == namechar)

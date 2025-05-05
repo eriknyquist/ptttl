@@ -1,8 +1,8 @@
 # Expected error message:
-PTTTL parser object has a channel count of 0
+Invalid option setting
 
 # Expected line number:
-2
+1
 
 # Expected column number:
-0
+2

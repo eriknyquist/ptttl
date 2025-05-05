@@ -47,10 +47,6 @@ typedef struct
 } wavfile_header_t;
 
 
-// Store a description of the last error
-static ptttl_parser_error_t _error = {.line = 0u, .column = 0u, .error_message=NULL};
-
-
 #if defined(__BYTE_ORDER__)
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 static int _big_endian = 1;
@@ -81,11 +77,11 @@ static int _big_endian; // Set at runtime
 // Swaps byte order of a signed 16-bit value if native order is big-endian
 
 // Helper macro, stores information about an error, which can be retrieved by ptttl_to_wav_error()
-#define ERROR(_parser, _msg)                                \
-{                                                           \
-    _error.error_message = _msg;                            \
-    _error.line = _parser->active_stream->line;             \
-    _error.column = _parser->active_stream->column;         \
+#define ERROR(_parser, _msg)                                        \
+{                                                                   \
+    _parser->error.error_message = _msg;                            \
+    _parser->error.line = _parser->active_stream->line;             \
+    _parser->error.column = _parser->active_stream->column;         \
 }
 
 static void _prepare_header(wavfile_header_t *output,
@@ -123,9 +119,15 @@ static void _prepare_header(wavfile_header_t *output,
 /**
  * @see ptttl_to_wav.h
  */
-ptttl_parser_error_t ptttl_to_wav_error(void)
+ptttl_parser_error_t ptttl_to_wav_error(ptttl_parser_t *parser)
 {
-    return _error;
+    if (parser == NULL)
+    {
+        ptttl_parser_error_t ret = {NULL, 0, 0};
+        return ret;
+    }
+
+    return parser->error;
 }
 
 
@@ -154,7 +156,6 @@ int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename)
     int ret = ptttl_sample_generator_create(parser, &generator, &config);
     if (ret < 0)
     {
-        _error = ptttl_sample_generator_error();
         return ret;
     }
 
@@ -207,7 +208,6 @@ int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename)
 
     if (ret < 0)
     {
-        _error = ptttl_sample_generator_error();
         fclose(fp);
         return ret;
     }
