@@ -255,8 +255,12 @@ static int _peek_next_char(ptttl_parser_t *parser, char *nextchar)
     else
     {
         ret = _readchar_wrapper(parser, nextchar);
-        parser->active_stream->have_saved_char = 1u;
-        parser->active_stream->saved_char = *nextchar;
+
+        if (ret == 0)
+        {
+            parser->active_stream->have_saved_char = 1u;
+            parser->active_stream->saved_char = *nextchar;
+        }
     }
 
     return ret;
@@ -886,6 +890,8 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
     int readchar_ret = 0;
     char namechar = '\0';
     int ret = 0;
+    parser->name[0] = '\0';
+
     while ((readchar_ret = _read_next_char(parser, &namechar)) == 0)
     {
         if (':' == namechar)
@@ -897,7 +903,7 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
         {
             if ((PTTTL_MAX_NAME_LEN - 1u) == namepos)
             {
-                ERROR(parser, "Name too long, see PTTTL_MAX_NAME_LEN in ptttl_parser.h");
+                ERROR(parser, "Maximum song name length exceeded");
                 return -1;
             }
 

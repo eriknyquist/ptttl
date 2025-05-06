@@ -35,7 +35,7 @@ ptttl_cli: make_build_dirs
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_cli.c -o $(OBJ_DIR)/ptttl_cli.o
 	$(CC) $(CFLAGS) $(OBJ_DIR)/ptttl_parser.o $(OBJ_DIR)/ptttl_sample_generator.o $(OBJ_DIR)/ptttl_to_wav.o $(OBJ_DIR)/ptttl_cli.o -o $(CLI_BIN)
 
-debug: CFLAGS += -O0 -g -fanalyzer -fsanitize=address -fsanitize=undefined
+debug: CFLAGS += -O0 -g -fsanitize=address,undefined
 debug: ptttl_cli
 
 afl_fuzz_harness: CC=$(AFL_CC)
@@ -51,7 +51,7 @@ fuzz: afl_fuzz_harness
 fuzz:
 	export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1 && afl-fuzz -t 2000 -i $(FUZZ_DIR)/testcase_corpus/ -o $(FUZZ_DIR)/afl_findings -- $(FUZZ_BIN)
 
-test: CFLAGS += -O0 -g3 -fsanitize=address -fsanitize=undefined
+test: CFLAGS += -O0 -g3 -fsanitize=address,undefined
 test: make_build_dirs
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_parser.c -o $(TEST_OBJ_DIR)/ptttl_parser.o
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_sample_generator.c -o $(TEST_OBJ_DIR)/ptttl_sample_generator.o

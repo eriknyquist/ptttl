@@ -61,6 +61,9 @@ static const char* _testcase_dirs[] =
     "test/testcases/malformed_pause_1",
     "test/testcases/malformed_pause_2",
     "test/testcases/bpm_too_large",
+    "test/testcases/name_too_long",
+    "test/testcases/multiline_name_1",
+    "test/testcases/multiline_name_2",
     "test/testcases/afl_testcase_1"
 };
 
