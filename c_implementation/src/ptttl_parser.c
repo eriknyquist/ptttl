@@ -490,6 +490,14 @@ static int _parse_option(char opt, ptttl_parser_t *parser, uint8_t option_expect
     {
         case 'b':
             ret = _parse_uint_from_input(parser, &parser->bpm, 0u);
+            if (0 == ret)
+            {
+                if (0u == parser->bpm)
+                {
+                    ERROR(parser, "BPM cannot be zero");
+                    return -1;
+                }
+            }
             break;
         case 'd':
         {
