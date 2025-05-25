@@ -135,7 +135,8 @@ ptttl_parser_error_t ptttl_to_wav_error(ptttl_parser_t *parser)
 /**
  * @see ptttl_to_wav.h
  */
-int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename)
+int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename,
+                 ptttl_waveform_type_e wave_type)
 {
     ASSERT(NULL != parser);
     ASSERT(NULL != wav_filename)
@@ -151,6 +152,16 @@ int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename)
     if (ret < 0)
     {
         return ret;
+    }
+
+    // Set specified waveform type for all channels
+    for (uint32_t channel = 0u; channel < parser->channel_count; channel++)
+    {
+        if (ptttl_sample_generator_set_waveform(&generator, channel, wave_type) != 0)
+        {
+            printf("Failed to set waveform type\n");
+            return -1;
+        }
     }
 
     FILE *fp = fopen(wav_filename, "wb");

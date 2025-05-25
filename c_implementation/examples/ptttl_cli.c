@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include "ptttl_parser.h"
 #include "ptttl_to_wav.h"
 
@@ -43,10 +44,43 @@ static int _seek(uint32_t position)
 
 int main(int argc, char *argv[])
 {
-    if (3 != argc)
+    if ((3 != argc) && (4 != argc))
     {
-        printf("Usage: %s <PTTTL/RTTTL filename> <output filename>\n", argv[0]);
+        printf("Usage: %s <PTTTL/RTTTL filename> <output filename> [<waveform_type>]\n\n", argv[0]);
+        printf("<waveform_type> is optional, and can be any of the following:\n");
+        printf("    sine\n");
+        printf("    triangle\n");
+        printf("    sawtooth\n");
+        printf("    square\n\n");
+
         return -1;
+    }
+
+    ptttl_waveform_type_e wave_type = WAVEFORM_TYPE_SINE;
+    if (argc == 4)
+    {
+        if (strncmp(argv[3], "sine", 4) == 0)
+        {
+            wave_type = WAVEFORM_TYPE_SINE;
+        }
+        else if (strncmp(argv[3], "triangle", 8) == 0)
+        {
+            wave_type = WAVEFORM_TYPE_TRIANGLE;
+        }
+        else if (strncmp(argv[3], "sawtooth", 8) == 0)
+        {
+            wave_type = WAVEFORM_TYPE_SAWTOOTH;
+        }
+        else if (strncmp(argv[3], "square", 6) == 0)
+        {
+            wave_type = WAVEFORM_TYPE_SQUARE;
+        }
+        else
+        {
+            printf("Error: unrecognized waveform type '%s'\n", argv[3]);
+            return -1;
+        }
+
     }
 
     fp = fopen(argv[1], "rb");
@@ -70,7 +104,7 @@ int main(int argc, char *argv[])
     if (0 == ret)
     {
         // Parse PTTTL/RTTTL source and convert to .wav file
-        ret = ptttl_to_wav(&parser, argv[2]);
+        ret = ptttl_to_wav(&parser, argv[2], wave_type);
         if (ret < 0)
         {
             ptttl_parser_error_t err = ptttl_to_wav_error(&parser);

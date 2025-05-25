@@ -17,6 +17,7 @@
 
 
 #include "ptttl_parser.h"
+#include "ptttl_sample_generator.h"
 
 
 #ifdef __cplusplus
@@ -41,11 +42,13 @@ ptttl_parser_error_t ptttl_to_wav_error(ptttl_parser_t *parser);
  *
  * @param parser         Pointer to initialized parser object
  * @param wav_filename   Pointer to name of .wav file to create. Must be writeable.
+ * @param wave_type      Waveform type to use for all channels
  *
  * @return 0 if successful, -1 if an error occurred. Call #ptttl_to_wav_error for
  *         an error description if -1 is returned.
  */
-int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename);
+int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename,
+                 ptttl_waveform_type_e wave_type);
 
 
 #ifdef __cplusplus

@@ -4,6 +4,7 @@ BUILD_DIR      := build
 SRC_DIR        := src
 TEST_DIR       := test
 FUZZ_DIR       := fuzz_testing
+EXAMPLES_DIR   := examples
 OBJ_DIR        := $(BUILD_DIR)/obj
 TEST_OBJ_DIR   := $(TEST_DIR)/obj
 
@@ -32,7 +33,7 @@ ptttl_cli: make_build_dirs
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_parser.c -o $(OBJ_DIR)/ptttl_parser.o
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_sample_generator.c -o $(OBJ_DIR)/ptttl_sample_generator.o
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_to_wav.c -o $(OBJ_DIR)/ptttl_to_wav.o
-	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_cli.c -o $(OBJ_DIR)/ptttl_cli.o
+	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/ptttl_cli.c -o $(OBJ_DIR)/ptttl_cli.o
 	$(CC) $(CFLAGS) $(OBJ_DIR)/ptttl_parser.o $(OBJ_DIR)/ptttl_sample_generator.o $(OBJ_DIR)/ptttl_to_wav.o $(OBJ_DIR)/ptttl_cli.o -o $(CLI_BIN)
 
 debug: CFLAGS += -O0 -g -fsanitize=address,undefined
