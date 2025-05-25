@@ -80,9 +80,9 @@ static float _square_generator(float x, float p, unsigned int s)
     if (x < 0.0f) x += 1.0f;
 
     // Calculate max. number of harmonics given the waveform frequency
-	int maxh = (int) ((((float) s) * 0.5f) / p);
-	if (maxh < 1) maxh = 1;               // At least the fundamental harmonic
-	int hcount = (maxh < 16) ? maxh : 16; // No higher than 16 harmonics
+    int maxh = (int) ((((float) s) * 0.5f) / p);
+    if (maxh < 1) maxh = 1;               // At least the fundamental harmonic
+    int hcount = (maxh < 16) ? maxh : 16; // No higher than 16 harmonics
 
     // Generate square point by summing points of sine waves of the harmonics
     float sum = 0.0f;
@@ -106,9 +106,9 @@ static float _sawtooth_generator(float x, float p, unsigned int s)
     if (x < 0.0f) x += 1.0f;
 
     // Calculate max. number of harmonics given the waveform frequency
-	int maxh = (int) ((((float) s) * 0.5f) / p);
-	if (maxh < 1) maxh = 1;               // At least the fundamental harmonic
-	int hcount = (maxh < 16) ? maxh : 16; // No higher than 16 harmonics
+    int maxh = (int) ((((float) s) * 0.5f) / p);
+    if (maxh < 1) maxh = 1;               // At least the fundamental harmonic
+    int hcount = (maxh < 16) ? maxh : 16; // No higher than 16 harmonics
 
     // Generate sawtooth point by summing points of sine waves of the harmonics
     float sum = 0.0f;
