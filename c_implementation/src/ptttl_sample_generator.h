@@ -39,6 +39,8 @@ typedef enum
 {
     WAVEFORM_TYPE_SINE = 0,  ///< Generates a sine wave
     WAVEFORM_TYPE_TRIANGLE,  ///< Generates a triangle wave
+    WAVEFORM_TYPE_SAWTOOTH,  ///< Generates a sawtooth wave
+    WAVEFORM_TYPE_SQUARE,    ///< Generates a square wave
     WAVEFORM_TYPE_COUNT
 } ptttl_waveform_type_e;
 
@@ -46,11 +48,13 @@ typedef enum
 /**
  * Callback function for a waveform generator
  *
- * @param x   Position on the waveform, in turns (0.0 through 1.0)
+ * @param x   Phase; current position on the waveform, in turns (0.0 through 1.0)
+ * @param p   Wave frequency in Hz
+ * @param s   Sampling rate in Hz
  *
  * @return Value for the given position, in the range -1.0 through 1.0
  */
-typedef float (*ptttl_waveform_generator_t)(float x);
+typedef float (*ptttl_waveform_generator_t)(float x, float p, unsigned int s);
 
 
 /**
