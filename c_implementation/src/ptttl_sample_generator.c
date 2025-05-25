@@ -21,6 +21,8 @@
 // Max positive value of a signed 16-bit sample
 #define MAX_SAMPLE_VALUE   (0x7FFF)
 
+// Default waveform type for all channels
+#define DEFAULT_WAVEFORM_TYPE WAVEFORM_TYPE_SINE
 
 // Store an error message for reporting by ptttl_sample_generator_error()
 #define ERROR(_parser, _msg)                                        \
@@ -29,6 +31,18 @@
     _parser->error.line = _parser->active_stream->line;             \
     _parser->error.column = _parser->active_stream->column;         \
 }
+
+
+// Forward declaration of built-in waveform generators
+static float _triangle_generator(float x);
+static float _sine_generator(float x);
+
+// Mapping of waveform type enums to waveform generator functions
+static ptttl_waveform_generator_t _waveform_generators[WAVEFORM_TYPE_COUNT] =
+{
+    _sine_generator,           // WAVEFORM_TYPE_SINE
+    _triangle_generator        // WAVEFORM_TYPE_TRIANGLE
+};
 
 
 /**
@@ -49,13 +63,38 @@ static unsigned int _raise_powerof2(unsigned int exp)
     return ret;
 }
 
+/**
+ * Triangle wave generator
+ *
+ * @see ptttl_waveform_generator_t
+ */
+static float _triangle_generator(float x)
+{
+    int ix = (int)x;
+    float t = x - ix;
+    if (t < 0.0f) t += 1.0f;
+
+    // build [-1..+1..-1]
+    if (t < 0.5f)
+    {
+        return t * 4.0f - 1.0f; // rise from -1 to +1
+    }
+    else
+    {
+        return 3.0f - t * 4.0f; // fall from +1 back to -1
+    }
+}
 
 /**
+ * Sine wave generator
+ *
+ * @see ptttl_waveform_generator_t
+ *
  * Fast sine approximation copied from:
  * https://github.com/skeeto/scratch/blob/master/misc/rtttl.c
- * x is in turns (0..1), not radians (0..2*pi)
+ *
  */
-static float fast_sinf(float x)
+static float _sine_generator(float x)
 {
     x  = x < 0 ? 0.5f - x : x;
     x -= 0.500f + (float)(int)x;
@@ -66,34 +105,38 @@ static float fast_sinf(float x)
 
 
 /**
- * Generate a single point on a sine wave, between 0.0-1.0, for a given sample rate and frequency
+ * Generate a single point on a waveform, between -1.0-1.0, for a given sample rate and frequency
  *
+ * @param wgen         Waveform generator function
  * @param sample_rate  Sampling rate
  * @param freq         Frequency of sine wave
  * @param sine_index   Index of sample within this note (0 is the first sample of the note)
  *
  * @return Sine wave sample
  */
-static float _generate_sine_point(unsigned int sample_rate, float freq, unsigned int sine_index)
+static float _generate_waveform_point(ptttl_waveform_generator_t wgen, unsigned int sample_rate,
+                                      float freq, unsigned int sine_index)
 {
     float sine_state = freq * (((float) sine_index) / (float) sample_rate);
-    return fast_sinf(sine_state);
+    return wgen(sine_state);
 }
 
 
 /**
- * Generate a single sine wave sample between 0-65535 for a given sample rate and frequency
+ * Generate a single waveform sample between 0-65535 for a given sample rate and frequency
  *
+ * @param wgen         Waveform generator function
  * @param sample_rate  Sampling rate
  * @param freq         Frequency of sine wave
  * @param sine_index   Index of sample within this note (0 is the first sample of the note)
  *
  * @return Sine wave sample
  */
-static int32_t _generate_sine_sample(unsigned int sample_rate, float freq, unsigned int sine_index)
+static int32_t _generate_waveform_sample(ptttl_waveform_generator_t wgen, unsigned int sample_rate,
+                                         float freq, unsigned int sine_index)
 {
     // Calculate sample value between 0.0 - 1.0
-    float sample_norm = _generate_sine_point(sample_rate, freq, sine_index);
+    float sample_norm = _generate_waveform_point(wgen, sample_rate, freq, sine_index);
 
     // Convert to 0x0-0x7fff range
     return (int32_t) (sample_norm * (float) MAX_SAMPLE_VALUE);
@@ -225,16 +268,9 @@ ptttl_parser_error_t ptttl_sample_generator_error(ptttl_parser_t *parser)
 int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator_t *generator,
                                   ptttl_sample_generator_config_t *config)
 {
-    if (NULL == parser)
-    {
-        return -1;
-    }
-
-    if ((NULL == generator) || (NULL == config))
-    {
-        ERROR(parser, "NULL pointer passed to function");
-        return -1;
-    }
+    ASSERT(NULL != parser);
+    ASSERT(NULL != generator);
+    ASSERT(NULL != config);
 
     if (0u == parser->channel_count)
     {
@@ -267,6 +303,9 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
         }
 
         _load_note_stream(generator, &note, &generator->note_streams[chan]);
+
+        // Set default waveform generator
+        generator->note_streams[chan].wgen = _waveform_generators[DEFAULT_WAVEFORM_TYPE];
     }
 
     return 0;
@@ -299,12 +338,12 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_n
 
         if ((0u != stream->vibrato_frequency) || (0u != stream->vibrato_variance))
         {
-            float vsine = _generate_sine_point(generator->config.sample_rate, stream->vibrato_frequency,
-                                               stream->sine_index);
+            float vsine = _generate_waveform_point(_sine_generator, generator->config.sample_rate,
+                                                   stream->vibrato_frequency, stream->sine_index);
             float pitch_change_hz = ((float) stream->vibrato_variance) * vsine;
             float note_pitch_hz = stream->pitch_hz + pitch_change_hz;
 
-            float vsample = fast_sinf(stream->phasor_state);
+            float vsample = _sine_generator(stream->phasor_state);
 
             float phasor_inc = note_pitch_hz / generator->config.sample_rate;
             stream->phasor_state += phasor_inc;
@@ -317,7 +356,8 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_n
         }
         else
         {
-            raw_sample = _generate_sine_sample(generator->config.sample_rate, stream->pitch_hz, stream->sine_index);
+            raw_sample = _generate_waveform_sample(stream->wgen, generator->config.sample_rate,
+                                                   stream->pitch_hz, stream->sine_index);
         }
 
         stream->sine_index += 1u;
@@ -358,19 +398,55 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_n
 /**
  * @see ptttl_sample_generator.h
  */
-int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_t *num_samples,
-                                    int16_t *samples)
+int ptttl_sample_generator_set_waveform(ptttl_sample_generator_t *generator,
+                                        uint32_t channel, ptttl_waveform_type_e type)
 {
-    if (NULL == generator)
+    ASSERT(NULL != generator);
+
+    if (channel >= generator->parser->channel_count)
     {
+        ERROR(generator->parser, "Invalid channel index");
         return -1;
     }
 
-    if ((NULL == num_samples) || (NULL == samples))
+    if ((type < 0) || (type >= WAVEFORM_TYPE_COUNT))
     {
-        ERROR(generator->parser, "NULL pointer passed to function");
+        ERROR(generator->parser, "Invalid waveform type");
         return -1;
     }
+
+    generator->note_streams[channel].wgen = _waveform_generators[type];
+    return 0;
+}
+
+/**
+ * @see ptttl_sample_generator.h
+ */
+int ptttl_sample_generator_set_custom_waveform(ptttl_sample_generator_t *generator,
+                                               uint32_t channel, ptttl_waveform_generator_t wgen)
+{
+    ASSERT(NULL != generator);
+    ASSERT(NULL != wgen);
+
+    if (channel >= generator->parser->channel_count)
+    {
+        ERROR(generator->parser, "Invalid channel index");
+        return -1;
+    }
+
+    generator->note_streams[channel].wgen = wgen;
+    return 0;
+}
+
+/**
+ * @see ptttl_sample_generator.h
+ */
+int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_t *num_samples,
+                                    int16_t *samples)
+{
+    ASSERT(NULL != generator);
+    ASSERT(NULL != num_samples);
+    ASSERT(NULL != samples);
 
     uint32_t samples_to_generate = *num_samples;
     *num_samples = 0u;

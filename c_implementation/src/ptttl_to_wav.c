@@ -17,6 +17,7 @@
 
 #include "ptttl_to_wav.h"
 #include "ptttl_sample_generator.h"
+#include "ptttl_common.h"
 
 
 // Sample width in bits
@@ -136,15 +137,8 @@ ptttl_parser_error_t ptttl_to_wav_error(ptttl_parser_t *parser)
  */
 int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename)
 {
-    if (NULL == parser)
-    {
-        return -1;
-    }
-
-    if (NULL == wav_filename)
-    {
-        ERROR(parser, "NULL pointer passed to function");
-    }
+    ASSERT(NULL != parser);
+    ASSERT(NULL != wav_filename)
 
 #if !defined(__BYTE_ORDER__)
     _big_endian = !(*(char *)(int[]){1});

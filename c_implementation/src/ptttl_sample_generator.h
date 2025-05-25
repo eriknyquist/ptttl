@@ -33,20 +33,42 @@
 
 
 /**
+ * Enumerates all available built-in waveform types
+ */
+typedef enum
+{
+    WAVEFORM_TYPE_SINE = 0,  ///< Generates a sine wave
+    WAVEFORM_TYPE_TRIANGLE,  ///< Generates a triangle wave
+    WAVEFORM_TYPE_COUNT
+} ptttl_waveform_type_e;
+
+
+/**
+ * Callback function for a waveform generator
+ *
+ * @param x   Position on the waveform, in turns (0.0 through 1.0)
+ *
+ * @return Value for the given position, in the range -1.0 through 1.0
+ */
+typedef float (*ptttl_waveform_generator_t)(float x);
+
+
+/**
  * Represents the current note that samples are being generated for on any one channel
  */
 typedef struct
 {
-    uint32_t vibrato_frequency;   ///< Vibrato frequency, in HZ
-    uint32_t vibrato_variance;    ///< Vibrato variance, in HZ
-    unsigned int sine_index;      ///< Monotonically increasing index for sinf() function, note pitch
-    unsigned int start_sample;    ///< The sample index on which this note started
-    unsigned int num_samples;     ///< Number of samples this note runs for
-    unsigned int attack;          ///< Note decay length, in samples
-    unsigned int decay;           ///< Note decay length, in samples
-    unsigned int note_number;     ///< Piano key number for this note, 1-88
-    float pitch_hz;               ///< Note pitch in Hz
-    float phasor_state;           ///< Phasor state for vibrato (frequency modulation)
+    ptttl_waveform_generator_t wgen; ///< Waveform generator function
+    uint32_t vibrato_frequency;      ///< Vibrato frequency, in HZ
+    uint32_t vibrato_variance;       ///< Vibrato variance, in HZ
+    unsigned int sine_index;         ///< Monotonically increasing index for sinf() function, note pitch
+    unsigned int start_sample;       ///< The sample index on which this note started
+    unsigned int num_samples;        ///< Number of samples this note runs for
+    unsigned int attack;             ///< Note decay length, in samples
+    unsigned int decay;              ///< Note decay length, in samples
+    unsigned int note_number;        ///< Piano key number for this note, 1-88
+    float pitch_hz;                  ///< Note pitch in Hz
+    float phasor_state;              ///< Phasor state for vibrato (frequency modulation)
 } ptttl_note_stream_t;
 
 /**
@@ -96,6 +118,38 @@ ptttl_parser_error_t ptttl_sample_generator_error(ptttl_parser_t *parser);
  */
 int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator_t *generator,
                                   ptttl_sample_generator_config_t *config);
+
+/**
+ * Set the built-in waveform type for a specific channel of the sample generator
+ *
+ * @param generator    Pointer to initialized generator object
+ * @param channel      Channel index to set the waveform type for. Channel index
+ *                     is 0-based, and channels are indexed in the order in which they appear
+ *                     in the PTTTL source text. For example, channel 0 is the first channel
+ *                     that appears in the source text, channel 1 is the second channel, and so on.
+ * @param type         Built-in waveform type to generate for the specified channel.
+ *
+ * @return 0 if successful, -1 if an error occurred. Call #ptttl_sample_generator_error
+ *         for an error description if -1 is returned.
+ */
+int ptttl_sample_generator_set_waveform(ptttl_sample_generator_t *generator,
+                                        uint32_t channel, ptttl_waveform_type_e type);
+
+/**
+ * Set a custom waveform generator function for a specific channel of the sample generator
+ *
+ * @param generator    Pointer to initialized generator object
+ * @param channel      Channel index to set the waveform type for. Channel index
+ *                     is 0-based, and channels are indexed in the order in which they appear
+ *                     in the PTTTL source text. For example, channel 0 is the first channel
+ *                     that appears in the source text, channel 1 is the second channel, and so on.
+ * @param wgen         Waveform generator function to use for the specified channel.
+ *
+ * @return 0 if successful, -1 if an error occurred. Call #ptttl_sample_generator_error
+ *         for an error description if -1 is returned.
+ */
+int ptttl_sample_generator_set_custom_waveform(ptttl_sample_generator_t *generator,
+                                               uint32_t channel, ptttl_waveform_generator_t wgen);
 
 /**
  * Generate the next audio sample(s) for an initialized generator object

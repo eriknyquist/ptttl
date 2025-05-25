@@ -59,6 +59,8 @@ typedef enum
 static const uint32_t _octave_starts[NOTE_OCTAVE_MAX + 1u] = {0u, 3u, 15u, 27u, 39u, 51u, 63u, 75u, 87u};
 
 
+#define ASSERT(cond) { if (!(cond)) __builtin_trap(); }
+
 #ifdef __cplusplus
     }
 #endif

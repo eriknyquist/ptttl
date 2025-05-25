@@ -869,10 +869,7 @@ ptttl_parser_error_t ptttl_parser_error(ptttl_parser_t *parser)
  */
 int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
 {
-    if (NULL == parser)
-    {
-        return -1;
-    }
+    ASSERT(NULL != parser);
 
     parser->stream.line = 1u;
     parser->stream.column = 0u;
@@ -1095,16 +1092,8 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
  */
 int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_note_t *note)
 {
-    if (NULL == parser)
-    {
-        return -1;
-    }
-
-    if (NULL == note)
-    {
-        ERROR(parser, "NULL output pointer provided");
-        return -1;
-    }
+    ASSERT(NULL != parser);
+    ASSERT(NULL != note);
 
     if (channel_idx >= parser->channel_count)
     {
