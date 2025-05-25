@@ -70,7 +70,7 @@ Build and run the test suite using the `test` target:
     make test
 
 How to incorporate into your own applications
-=============================================
+---------------------------------------------
 
 There are two supported scenarios...
 
@@ -92,7 +92,7 @@ PTTTL/RTTTL text and generate a .wav file
   (See ``ptttl_to_wav.h`` for API documentation)
 
 ``PTTTL_MAX_CHANNELS_PER_FILE`` setting and how it affects memory requirements
-==============================================================================
+------------------------------------------------------------------------------
 
 The sizes of the ``ptttl_parser_t`` struct and ``ptttl_sample_generator_t`` struct
 are fixed at compile time, and are significantly affected by the ``PTTTL_MAX_CHANNELS_PER_FILE``
