@@ -113,7 +113,7 @@ static float _sawtooth_generator(float x, float p, unsigned int s)
     // Generate sawtooth point by summing points of sine waves of the harmonics
     float sum = 0.0f;
     for (int n = 1; n <= hcount; ++n)
-	{
+    {
         float sign = (n & 1) ? 1.0f : -1.0f;
         sum += sign * (2.0f / (PI * n)) * _sine_generator(n * x, 0.0f, 0u);
     }

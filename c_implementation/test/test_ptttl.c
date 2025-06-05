@@ -95,6 +95,10 @@ static uint8_t *_testcase_buf = NULL;
 // Size of file content loaded in memory
 static int _buflen = 0;
 
+// Chunk buffer for reading test case info from files
+static char _fbuf[8192];
+static size_t _fbufsize = 0;
+static size_t _fbufpos = 0;
 
 // Forward declaration of iface callbacks
 static int _read_mem(char *nextchar);
@@ -179,6 +183,24 @@ static int _seek_file(uint32_t position)
     return ret;
 }
 
+// Used for reading testcase info from files in testcase directory
+static size_t _buffered_readchar(FILE *fp, char *c)
+{
+    if (_fbufsize == _fbufpos)
+    {
+        _fbufsize = fread(_fbuf, 1, sizeof(_fbuf), fp);
+        if (_fbufsize == 0)
+        {
+            return 0;
+        }
+
+        _fbufpos = 0;
+    }
+
+    *c = _fbuf[_fbufpos++];
+    return 1u;
+}
+
 static bool _get_next_noncomment_char(FILE *fp, char *c)
 {
     size_t chars_read;
@@ -187,7 +209,7 @@ static bool _get_next_noncomment_char(FILE *fp, char *c)
     do
     {
         char readchar;
-        chars_read = fread(&readchar, 1, 1, fp);
+        chars_read = _buffered_readchar(fp, &readchar);
         if (chars_read == 1)
         {
             if (readchar == '#')
@@ -415,6 +437,9 @@ static int _run_testcase(const char *testcase_dir, ptttl_parser_input_iface_t *i
     char source_path[128];
     char error_path[128];
     char expected_samples_path[128];
+
+    _fbufpos = 0;
+    _fbufsize = 0;
 
     (void) snprintf(source_path, sizeof(source_path), "%s/source.txt", testcase_dir);
     (void) snprintf(error_path, sizeof(error_path), "%s/expected_error.txt", testcase_dir);
