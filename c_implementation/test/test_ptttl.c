@@ -139,7 +139,7 @@ static int _read_mem(char *nextchar)
     return 0;
 }
 
-// ptttl_input_iface_t callback to seek to a specific position in file loaded int memory
+// ptttl_input_iface_t callback to seek to a specific position in file loaded in memory
 static int _seek_mem(uint32_t position)
 {
     if (_buflen <= (int) position)
