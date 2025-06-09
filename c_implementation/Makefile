@@ -11,6 +11,7 @@ TEST_OBJ_DIR   := $(TEST_DIR)/obj
 SAMPLES_FILE_BIN  := $(BUILD_DIR)/gen_samples_from_file
 SAMPLES_MEM_BIN   := $(BUILD_DIR)/gen_samples_from_mem
 GEN_CONFIG_BIN    := $(BUILD_DIR)/generator_config
+SET_WAVE_BIN      := $(BUILD_DIR)/set_waveform
 CLI_BIN           := $(BUILD_DIR)/ptttl_cli
 FUZZ_BIN          := $(BUILD_DIR)/afl_fuzz_harness
 TEST_BIN          := $(TEST_DIR)/test_ptttl
@@ -37,10 +38,12 @@ examples: make_build_dirs
 	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/gen_samples_from_file.c -o $(OBJ_DIR)/gen_samples_from_file.o
 	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/gen_samples_from_file.c -o $(OBJ_DIR)/gen_samples_from_mem.o
 	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/generator_config.c -o $(OBJ_DIR)/generator_config.o
+	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/set_waveform.c -o $(OBJ_DIR)/set_waveform.o
 	$(CC) $(CFLAGS) $(OBJ_DIR)/ptttl_parser.o $(OBJ_DIR)/ptttl_sample_generator.o $(OBJ_DIR)/ptttl_to_wav.o $(OBJ_DIR)/ptttl_cli.o -o $(CLI_BIN)
 	$(CC) $(CFLAGS) $(OBJ_DIR)/ptttl_parser.o $(OBJ_DIR)/ptttl_sample_generator.o $(OBJ_DIR)/ptttl_to_wav.o $(OBJ_DIR)/gen_samples_from_file.o -o $(SAMPLES_FILE_BIN)
 	$(CC) $(CFLAGS) $(OBJ_DIR)/ptttl_parser.o $(OBJ_DIR)/ptttl_sample_generator.o $(OBJ_DIR)/ptttl_to_wav.o $(OBJ_DIR)/gen_samples_from_mem.o -o $(SAMPLES_MEM_BIN)
 	$(CC) $(CFLAGS) $(OBJ_DIR)/ptttl_parser.o $(OBJ_DIR)/ptttl_sample_generator.o $(OBJ_DIR)/ptttl_to_wav.o $(OBJ_DIR)/generator_config.o -o $(GEN_CONFIG_BIN)
+	$(CC) $(CFLAGS) $(OBJ_DIR)/ptttl_parser.o $(OBJ_DIR)/ptttl_sample_generator.o $(OBJ_DIR)/ptttl_to_wav.o $(OBJ_DIR)/set_waveform.o -o $(SET_WAVE_BIN)
 
 debug: CFLAGS += -O0 -g -fsanitize=address,undefined
 debug: examples
