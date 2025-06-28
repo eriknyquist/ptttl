@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
         ret = ptttl_to_wav(&parser, argv[2], wave_type);
         if (ret < 0)
         {
-            ptttl_parser_error_t err = ptttl_to_wav_error(&parser);
+            ptttl_parser_error_t err = ptttl_parser_error(&parser);
             printf("Error Generating WAV file (%s, line %d, column %d): %s\n", argv[1], err.line,
                    err.column, err.error_message);
         }

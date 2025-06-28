@@ -27,16 +27,6 @@
 
 
 /**
- * Return error info after ptttl_to_wav has returned -1
- *
- * @param   Pointer to initialized parser object
- *
- * @return  Object describing the error that occurred. error_message field will be NULL
- *          if no error has occurred.
- */
-ptttl_parser_error_t ptttl_to_wav_error(ptttl_parser_t *parser);
-
-/**
  * Generate samples for some parsed PTTTL data and write them directly to a .wav file.
  * No dynamic memory allocation. Does not require holding the entire .wav file in memory
  * at once.
@@ -45,7 +35,7 @@ ptttl_parser_error_t ptttl_to_wav_error(ptttl_parser_t *parser);
  * @param wav_filename   Pointer to name of .wav file to create. Must be writeable.
  * @param wave_type      Waveform type to use for all channels
  *
- * @return 0 if successful, -1 if an error occurred. Call #ptttl_to_wav_error for
+ * @return 0 if successful, -1 if an error occurred. Call #ptttl_parser_error for
  *         an error description if -1 is returned.
  */
 int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename,

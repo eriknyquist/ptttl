@@ -101,24 +101,13 @@ typedef struct
 
 
 /**
- * Return error info describing the last error that occurred
- *
- * @param   Pointer to initialized parser object
- *
- * @return  Object describing the error that occurred. error_message field will be NULL
- *          if no error has occurred.
- */
-ptttl_parser_error_t ptttl_sample_generator_error(ptttl_parser_t *parser);
-
-
-/**
  * Initialize a sample generator instance for a specific PTTTL/RTTTL source text
  *
  * @param parser         Pointer to initialized PTTTL parser object
  * @param generator      Pointer to generator instance to initialize
  * @param config         Pointer to sample generator configuration data
  *
- * @return 0 if successful, -1 if an error occurred. Call #ptttl_sample_generator_error
+ * @return 0 if successful, -1 if an error occurred. Call #ptttl_parser_error
  *         for an error description if -1 is returned.
  */
 int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator_t *generator,
@@ -134,7 +123,7 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
  *                     that appears in the source text, channel 1 is the second channel, and so on.
  * @param type         Built-in waveform type to generate for the specified channel.
  *
- * @return 0 if successful, -1 if an error occurred. Call #ptttl_sample_generator_error
+ * @return 0 if successful, -1 if an error occurred. Call #ptttl_parser_error
  *         for an error description if -1 is returned.
  */
 int ptttl_sample_generator_set_waveform(ptttl_sample_generator_t *generator,
@@ -150,7 +139,7 @@ int ptttl_sample_generator_set_waveform(ptttl_sample_generator_t *generator,
  *                     that appears in the source text, channel 1 is the second channel, and so on.
  * @param wgen         Waveform generator function to use for the specified channel.
  *
- * @return 0 if successful, -1 if an error occurred. Call #ptttl_sample_generator_error
+ * @return 0 if successful, -1 if an error occurred. Call #ptttl_parser_error
  *         for an error description if -1 is returned.
  */
 int ptttl_sample_generator_set_custom_waveform(ptttl_sample_generator_t *generator,
@@ -168,7 +157,7 @@ int ptttl_sample_generator_set_custom_waveform(ptttl_sample_generator_t *generat
  *                         bytes of storage for the generated samples.
  *
  * @return 0 if successful, 1 if all samples have been generated, and -1 if an error occurred.
- *         Call #ptttl_sample_generator_error for an error description if -1 is returned.
+ *         Call #ptttl_parser_error for an error description if -1 is returned.
  */
 int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator,
                                     uint32_t *num_samples, int16_t *samples);

@@ -26,7 +26,7 @@
 
 #define PI 3.14159265358979323846f
 
-// Store an error message for reporting by ptttl_sample_generator_error()
+// Store an error message for reporting by ptttl_parser_error()
 #define ERROR(_parser, _msg)                                        \
 {                                                                   \
     _parser->error.error_message = _msg;                            \
@@ -311,19 +311,6 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
     }
 }
 
-/**
- * @see ptttl_sample_generator.h
- */
-ptttl_parser_error_t ptttl_sample_generator_error(ptttl_parser_t *parser)
-{
-    if (parser == NULL)
-    {
-        ptttl_parser_error_t ret = {NULL, 0, 0};
-        return ret;
-    }
-
-    return parser->error;
-}
 
 /**
  * @see ptttl_sample_generator.h

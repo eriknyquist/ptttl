@@ -77,7 +77,7 @@ static int _big_endian; // Set at runtime
 
 // Swaps byte order of a signed 16-bit value if native order is big-endian
 
-// Helper macro, stores information about an error, which can be retrieved by ptttl_to_wav_error()
+// Helper macro, stores information about an error, which can be retrieved by ptttl_parser_error()
 #define ERROR(_parser, _msg)                                        \
 {                                                                   \
     _parser->error.error_message = _msg;                            \
@@ -116,21 +116,6 @@ static void _prepare_header(wavfile_header_t *output,
     output->subchunk2_id[2] = 't';
     output->subchunk2_id[3] = 'a';
 }
-
-/**
- * @see ptttl_to_wav.h
- */
-ptttl_parser_error_t ptttl_to_wav_error(ptttl_parser_t *parser)
-{
-    if (parser == NULL)
-    {
-        ptttl_parser_error_t ret = {NULL, 0, 0};
-        return ret;
-    }
-
-    return parser->error;
-}
-
 
 /**
  * @see ptttl_to_wav.h

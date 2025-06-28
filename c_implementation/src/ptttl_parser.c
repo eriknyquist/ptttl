@@ -861,6 +861,7 @@ static int _parse_ptttl_note(ptttl_parser_t *parser, ptttl_output_note_t *output
  */
 ptttl_parser_error_t ptttl_parser_error(ptttl_parser_t *parser)
 {
+    ASSERT(parser != NULL);
     return parser->error;
 }
 
