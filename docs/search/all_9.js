@@ -19,14 +19,12 @@ var searchData=
   ['ptttl_5fsample_5fgenerator_5fconfig_5fdefault_39',['PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT',['../ptttl__sample__generator_8h.html#af5fe3f61ea819012849a89ada714ccdd',1,'ptttl_sample_generator.h']]],
   ['ptttl_5fsample_5fgenerator_5fconfig_5ft_40',['ptttl_sample_generator_config_t',['../structptttl__sample__generator__config__t.html',1,'']]],
   ['ptttl_5fsample_5fgenerator_5fcreate_41',['ptttl_sample_generator_create',['../ptttl__sample__generator_8h.html#ae137370e277f0b4b968dad4897877ffe',1,'ptttl_sample_generator.h']]],
-  ['ptttl_5fsample_5fgenerator_5ferror_42',['ptttl_sample_generator_error',['../ptttl__sample__generator_8h.html#aa6b89c168c9302cef48a3c792bc5d5d1',1,'ptttl_sample_generator.h']]],
-  ['ptttl_5fsample_5fgenerator_5fgenerate_43',['ptttl_sample_generator_generate',['../ptttl__sample__generator_8h.html#ad1780a1d1d2d3e486ce35c1a51036cca',1,'ptttl_sample_generator.h']]],
-  ['ptttl_5fsample_5fgenerator_5fset_5fcustom_5fwaveform_44',['ptttl_sample_generator_set_custom_waveform',['../ptttl__sample__generator_8h.html#ae16f0bf92a7bf5216ea93c483d450846',1,'ptttl_sample_generator.h']]],
-  ['ptttl_5fsample_5fgenerator_5fset_5fwaveform_45',['ptttl_sample_generator_set_waveform',['../ptttl__sample__generator_8h.html#af6845ad89a777f856e48fa3b7b1fd02d',1,'ptttl_sample_generator.h']]],
-  ['ptttl_5fsample_5fgenerator_5ft_46',['ptttl_sample_generator_t',['../structptttl__sample__generator__t.html',1,'']]],
-  ['ptttl_5fto_5fwav_47',['ptttl_to_wav',['../ptttl__to__wav_8h.html#a61854483e003fe8662767b7a53b56791',1,'ptttl_to_wav.h']]],
-  ['ptttl_5fto_5fwav_2eh_48',['ptttl_to_wav.h',['../ptttl__to__wav_8h.html',1,'']]],
-  ['ptttl_5fto_5fwav_5ferror_49',['ptttl_to_wav_error',['../ptttl__to__wav_8h.html#af0cff1baa2f96e80ee2864cc707de843',1,'ptttl_to_wav.h']]],
-  ['ptttl_5fwaveform_5fgenerator_5ft_50',['ptttl_waveform_generator_t',['../ptttl__sample__generator_8h.html#a10683bd5b78117262f2270e2c2f86bb5',1,'ptttl_sample_generator.h']]],
-  ['ptttl_5fwaveform_5ftype_5fe_51',['ptttl_waveform_type_e',['../ptttl__sample__generator_8h.html#a2cd4a11daac44dffe8622847668a238e',1,'ptttl_sample_generator.h']]]
+  ['ptttl_5fsample_5fgenerator_5fgenerate_42',['ptttl_sample_generator_generate',['../ptttl__sample__generator_8h.html#ad1780a1d1d2d3e486ce35c1a51036cca',1,'ptttl_sample_generator.h']]],
+  ['ptttl_5fsample_5fgenerator_5fset_5fcustom_5fwaveform_43',['ptttl_sample_generator_set_custom_waveform',['../ptttl__sample__generator_8h.html#ae16f0bf92a7bf5216ea93c483d450846',1,'ptttl_sample_generator.h']]],
+  ['ptttl_5fsample_5fgenerator_5fset_5fwaveform_44',['ptttl_sample_generator_set_waveform',['../ptttl__sample__generator_8h.html#af6845ad89a777f856e48fa3b7b1fd02d',1,'ptttl_sample_generator.h']]],
+  ['ptttl_5fsample_5fgenerator_5ft_45',['ptttl_sample_generator_t',['../structptttl__sample__generator__t.html',1,'']]],
+  ['ptttl_5fto_5fwav_46',['ptttl_to_wav',['../ptttl__to__wav_8h.html#a61854483e003fe8662767b7a53b56791',1,'ptttl_to_wav.h']]],
+  ['ptttl_5fto_5fwav_2eh_47',['ptttl_to_wav.h',['../ptttl__to__wav_8h.html',1,'']]],
+  ['ptttl_5fwaveform_5fgenerator_5ft_48',['ptttl_waveform_generator_t',['../ptttl__sample__generator_8h.html#a10683bd5b78117262f2270e2c2f86bb5',1,'ptttl_sample_generator.h']]],
+  ['ptttl_5fwaveform_5ftype_5fe_49',['ptttl_waveform_type_e',['../ptttl__sample__generator_8h.html#a2cd4a11daac44dffe8622847668a238e',1,'ptttl_sample_generator.h']]]
 ];

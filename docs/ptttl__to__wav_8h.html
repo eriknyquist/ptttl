@@ -84,8 +84,6 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:af0cff1baa2f96e80ee2864cc707de843"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structptttl__parser__error__t.html">ptttl_parser_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="ptttl__to__wav_8h.html#af0cff1baa2f96e80ee2864cc707de843">ptttl_to_wav_error</a> (<a class="el" href="structptttl__parser__t.html">ptttl_parser_t</a> *parser)</td></tr>
-<tr class="separator:af0cff1baa2f96e80ee2864cc707de843"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a61854483e003fe8662767b7a53b56791"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="ptttl__to__wav_8h.html#a61854483e003fe8662767b7a53b56791">ptttl_to_wav</a> (<a class="el" href="structptttl__parser__t.html">ptttl_parser_t</a> *parser, const char *wav_filename, <a class="el" href="ptttl__sample__generator_8h.html#a2cd4a11daac44dffe8622847668a238e">ptttl_waveform_type_e</a> wave_type)</td></tr>
 <tr class="separator:a61854483e003fe8662767b7a53b56791"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -136,33 +134,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>0 if successful, -1 if an error occurred. Call <a class="el" href="ptttl__to__wav_8h.html#af0cff1baa2f96e80ee2864cc707de843">ptttl_to_wav_error</a> for an error description if -1 is returned. </dd></dl>
-
-</div>
-</div>
-<a id="af0cff1baa2f96e80ee2864cc707de843"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af0cff1baa2f96e80ee2864cc707de843">&#9670;&nbsp;</a></span>ptttl_to_wav_error()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="structptttl__parser__error__t.html">ptttl_parser_error_t</a> ptttl_to_wav_error </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structptttl__parser__t.html">ptttl_parser_t</a> *&#160;</td>
-          <td class="paramname"><em>parser</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Return error info after ptttl_to_wav has returned -1</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">Pointer</td><td>to initialized parser object</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Object describing the error that occurred. error_message field will be NULL if no error has occurred. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>0 if successful, -1 if an error occurred. Call <a class="el" href="ptttl__parser_8h.html#a87bf37f225921f3e1af57df81ab4f3cc">ptttl_parser_error</a> for an error description if -1 is returned. </dd></dl>
 
 </div>
 </div>
