@@ -1,6 +1,7 @@
-/* ptttl_to_wav.h
+/**
+ * @file ptttl_to_wav.h
  *
- * Converts the output of ptttl_parse() into a WAV file.
+ * @brief Converts the output of ptttl_parse() into a WAV file.
  * No dynamic memory allocation, and no loading the entire WAV file in memory.
  *
  * Requires ptttl_parser.c and ptttl_sample_generator.c
@@ -9,7 +10,7 @@
  *
  * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
  *
- * Erik Nyquist 2025
+ * @author Erik Nyquist
  */
 
 #ifndef PTTTL_TO_WAV_H

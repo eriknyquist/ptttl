@@ -1,6 +1,7 @@
-/* ptttl_sample_generator.h
+/** 
+ * @file ptttl_sample_generator.h
  *
- * Converts the output of ptttl_parse_next() into a stream of signed 16-bit audio samples
+ * @brief Converts the output of ptttl_parse_next() into a stream of signed 16-bit audio samples
  * suitable for a WAV file. Samples can be obtained one at a time, at your leisure.
  *
  * Requires ptttl_parser.c
@@ -9,7 +10,7 @@
  *
  * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
  *
- * Erik Nyquist 2025
+ * @author Erik Nyquist
  */
 
 #ifndef PTTTL_SAMPLE_GENERATOR_H

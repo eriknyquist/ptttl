@@ -3,82 +3,26 @@
 Polyphonic Tone Transfer Language
 #################################
 
-``ptttl`` is a command-line utility for converting PTTTL and
-`RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ files to
-.wav audio files. `ptttl` also provides an API for parsing PTTTL and
-`RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ files to convert them
-into usable musical data.
-
 The Polyphonic Tone Text Transfer Language (PTTTL) is a way to describe polyphonic
 melodies, and is a superset of Nokia's
 `RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ format, extending
 it to enable polyphony and vibrato.
 
 
-Python reference implementation
-###############################
+Python & C reference implementations
+####################################
 
-A reference implementation in python is provided for general purpose applications.
+Reference implementations in python and C are provided. The C implementation has
+been much more thoroughly tested and fuzzed, and I strongly recommend using the C
+version instead of the python version.
 
 API documentation
 ==================
-API documentation `can be found here <https://ptttl.readthedocs.io/>`_
 
+Python API documentation `can be found here <https://ptttl.readthedocs.io/>`_.
 
-Install
-=======
+C API documentation `can be found here <https://eriknyquist.github.io/ptttl>`_.
 
-Install from pip
-
-::
-
-    pip install -r ptttl
-
-
-Converting PTTTL/RTTTL files to .wav files from the command line
-================================================================
-
-::
-
-   python -m ptttl input.ptttl -f output.wav
-
-Run ``python -m ptttl -h`` to see available options.
-
-
-Parsing PTTTL/RTTTL files in a python script
-============================================
-
-::
-
-   >>> from ptttl.parser import PTTTLParser
-   >>> with open('input.pttl', 'r') as fh:
-   ...     ptttl_source = fh.read()
-   ...
-   >>> parser = PTTTLParser()
-   >>> ptttl_data = parser.parse(ptttl_source)
-   >>> ptttl_data
-   PTTTLData([PTTTLNote(pitch=195.9977, duration=0.5625), PTTTLNote(pitch=195.9977, duration=0.2812), ...], ...)
-
-
-Converting PTTTL/RTTTL files to .wav in a python script
-=======================================================
-
-::
-
-   >>> from ptttl.audio import ptttl_to_wav
-   >>> with open('input.pttl', 'r') as fh:
-   ...     ptttl_source = fh.read()
-   ...
-   >>> ptttl_to_wav(ptttl_source, 'output.wav')
-
-
-C reference implementation
-##########################
-
-A reference implemention written in C is provided, which is suitable for use in
-embedded applications, under the ``c_implementation`` directory.
-
-`See the README for the C implementation here. <c_implementation/README.rst>`_
 
 PTTTL format
 ############
