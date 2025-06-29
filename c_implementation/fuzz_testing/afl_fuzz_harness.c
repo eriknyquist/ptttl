@@ -61,9 +61,12 @@ int main(int argc, char *argv[])
 #endif
 
     unsigned char *buf = __AFL_FUZZ_TESTCASE_BUF;
+    const uint32_t sample_buf_len = 8192;
+    int16_t sample_buf[sample_buf_len];
 
     while (__AFL_LOOP(10000))
     {
+        uint32_t num_samples = sample_buf_len;
         buflen = __AFL_FUZZ_TESTCASE_LEN;
         testcase_buf = buf;
 
@@ -82,8 +85,20 @@ int main(int argc, char *argv[])
         ptttl_parser_input_iface_t iface = {.read=_read, .seek=_seek};
 
         __AFL_COVERAGE_ON();
-        (void) ptttl_parse_init(&parser, iface);
-        (void) ptttl_to_wav(&parser, "afl_test.wav");
+        if (ptttl_parse_init(&parser, iface) < 0)
+        {
+            continue;
+        }
+
+        ptttl_sample_generator_t generator;
+        ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
+        if (ptttl_sample_generator_create(&parser, &generator, &config) < 0)
+        {
+            continue;
+        }
+
+        while (ptttl_sample_generator_generate(&generator, &num_samples, sample_buf) == 0);
+
         __AFL_COVERAGE_OFF();
     }
 
