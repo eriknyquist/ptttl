@@ -20,6 +20,7 @@ TEST_BIN          := $(TEST_DIR)/test_ptttl
 RM             := rm -rf
 MKDIR          := mkdir -p
 
+ASAN_OPTIONS := "abort_on_error=1:halt_on_error=1:symbolize=0:detect_stack_use_after_return=1:max_malloc_fill_size=1073741824"
 CFLAGS := -Wall -pedantic -I$(SRC_DIR)
 
 AFL_CC := afl-clang-fast
@@ -52,7 +53,7 @@ debug: CFLAGS += -O0 -g -fsanitize=address,undefined
 debug: examples
 
 afl_fuzz_harness: CC=$(AFL_CC)
-afl_fuzz_harness: CFLAGS += -O2
+afl_fuzz_harness: CFLAGS += -O0 -g3 -fsanitize=address,undefined
 afl_fuzz_harness: make_build_dirs
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_parser.c -o $(OBJ_DIR)/ptttl_parser.o
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_sample_generator.c -o $(OBJ_DIR)/ptttl_sample_generator.o
@@ -62,7 +63,7 @@ afl_fuzz_harness: make_build_dirs
 
 fuzz: afl_fuzz_harness
 fuzz:
-	export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1 && afl-fuzz -t 2000 -i $(FUZZ_DIR)/testcase_corpus/ -o $(FUZZ_DIR)/afl_findings -- $(FUZZ_BIN)
+	export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1 && export ASAN_OPTIONS=$(ASAN_OPTIONS) && afl-fuzz -t 2000 -i $(FUZZ_DIR)/testcase_corpus/ -o $(FUZZ_DIR)/afl_findings -- $(FUZZ_BIN)
 
 test: CFLAGS += -O0 -g3 -fsanitize=address,undefined
 test: make_build_dirs
