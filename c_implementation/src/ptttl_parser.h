@@ -35,7 +35,7 @@
     extern "C" {
 #endif
 
-#define PTTTL_VERSION "v0.1.0"
+#define PTTTL_VERSION "v0.2.0"
 
 /**
  * Maximum number of channels (note lanes) allowed in a single PTTTL file. This

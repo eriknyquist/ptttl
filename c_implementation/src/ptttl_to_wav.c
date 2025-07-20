@@ -120,20 +120,21 @@ static void _prepare_header(wavfile_header_t *output,
 /**
  * @see ptttl_to_wav.h
  */
-int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename,
+int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config_t *config,
                  ptttl_waveform_type_e wave_type)
 {
     ASSERT(NULL != parser);
-    ASSERT(NULL != wav_filename)
+    ASSERT(NULL != fp);
 
 #if !defined(__BYTE_ORDER__)
     _big_endian = !(*(char *)(int[]){1});
 #endif
 
     ptttl_sample_generator_t generator;
-    ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
+    ptttl_sample_generator_config_t default_config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
+    ptttl_sample_generator_config_t *config_to_use = (config == NULL) ? &default_config : config;
 
-    int ret = ptttl_sample_generator_create(parser, &generator, &config);
+    int ret = ptttl_sample_generator_create(parser, &generator, config_to_use);
     if (ret < 0)
     {
         return ret;
@@ -149,19 +150,11 @@ int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename,
         }
     }
 
-    FILE *fp = fopen(wav_filename, "wb");
-    if (NULL == fp)
-    {
-        ERROR(parser, "Unable to open WAV file for writing");
-        return -1;
-    }
-
     // Seek to end of header, we'll generate samples first
     ret = fseek(fp, sizeof(wavfile_header_t), SEEK_SET);
     if (0 != ret)
     {
         ERROR(parser, "Failed to seek within WAV file for writing");
-        fclose(fp);
         return -1;
     }
 
@@ -184,7 +177,6 @@ int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename,
         if (num_samples != size_written)
         {
             ERROR(parser, "Failed to write to WAV file");
-            fclose(fp);
             return -1;
         }
 
@@ -198,7 +190,6 @@ int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename,
 
     if (ret < 0)
     {
-        fclose(fp);
         return ret;
     }
 
@@ -207,24 +198,20 @@ int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename,
     if (0 != ret)
     {
         ERROR(parser, "Failed to seek within WAV file for writing");
-        fclose(fp);
         return -1;
     }
 
     wavfile_header_t header;
     int32_t framecount = ((int32_t) generator.current_sample) + 1u;
-    _prepare_header(&header, framecount, config.sample_rate);
+    _prepare_header(&header, framecount, config_to_use->sample_rate);
 
     // Write header
     size_t size_written = fwrite(&header, 1u, sizeof(header), fp);
     if (sizeof(header) != size_written)
     {
         ERROR(parser, "Failed to write to WAV file");
-        fclose(fp);
         return -1;
     }
-
-    fclose(fp);
 
     return 0;
 }

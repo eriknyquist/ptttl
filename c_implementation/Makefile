@@ -28,14 +28,20 @@ AFL_CC := afl-clang-fast
 default: examples
 
 make_build_dirs:
-	$(MKDIR) $(BUILD_DIR)
-	$(MKDIR) $(OBJ_DIR)
-	$(MKDIR) $(TEST_OBJ_DIR)
+	@$(MKDIR) $(BUILD_DIR)
+	@$(MKDIR) $(OBJ_DIR)
+	@$(MKDIR) $(TEST_OBJ_DIR)
 
 examples: make_build_dirs
+	@echo
+	@echo "Building core files..."
+	@echo
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_parser.c -o $(OBJ_DIR)/ptttl_parser.o
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_sample_generator.c -o $(OBJ_DIR)/ptttl_sample_generator.o
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/ptttl_to_wav.c -o $(OBJ_DIR)/ptttl_to_wav.o
+	@echo
+	@echo "Building example programs..."
+	@echo
 	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/ptttl_cli.c -o $(OBJ_DIR)/ptttl_cli.o
 	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/gen_samples_from_file.c -o $(OBJ_DIR)/gen_samples_from_file.o
 	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/gen_samples_from_file.c -o $(OBJ_DIR)/gen_samples_from_mem.o

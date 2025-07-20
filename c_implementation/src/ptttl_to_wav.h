@@ -32,13 +32,16 @@
  * at once.
  *
  * @param parser         Pointer to initialized parser object
- * @param wav_filename   Pointer to name of .wav file to create. Must be writeable.
+ * @param fp             File stream that has already been opened for writing. Generated
+ *                       contents of .wav file will be written here.
+ * @param config         Pointer to configuration for sample generator. May be NULL.
+ *                       If NULL, a default configuration will be used.
  * @param wave_type      Waveform type to use for all channels
  *
  * @return 0 if successful, -1 if an error occurred. Call #ptttl_parser_error for
  *         an error description if -1 is returned.
  */
-int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename,
+int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config_t *config,
                  ptttl_waveform_type_e wave_type);
 
 

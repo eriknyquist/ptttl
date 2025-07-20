@@ -18,12 +18,12 @@
 #include "ptttl_to_wav.h"
 
 // File pointer for RTTTL/PTTTL source file
-static FILE *fp = NULL;
+static FILE *rfp = NULL;
 
 // ptttl_input_iface_t callback to read the next PTTTL/RTTTL source character from the open file
 static int _read(char *nextchar)
 {
-    size_t ret = fread(nextchar, 1, 1, fp);
+    size_t ret = fread(nextchar, 1, 1, rfp);
 
     // Return 0 for success, 1 for EOF (no error condition)
     return (int) (1u != ret);
@@ -32,8 +32,8 @@ static int _read(char *nextchar)
 // ptttl_input_iface_t callback to seek to a specific position in the open file
 static int _seek(uint32_t position)
 {
-    int ret = fseek(fp, (long) position, SEEK_SET);
-    if (feof(fp))
+    int ret = fseek(rfp, (long) position, SEEK_SET);
+    if (feof(rfp))
     {
         return 1;
     }
@@ -83,16 +83,24 @@ int main(int argc, char *argv[])
 
     }
 
-    fp = fopen(argv[1], "rb");
-    if (NULL == fp)
+    rfp = fopen(argv[1], "rb");
+    if (NULL == rfp)
     {
-        printf("Unable to open file %s\n", argv[1]);
+        printf("Unable to open file for reading: %s\n", argv[1]);
         return -1;
     }
 
-    // Create and initialize PTTTL parser object
+    FILE *wfp = fopen(argv[2], "wb");
+    if (NULL == wfp)
+    {
+        printf("Unable to open file for writing: %s\n", argv[2]);
+        return -1;
+    }
+    // Create and initialize PTTTL parser object, sample generator config object
     ptttl_parser_t parser;
     ptttl_parser_input_iface_t iface = {.read=_read, .seek=_seek};
+    ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
+    config.amplitude = 1.0;
 
     int ret = ptttl_parse_init(&parser, iface);
     if (0 > ret)
@@ -104,7 +112,7 @@ int main(int argc, char *argv[])
     if (0 == ret)
     {
         // Parse PTTTL/RTTTL source and convert to .wav file
-        ret = ptttl_to_wav(&parser, argv[2], wave_type);
+        ret = ptttl_to_wav(&parser, wfp, &config, wave_type);
         if (ret < 0)
         {
             ptttl_parser_error_t err = ptttl_parser_error(&parser);
@@ -113,7 +121,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    fclose(fp);
+    fclose(rfp);
+    fclose(wfp);
 
     return ret;
 }
