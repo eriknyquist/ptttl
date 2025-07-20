@@ -86,20 +86,21 @@ $(function() {
 <div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160; </div>
 <div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160; </div>
-<div class="line"><a name="l00041"></a><span class="lineno"><a class="line" href="ptttl__to__wav_8h.html#a61854483e003fe8662767b7a53b56791">   41</a></span>&#160;<span class="keywordtype">int</span> <a class="code" href="ptttl__to__wav_8h.html#a61854483e003fe8662767b7a53b56791">ptttl_to_wav</a>(<a class="code" href="structptttl__parser__t.html">ptttl_parser_t</a> *parser, <span class="keyword">const</span> <span class="keywordtype">char</span> *wav_filename,</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;                 <a class="code" href="ptttl__sample__generator_8h.html#a2cd4a11daac44dffe8622847668a238e">ptttl_waveform_type_e</a> wave_type);</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160; </div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160; </div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="preprocessor">#ifdef __cplusplus</span></div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    }</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160; </div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;<span class="preprocessor">#endif </span><span class="comment">// PTTTL_TO_WAV_H</span></div>
+<div class="line"><a name="l00044"></a><span class="lineno"><a class="line" href="ptttl__to__wav_8h.html#af7053934c43b6b549f70d48972ab7f87">   44</a></span>&#160;<span class="keywordtype">int</span> <a class="code" href="ptttl__to__wav_8h.html#af7053934c43b6b549f70d48972ab7f87">ptttl_to_wav</a>(<a class="code" href="structptttl__parser__t.html">ptttl_parser_t</a> *parser, FILE *fp, <a class="code" href="structptttl__sample__generator__config__t.html">ptttl_sample_generator_config_t</a> *config,</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;                 <a class="code" href="ptttl__sample__generator_8h.html#a2cd4a11daac44dffe8622847668a238e">ptttl_waveform_type_e</a> wave_type);</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160; </div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160; </div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="preprocessor">#ifdef __cplusplus</span></div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;    }</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160; </div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;<span class="preprocessor">#endif </span><span class="comment">// PTTTL_TO_WAV_H</span></div>
 <div class="ttc" id="aptttl__parser_8h_html"><div class="ttname"><a href="ptttl__parser_8h.html">ptttl_parser.h</a></div><div class="ttdoc">Parser for RTTTL (Ring Tone Text Transfer Language) and PTTTL (Polyphonic Tone Text Transfer Language...</div></div>
 <div class="ttc" id="aptttl__sample__generator_8h_html"><div class="ttname"><a href="ptttl__sample__generator_8h.html">ptttl_sample_generator.h</a></div><div class="ttdoc">Converts the output of ptttl_parse_next() into a stream of signed 16-bit audio samples suitable for a...</div></div>
 <div class="ttc" id="aptttl__sample__generator_8h_html_a2cd4a11daac44dffe8622847668a238e"><div class="ttname"><a href="ptttl__sample__generator_8h.html#a2cd4a11daac44dffe8622847668a238e">ptttl_waveform_type_e</a></div><div class="ttdeci">ptttl_waveform_type_e</div><div class="ttdef"><b>Definition:</b> ptttl_sample_generator.h:40</div></div>
-<div class="ttc" id="aptttl__to__wav_8h_html_a61854483e003fe8662767b7a53b56791"><div class="ttname"><a href="ptttl__to__wav_8h.html#a61854483e003fe8662767b7a53b56791">ptttl_to_wav</a></div><div class="ttdeci">int ptttl_to_wav(ptttl_parser_t *parser, const char *wav_filename, ptttl_waveform_type_e wave_type)</div></div>
+<div class="ttc" id="aptttl__to__wav_8h_html_af7053934c43b6b549f70d48972ab7f87"><div class="ttname"><a href="ptttl__to__wav_8h.html#af7053934c43b6b549f70d48972ab7f87">ptttl_to_wav</a></div><div class="ttdeci">int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config_t *config, ptttl_waveform_type_e wave_type)</div></div>
 <div class="ttc" id="astructptttl__parser__t_html"><div class="ttname"><a href="structptttl__parser__t.html">ptttl_parser_t</a></div><div class="ttdef"><b>Definition:</b> ptttl_parser.h:159</div></div>
+<div class="ttc" id="astructptttl__sample__generator__config__t_html"><div class="ttname"><a href="structptttl__sample__generator__config__t.html">ptttl_sample_generator_config_t</a></div><div class="ttdef"><b>Definition:</b> ptttl_sample_generator.h:83</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

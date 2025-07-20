@@ -84,8 +84,8 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a61854483e003fe8662767b7a53b56791"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="ptttl__to__wav_8h.html#a61854483e003fe8662767b7a53b56791">ptttl_to_wav</a> (<a class="el" href="structptttl__parser__t.html">ptttl_parser_t</a> *parser, const char *wav_filename, <a class="el" href="ptttl__sample__generator_8h.html#a2cd4a11daac44dffe8622847668a238e">ptttl_waveform_type_e</a> wave_type)</td></tr>
-<tr class="separator:a61854483e003fe8662767b7a53b56791"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af7053934c43b6b549f70d48972ab7f87"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="ptttl__to__wav_8h.html#af7053934c43b6b549f70d48972ab7f87">ptttl_to_wav</a> (<a class="el" href="structptttl__parser__t.html">ptttl_parser_t</a> *parser, FILE *fp, <a class="el" href="structptttl__sample__generator__config__t.html">ptttl_sample_generator_config_t</a> *config, <a class="el" href="ptttl__sample__generator_8h.html#a2cd4a11daac44dffe8622847668a238e">ptttl_waveform_type_e</a> wave_type)</td></tr>
+<tr class="separator:af7053934c43b6b549f70d48972ab7f87"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Converts the output of ptttl_parse() into a WAV file. No dynamic memory allocation, and no loading the entire WAV file in memory. </p>
@@ -94,8 +94,8 @@ Functions</h2></td></tr>
 <p>See <a href="https://github.com/eriknyquist/ptttl">https://github.com/eriknyquist/ptttl</a> for more details about PTTTL.</p>
 <dl class="section author"><dt>Author</dt><dd>Erik Nyquist </dd></dl>
 </div><h2 class="groupheader">Function Documentation</h2>
-<a id="a61854483e003fe8662767b7a53b56791"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a61854483e003fe8662767b7a53b56791">&#9670;&nbsp;</a></span>ptttl_to_wav()</h2>
+<a id="af7053934c43b6b549f70d48972ab7f87"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af7053934c43b6b549f70d48972ab7f87">&#9670;&nbsp;</a></span>ptttl_to_wav()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -109,8 +109,14 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>wav_filename</em>, </td>
+          <td class="paramtype">FILE *&#160;</td>
+          <td class="paramname"><em>fp</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structptttl__sample__generator__config__t.html">ptttl_sample_generator_config_t</a> *&#160;</td>
+          <td class="paramname"><em>config</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -129,7 +135,8 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">parser</td><td>Pointer to initialized parser object </td></tr>
-    <tr><td class="paramname">wav_filename</td><td>Pointer to name of .wav file to create. Must be writeable. </td></tr>
+    <tr><td class="paramname">fp</td><td>File stream that has already been opened for writing. Generated contents of .wav file will be written here. </td></tr>
+    <tr><td class="paramname">config</td><td>Pointer to configuration for sample generator. May be NULL. If NULL, a default configuration will be used. </td></tr>
     <tr><td class="paramname">wave_type</td><td>Waveform type to use for all channels</td></tr>
   </table>
   </dd>
