@@ -58,9 +58,7 @@
 #endif
 
 /**
- * Generate samples for some parsed PTTTL data and write them directly to a .wav file.
- * No dynamic memory allocation. Does not require holding the entire .wav file in memory
- * at once.
+ * Convert PTTTL/RTTTL source to .wav file
  *
  * @param parser         Pointer to initialized parser object
  * @param fp             File stream that has already been opened for writing. Generated

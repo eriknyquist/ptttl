@@ -121,13 +121,36 @@ static void _prepare_header(wavfile_header_t *output,
     output->subchunk2_id[3] = 'a';
 }
 
+
+/**
+ * Initializes sample generator object, and optionally PTTTL parser object.
+ *
+ * @param generator     Pointer to sample generator object to initialize
+ * @param config        Pointer to sample generator config to use
+ * @param wave_type     Waveform type for the sample generator to use
+ * @param parser        Pointer to parser object
+ * @param reinit_parser True if parser object should also be re-initialized
+ *
+ * @return 0 if successful
+ */
 static int _init_sample_generation(ptttl_sample_generator_t *generator,
                                    ptttl_sample_generator_config_t *config,
                                    ptttl_waveform_type_e wave_type,
                                    ptttl_parser_t *parser,
                                    bool reinit_parser)
 {
-    int ret = ptttl_sample_generator_create(parser, generator, config);
+    int ret = 0;
+
+    if (reinit_parser)
+    {
+        ret = ptttl_parse_init(parser, parser->iface);
+        if (ret != 0)
+        {
+            return ret;
+        }
+    }
+
+    ret = ptttl_sample_generator_create(parser, generator, config);
     if (ret < 0)
     {
         return ret;
@@ -140,15 +163,6 @@ static int _init_sample_generation(ptttl_sample_generator_t *generator,
         {
             printf("Failed to set waveform type\n");
             return -1;
-        }
-    }
-
-    if (reinit_parser)
-    {
-        ret = ptttl_parse_init(parser, parser->iface);
-        if (ret != 0)
-        {
-            return ret;
         }
     }
 

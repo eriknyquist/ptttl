@@ -24,9 +24,7 @@ only the file(s) that you need:
   Requires ``stdint.h``, ``memset()`` from ``string.h``.
 
 * **ptttl_to_wav.c**: Reads the output of ``ptttl_parser.c`` and produces a .wav file
-  containing the tones described by the RTTTL/PTTTL source. ``ptttl_sample_generator.c``
-  is used to generate one sample at a time and write it to the .wav file immediately,
-  so there is no need to store the entire .wav file in memory. Requires ``stdio.h`` and
+  containing the tones described by the RTTTL/PTTTL source. Requires ``stdio.h`` and
   ``stdint.h``.
 
 Some additional files, that are not required for normal usage but may be useful for
