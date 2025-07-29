@@ -12,13 +12,17 @@
  * Erik Nyquist 2025
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
+#if PTTTL_WAVFILE_GENERATION_STRATEGY == 1
+#include <stdlib.h>
+#endif
+
 
 #include "ptttl_to_wav.h"
 #include "ptttl_sample_generator.h"
 #include "ptttl_common.h"
-
 
 // Sample width in bits
 #define BITS_PER_SAMPLE (16)
@@ -117,6 +121,41 @@ static void _prepare_header(wavfile_header_t *output,
     output->subchunk2_id[3] = 'a';
 }
 
+static int _init_sample_generation(ptttl_sample_generator_t *generator,
+                                   ptttl_sample_generator_config_t *config,
+                                   ptttl_waveform_type_e wave_type,
+                                   ptttl_parser_t *parser,
+                                   bool reinit_parser)
+{
+    int ret = ptttl_sample_generator_create(parser, generator, config);
+    if (ret < 0)
+    {
+        return ret;
+    }
+
+    // Set specified waveform type for all channels
+    for (uint32_t channel = 0u; channel < parser->channel_count; channel++)
+    {
+        if (ptttl_sample_generator_set_waveform(generator, channel, wave_type) != 0)
+        {
+            printf("Failed to set waveform type\n");
+            return -1;
+        }
+    }
+
+    if (reinit_parser)
+    {
+        ret = ptttl_parse_init(parser, parser->iface);
+        if (ret != 0)
+        {
+            return ret;
+        }
+    }
+
+    return 0;
+}
+
+
 /**
  * @see ptttl_to_wav.h
  */
@@ -130,25 +169,59 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
     _big_endian = !(*(char *)(int[]){1});
 #endif
 
+    wavfile_header_t header;
     ptttl_sample_generator_t generator;
     ptttl_sample_generator_config_t default_config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
     ptttl_sample_generator_config_t *config_to_use = (config == NULL) ? &default_config : config;
 
-    int ret = ptttl_sample_generator_create(parser, &generator, config_to_use);
+    int ret = _init_sample_generation(&generator, config_to_use, wave_type, parser, false);
     if (ret < 0)
     {
         return ret;
     }
 
-    // Set specified waveform type for all channels
-    for (uint32_t channel = 0u; channel < parser->channel_count; channel++)
+    // Generate 1k samples at a time and write to file, until all samples are generated
+    const uint32_t sample_buf_len = 1024;
+    uint32_t num_samples = sample_buf_len;
+
+#if PTTTL_WAVFILE_GENERATION_STRATEGY == 0
+    int16_t sample_buf[sample_buf_len];
+
+    // First pass of sample generation, we'll generate the header first
+    while ((ret = ptttl_sample_generator_generate(&generator, &num_samples, sample_buf)) == 0);
+    if (ret < 0)
     {
-        if (ptttl_sample_generator_set_waveform(&generator, channel, wave_type) != 0)
-        {
-            printf("Failed to set waveform type\n");
-            return -1;
-        }
+        return ret;
     }
+
+    int framecount = (int32_t) generator.current_sample;
+    _prepare_header(&header, framecount, config_to_use->sample_rate);
+
+    // Write header
+    size_t size_written = fwrite(&header, 1u, sizeof(header), fp);
+    if (sizeof(header) != size_written)
+    {
+        ERROR(parser, "Failed to write WAV data");
+        return -1;
+    }
+
+    // Reset parser / sample generator
+    ret = _init_sample_generation(&generator, config_to_use, wave_type, parser, true);
+    if (ret < 0)
+    {
+        return ret;
+    }
+#elif PTTTL_WAVFILE_GENERATION_STRATEGY == 1
+    uint32_t alloc_size = sample_buf_len * 8u;
+    int16_t *sample_buf = malloc(alloc_size * sizeof(int16_t));
+    if (NULL == sample_buf)
+    {
+        ERROR(parser, "Failed to allocate memory");
+        return -1;
+    }
+
+#elif PTTTL_WAVFILE_GENERATION_STRATEGY == 2
+    int16_t sample_buf[sample_buf_len];
 
     // Seek to end of header, we'll generate samples first
     ret = fseek(fp, sizeof(wavfile_header_t), SEEK_SET);
@@ -157,22 +230,25 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
         ERROR(parser, "Failed to seek within WAV file for writing");
         return -1;
     }
+#endif
 
-    // Generate 1k samples at a time and write to file, until all samples are generated
-    const uint32_t sample_buf_len = 1024;
-    int16_t sample_buf[sample_buf_len];
-    uint32_t num_samples = sample_buf_len;
+    int16_t *sample_buf_ptr = &sample_buf[0];
 
-    while ((ret = ptttl_sample_generator_generate(&generator, &num_samples, sample_buf)) != -1)
+    while ((ret = ptttl_sample_generator_generate(&generator, &num_samples, sample_buf_ptr)) != -1)
     {
         if (_big_endian)
         {
             for (uint32_t i = 0; i < num_samples; i++)
             {
-                sample_buf[i] = cpu_to_le16(sample_buf[i]);
+                sample_buf_ptr[i] = cpu_to_le16(sample_buf_ptr[i]);
             }
         }
 
+        if (1 == ret)
+        {
+            break;
+        }
+#if (PTTTL_WAVFILE_GENERATION_STRATEGY == 0) || (PTTTL_WAVFILE_GENERATION_STRATEGY == 2)
         size_t size_written = fwrite(&sample_buf, sizeof(uint16_t), num_samples, fp);
         if (num_samples != size_written)
         {
@@ -180,10 +256,23 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
             return -1;
         }
 
-        if (1 == ret)
+#elif PTTTL_WAVFILE_GENERATION_STRATEGY == 1
+        if ((generator.current_sample + sample_buf_len) > alloc_size)
         {
-            break;
+            alloc_size *= 2u;
+            sample_buf = realloc(sample_buf, alloc_size * sizeof(int16_t));
+            sample_buf_ptr = &sample_buf[generator.current_sample];
+            if (NULL == sample_buf)
+            {
+                ERROR(parser, "Failed to allocate memory");
+                return -1;
+            }
         }
+        else
+        {
+            sample_buf_ptr += sample_buf_len;
+        }
+#endif
 
         num_samples = sample_buf_len;
     }
@@ -193,6 +282,7 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
         return ret;
     }
 
+#if PTTTL_WAVFILE_GENERATION_STRATEGY == 2
     // Seek back to beginning and populate header
     ret = fseek(fp, 0u, SEEK_SET);
     if (0 != ret)
@@ -200,18 +290,35 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
         ERROR(parser, "Failed to seek within WAV file for writing");
         return -1;
     }
+#endif
 
-    wavfile_header_t header;
-    int32_t framecount = ((int32_t) generator.current_sample) + 1u;
+#if (PTTTL_WAVFILE_GENERATION_STRATEGY == 2) || (PTTTL_WAVFILE_GENERATION_STRATEGY == 1)
+    int32_t framecount = (int32_t) generator.current_sample;
     _prepare_header(&header, framecount, config_to_use->sample_rate);
 
     // Write header
     size_t size_written = fwrite(&header, 1u, sizeof(header), fp);
     if (sizeof(header) != size_written)
     {
-        ERROR(parser, "Failed to write to WAV file");
+        ERROR(parser, "Failed to write WAV data");
         return -1;
     }
+#endif
+
+#if PTTTL_WAVFILE_GENERATION_STRATEGY == 1
+    size_written = fwrite(sample_buf, 1u, generator.current_sample * sizeof(int16_t), fp);
+    if ((generator.current_sample) != size_written)
+    {
+        ERROR(parser, "Failed to write WAV data");
+        return -1;
+    }
+#endif
+
+    fflush(fp);
+
+#if PTTTL_WAVFILE_GENERATION_STRATEGY == 1
+    free(sample_buf);
+#endif
 
     return 0;
 }

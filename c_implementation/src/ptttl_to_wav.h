@@ -25,6 +25,37 @@
     extern "C" {
 #endif
 
+#ifndef PTTTL_WAVFILE_GENERATION_STRATEGY
+/**
+ * Defines the strategy used by #ptttl_to_wav to generate .wav files. The
+ * available options make various trade-offs between dynamic memory usage,
+ * performance, and composability:
+ *
+ * - 0 (default): <b>Seeking not allowed, dynamic memory allocation not allowed.</b>
+ *   This is the most portable and composable strategy. No dynamic/heap memory
+ *   will be used, and no seek operations will be performed on the output file
+ *   stream (allowing 'stdout' to be used as the output stream, for example).
+ *   Due to the fact that we need to know how many sample points / frames there
+ *   will be in order to generate the first few .wav bytes containing the header,
+ *   and no seeking is allowed, this strategy comes with a performance cost,
+ *   since the parser & sample generator must make two full passes of the input
+ *   text; once to determine the total number of sample points / frames the
+ *   generated .wav file will contain, and again to obtain the sample point /
+ *   frame values for writing to the output stream.
+ *
+ * - 1: <b>Seeking not allowed, dynamic memory allocation allowed</b>.
+ *      This option is more performant than 0, at the cost of dynamic memory
+ *      allocation being required. Seek operations will not be performed on the
+ *      output stream, but dynamic memory allocations will be performed.
+ *
+ * - 2: <b>Seeking allowed, dynamic memory allocation not allowed.</b>
+ *      This strategy is the most performant, at the cost of composability.
+ *      Seek operations will be performed on the output file stream, so only one
+ *      pass of the parser & sample generator are required. No dynamic memory
+ *      allocation will be performed.
+ */
+#define PTTTL_WAVFILE_GENERATION_STRATEGY 0
+#endif
 
 /**
  * Generate samples for some parsed PTTTL data and write them directly to a .wav file.

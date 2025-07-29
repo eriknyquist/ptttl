@@ -891,6 +891,9 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
     parser->iface = iface;
     parser->active_stream = &parser->stream;
 
+    // Ensure stream position is at 0
+    parser->iface.seek(0);
+
     // Read name (first field)
     unsigned int namepos = 0u;
     int readchar_ret = 0;
