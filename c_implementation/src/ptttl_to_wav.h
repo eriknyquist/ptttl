@@ -34,14 +34,14 @@
  * - 0 (default): <b>Seeking not allowed, dynamic memory allocation not allowed.</b>
  *   This is the most portable and composable strategy. No dynamic/heap memory
  *   will be used, and no seek operations will be performed on the output file
- *   stream (allowing 'stdout' to be used as the output stream, for example).
- *   Due to the fact that we need to know how many sample points / frames there
- *   will be in order to generate the first few .wav bytes containing the header,
- *   and no seeking is allowed, this strategy comes with a performance cost,
- *   since the parser & sample generator must make two full passes of the input
- *   text; once to determine the total number of sample points / frames the
- *   generated .wav file will contain, and again to obtain the sample point /
- *   frame values for writing to the output stream.
+ *   stream (allowing 'stdout' connected to a shell pipe to be used as the output
+ *   stream, for example). Due to the fact that we need to know how many sample
+ *   points / frames there will be in order to generate the first few .wav bytes
+ *   containing the header, and no seeking is allowed, this strategy comes with
+ *   a performance cost, since the parser & sample generator must make two full
+ *   passes of the input text; once to determine the total number of sample
+ *   points / frames the generated .wav file will contain, and again to obtain
+ *   the sample point / frame values for writing to the output stream.
  *
  * - 1: <b>Seeking not allowed, dynamic memory allocation allowed</b>.
  *      This option is more performant than 0, at the cost of dynamic memory

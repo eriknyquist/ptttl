@@ -12,6 +12,10 @@
  * Erik Nyquist 2025
  */
 
+#if (PTTTL_WAVFILE_GENERATION_STRATEGY < 0) || (PTTTL_WAVFILE_GENERATION_STRATEGY > 2)
+#error "Invalid value for PTTTL_WAVFILE_GENERATION_STRATEGY, must in the range 0-2"
+#endif
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
