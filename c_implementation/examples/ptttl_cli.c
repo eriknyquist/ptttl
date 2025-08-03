@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
     rfp = fopen(_input_filename, "rb");
     if (NULL == rfp)
     {
-        printf("Unable to open input file for reading: %s\n", argv[1]);
+        printf("Unable to open input file for reading: %s\n", _input_filename);
         return -1;
     }
 
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
         wfp = fopen(_output_filename, "wb");
         if (NULL == wfp)
         {
-            printf("Unable to open output file for writing: %s\n", argv[2]);
+            printf("Unable to open output file for writing: %s\n", _output_filename);
             fclose(rfp);
             return -1;
         }
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
     if (0 > ret)
     {
         ptttl_parser_error_t err = ptttl_parser_error(&parser);
-        printf("Error in %s (line %d, column %d): %s\n", argv[1], err.line, err.column, err.error_message);
+        printf("Error in %s (line %d, column %d): %s\n", _input_filename, err.line, err.column, err.error_message);
     }
 
     if (0 == ret)
@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
         if (ret < 0)
         {
             ptttl_parser_error_t err = ptttl_parser_error(&parser);
-            printf("Error Generating WAV file (%s, line %d, column %d): %s\n", argv[1], err.line,
+            printf("Error Generating WAV file (%s, line %d, column %d): %s\n", _input_filename, err.line,
                    err.column, err.error_message);
         }
     }
