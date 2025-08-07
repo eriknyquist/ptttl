@@ -241,7 +241,7 @@ int main(int argc, char *argv[])
     if (0 > ret)
     {
         ptttl_parser_error_t err = ptttl_parser_error(&parser);
-        printf("Error in %s (line %d, column %d): %s\n", _input_filename, err.line, err.column, err.error_message);
+        printf("Error (line %d, column %d): %s\n", err.line, err.column, err.error_message);
     }
 
     if (0 == ret)
@@ -251,8 +251,7 @@ int main(int argc, char *argv[])
         if (ret < 0)
         {
             ptttl_parser_error_t err = ptttl_parser_error(&parser);
-            printf("Error Generating WAV file (line %d, column %d): %s\n", err.line,
-                   err.column, err.error_message);
+            printf("Error (line %d, column %d): %s\n", err.line, err.column, err.error_message);
         }
     }
 
