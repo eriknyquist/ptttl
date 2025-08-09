@@ -296,6 +296,8 @@ static int _eat_all_nonvisible_chars(ptttl_parser_t *parser)
 
     while ((readchar_ret = _peek_next_char(parser, &nextchar)) == 0)
     {
+        CHECK_IFACE_RET_EOF(parser, readchar_ret);
+
         if (1u == in_comment)
         {
             (void) _read_next_char(parser, &nextchar);
@@ -303,10 +305,8 @@ static int _eat_all_nonvisible_chars(ptttl_parser_t *parser)
             {
                 in_comment = 0u;
             }
-            else
-            {
-                continue;
-            }
+
+            continue;
         }
 
         if (!IS_WHITESPACE(nextchar))
@@ -326,8 +326,6 @@ static int _eat_all_nonvisible_chars(ptttl_parser_t *parser)
             (void) _read_next_char(parser, &nextchar);
         }
     }
-
-    CHECK_IFACE_RET_EOF(parser, readchar_ret);
 
     return readchar_ret;
 }
@@ -900,6 +898,9 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
     char namechar = '\0';
     int ret = 0;
     parser->name[0] = '\0';
+
+    ret = _eat_all_nonvisible_chars(parser);
+    CHECK_IFACE_RET(parser, ret);
 
     while ((readchar_ret = _read_next_char(parser, &namechar)) == 0)
     {
