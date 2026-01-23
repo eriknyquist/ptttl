@@ -1,7 +1,7 @@
 All Star but it's a Bach chorale:
 d=4,o=5,b=100, f=7, v=10:
 
-#some   bo  -   dy      once    told    me      the     world   was     go -
+//some  bo  -   dy      once    told    me      the     world   was     go -
 
 4gb5v,  8db6,   8bb5,   4bb5,   8ab5v,  8gb5,   8gb5,   4b5v,   8bb5,   8bb5 |
 4gb4,   8gb4,   8gb4,   4gb4,   8f4,    8gb4,   8gb4,   4ab4,   8g4,    8g4  |
@@ -10,7 +10,7 @@ d=4,o=5,b=100, f=7, v=10:
 
 
 
-#-na    roll    me,
+//-na   roll    me,
 
 8ab5,   8ab5v,  4gb5 |
 8ab4,   8eb4,   4eb4 |

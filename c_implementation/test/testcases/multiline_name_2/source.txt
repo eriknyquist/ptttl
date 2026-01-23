@@ -1,5 +1,5 @@
-# Leading comment
-# More leading comment
+// Leading comment
+// More leading comment
 
 multi-
 

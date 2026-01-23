@@ -1,17 +1,17 @@
-# Plays all 88 notes on a piano, in sequence, lowest to highest. Useful as a smoke
-# test to manually check that things are working. Also starts with a really long
-# leading comment block, to ensure the "name" section parsing is working correctly
-# (prevents regression of an older bug where the leading comment was treated as part
-# of the "name" section
-#soprgopsr sg srpog jksropg jops gjposr 
-#soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
-#soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
-#soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
-#soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
-#soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
-#soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
+// Plays all 88 notes on a piano, in sequence, lowest to highest. Useful as a smoke
+// test to manually check that things are working. Also starts with a really long
+// leading comment block, to ensure the "name" section parsing is working correctly
+// (prevents regression of an older bug where the leading comment was treated as part
+// of the "name" section
+//soprgopsr sg srpog jksropg jops gjposr 
+//soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
+//soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
+//soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
+//soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
+//soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
+//soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
 
-#soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
+//soprgopsr sg srpog jksropg jops gjposr szerpjfgzoiergsrpogsorpgjpsojrgposrjgpsjgp
 
 Piano test:
 d=16,o=5,b=180:

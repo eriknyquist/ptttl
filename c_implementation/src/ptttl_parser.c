@@ -311,7 +311,7 @@ static int _eat_all_nonvisible_chars(ptttl_parser_t *parser)
 
         if (!IS_WHITESPACE(nextchar))
         {
-            if ('#' == nextchar)
+            if ('/' == nextchar)
             {
                 (void) _read_next_char(parser, &nextchar);
                 in_comment = 1u;
