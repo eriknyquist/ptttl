@@ -232,29 +232,18 @@ static void _note_number_to_pitch(uint32_t note_number, float *pitch_hz)
         493.883301256f    // NOTE_B
     };
 
-    float result = 0.0f;
-
-    // Some nasty arithmetic to do a branchless conversion of note number to octave number
-    int octave = ((int) (((note_number - 3u) / 12u) + 1u)) * (int) !(note_number < 3);
-
-    if (0 == octave)
-    {
-        result = note_pitches[NOTE_A + (note_number - 1u)];
-    }
-    else
-    {
-        unsigned int note_pitch_index = note_number - _octave_starts[octave];
-        result = note_pitches[note_pitch_index];
-    }
+    uint32_t octave = ((note_number + 20u) / 12u) - 1u;
+    uint32_t note_pitch_index = (note_number + 8u) % NOTE_PITCH_COUNT;
+    float result = note_pitches[note_pitch_index];
 
     // Set true pitch based on octave, if octave is not 4
-    if (octave < 4)
+    if (octave < 4u)
     {
-        result = result / (float) _raise_powerof2((unsigned int) (4 - octave));
+        result = result / (float) _raise_powerof2(4u - octave);
     }
-    else if (octave > 4)
+    else if (octave > 4u)
     {
-        result = result * (float) _raise_powerof2((unsigned int) (octave - 4));
+        result = result * (float) _raise_powerof2(octave - 4u);
     }
 
     *pitch_hz = result;
