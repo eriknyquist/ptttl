@@ -27,6 +27,15 @@
 
 
 /**
+ * Number of harmonics to use when generating the square and sawtooth waveforms.
+ * Higher numbers generate higher quality waves, at the cost of increased sample
+ * generation time.
+ */
+#ifndef PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS
+#define PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS 16
+#endif // PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS
+
+/**
  * ptttl_sample_generator_config_t object initialization with sane defaults
  */
 #define PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT {.sample_rate=44100u, .attack_samples=100u, \

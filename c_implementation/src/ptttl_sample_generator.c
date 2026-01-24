@@ -58,10 +58,10 @@ static ptttl_waveform_generator_t _waveform_generators[WAVEFORM_TYPE_COUNT] =
  *
  * @return Result
  */
-static unsigned int _raise_powerof2(unsigned int exp)
+static uint32_t _raise_powerof2(uint32_t exp)
 {
-    unsigned int ret = 1u;
-    for (unsigned int i = 0u; i < exp; i++)
+    uint32_t ret = 1u;
+    for (uint32_t i = 0u; i < exp; i++)
     {
         ret *= 2u;
     }
@@ -82,7 +82,8 @@ static float _square_generator(float x, float p, unsigned int s)
     // Calculate max. number of harmonics given the waveform frequency
     int maxh = (int) ((((float) s) * 0.5f) / p);
     if (maxh < 1) maxh = 1;               // At least the fundamental harmonic
-    int hcount = (maxh < 16) ? maxh : 16; // No higher than 16 harmonics
+    int hcount = (maxh < PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS) ?
+                  maxh : PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS;
 
     // Generate square point by summing points of sine waves of the harmonics
     float sum = 0.0f;
@@ -108,7 +109,8 @@ static float _sawtooth_generator(float x, float p, unsigned int s)
     // Calculate max. number of harmonics given the waveform frequency
     int maxh = (int) ((((float) s) * 0.5f) / p);
     if (maxh < 1) maxh = 1;               // At least the fundamental harmonic
-    int hcount = (maxh < 16) ? maxh : 16; // No higher than 16 harmonics
+    int hcount = (maxh < PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS) ?
+                  maxh : PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS;
 
     // Generate sawtooth point by summing points of sine waves of the harmonics
     float sum = 0.0f;
