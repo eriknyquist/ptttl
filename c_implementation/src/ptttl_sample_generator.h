@@ -27,7 +27,7 @@
 
 
 /**
- * Number of harmonics to use when generating the square and sawtooth waveforms.
+ * Number of harmonics to use when generating the square, sawtooth & triangle waveforms.
  * Higher numbers generate higher quality waves, at the cost of increased sample
  * generation time.
  */

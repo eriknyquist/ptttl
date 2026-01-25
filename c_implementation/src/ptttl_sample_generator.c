@@ -132,19 +132,17 @@ static float _triangle_generator(float x, float p, unsigned int s)
     (void) p; // Unused
     (void) s; // Unused
 
-    int ix = (int)x;
-    float t = x - ix;
-    if (t < 0.0f) t += 1.0f;
+    float value = 0.0f;
 
-    // build [-1..+1..-1]
-    if (t < 0.5f)
+    for (int k = 0; k < PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS; k++)
     {
-        return t * 4.0f - 1.0f; // rise from -1 to +1
+        int n = 2 * k + 1;
+        float sign = (k & 1) ? -1.0f : 1.0f;
+        value += sign * _sine_generator(n * x, p, s) / (n * n);
     }
-    else
-    {
-        return 3.0f - t * 4.0f; // fall from +1 back to -1
-    }
+
+    value *= 8.0f / (float) (PI * PI);
+    return value;
 }
 
 /**
