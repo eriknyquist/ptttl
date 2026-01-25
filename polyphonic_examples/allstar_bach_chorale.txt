@@ -1,0 +1,45 @@
+All Star but it's a Bach chorale:
+d=4,o=5,b=100, f=7, v=10:
+
+//some  bo  -   dy      once    told    me      the     world   was     go -
+
+4gb5v,  8db6,   8bb5,   4bb5,   8ab5v,  8gb5,   8gb5,   4b5v,   8bb5,   8bb5 |
+4gb4,   8gb4,   8gb4,   4gb4,   8f4,    8gb4,   8gb4,   4ab4,   8g4,    8g4  |
+4gb4,   8bb4,   8db5,   4db5,   8db5,   8db5,   8db5,   4eb5,   8db5,   8db5 |
+4gb3,   8gb3,   8gb3,   4gb3,   8ab3,   8bb3,   8bb3,   4ab3,   8bb3,   8bb3 ;
+
+
+
+//-na   roll    me,     I       aint    the     sharp - est     tool    in
+
+8ab5,   8ab5v,  4gb5,   8gb5v,  8db6v,  8bb5,   8bb5v,  8ab5,   8ab5v,  8gb5 |
+8ab4,   8eb4,   4eb4,   8eb4,   8gb4,   8gb4,   8gb4,   8f4,    8f4,    8eb4 |
+8eb5,   8eb5,   4b4,    8b4,    8db5,   8db5,   8db5,   8b4,    8b4,    8bb4 |
+8b3,    8b3,    4eb4,   8b3,    8bb3,   8b3,    8db4,   8db4,   8d4,    8eb4 ;
+
+
+
+//the   she  -  ed,             she     was     loo  -  king    kind    of
+
+8gb5,   4eb5v,  8db5v,  2p,     8gb5,   8gb5,   8db6v,  8bb5,   8bb5,   8ab5 |
+8eb4,   4b3,    8ab3,   2p,     8db4,   8db4,   8gb4,   8gb4,   8gb4,   8f4  |
+8bb4,   4gb4,   8f4,    2p,     8gb4,   8gb4,   8bb4,   8db5,   8db5,   8db5 |
+8db4,   4b3,    8ab3,   2p,     8bb3,   8ab3,   8gb3,   8gb3,   8gb3,   8ab3 ;
+
+
+
+//dumb  with    her     fing  - er      and     her     thumb   in      the
+
+8ab5v,  8gb5,   8gb5,   4b5v,   8bb5,   8bb5,   8ab5,   8ab5v,  8gb5,   8gb5 |
+8gb4,   8gb4,   8eb4,   4eb4,   8eb4,   8eb4,   8eb4,   8eb4,   8eb4,   8eb4 |
+8db5,   8db5,   8bb4,   4ab4,   8db5,   8db5,   8b4,    8b4,    8b4,    8b4  |
+8bb3,   8bb3,   8eb4,   4ab4,   8g4,    8g4,    8ab4,   8ab3,   8b3,    8b3  ;
+
+
+
+//shape of      an      L       on      her     for  -  head
+
+4db6v,  8bb5v,  8bb5v,  4ab5v,  8gb5,   8gb5,   4ab5v,  8eb5 |
+4gb4,   8gb4,   8gb4,   4f4,    8f4,    8eb4,   4eb4,   8b3  |
+4db5,   8db5,   8db5,   4b4,    8bb4,   8bb4,   4b4,    8ab4 |
+4bb3,   8b3,    8db4,   4d4,    8eb4,   8eb4 ,  4ab4,   8ab4

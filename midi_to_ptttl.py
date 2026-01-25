@@ -10,9 +10,9 @@
 #
 # - Whole notes, half notes, quarter notes, 8th notes, 16th notes, 32nd notes,
 #   and the dotted form of all these notes are the only durations supported for
-#   any note or rest. Note and rest lengths that do not match any of these options
-#   will be quantized to the nearest valid length, and again this will mess up
-#   the timing of your song.
+#   any note or rest. The script will make an attempt to concatenate multiple
+#   notes to approximate the actual note/rest length seen in the MIDI file, but
+#   again this may mess up the timing of your song.
 #
 # - Any notes playing simultaneously must be on separate tracks in the MIDI file.
 #   No notes can overlap within an individual MIDI track.
@@ -45,6 +45,54 @@ class PtttlNote:
     def __repr__(self):
         return self.__str__()
 
+    def _calculate_note_durations(self, bpm):
+        ret = []
+        length_ms = self.length_ms
+        tolerance_ms = 2
+        whole_note_ms = (60000.0 / float(bpm)) * 4.0
+        durations = self.note_durations.copy()
+
+        while length_ms >= tolerance_ms:
+            whole_note_fraction = whole_note_ms / length_ms
+            duration_ratio = length_ms / whole_note_ms
+
+            dot = False
+            smallest_error = float("inf")
+
+            for dur in durations:
+                fraction = 1.0 / float(dur)
+
+                # straight note
+                error = abs(duration_ratio - fraction)
+                if error < smallest_error:
+                    smallest_error = error
+                    duration = dur
+                    dot = False
+
+                # dotted note
+                dotted = fraction * 1.5
+                dotted_length_ms = int(whole_note_ms * dotted)
+
+                # Only consider dotted rhythm if it would be the last note
+                if (length_ms - dotted_length_ms) <= tolerance_ms:
+                    error = abs(duration_ratio - dotted)
+                    if error < smallest_error:
+                        smallest_error = error
+                        duration = dur
+                        dot = True
+
+            curr_length_ms = whole_note_ms * (1.0 / duration)
+            if dot:
+                curr_length_ms *= 1.5
+
+            if int(curr_length_ms) > length_ms:
+                durations.pop(0)
+            else:
+                length_ms -= int(curr_length_ms)
+                ret.append((duration, dot))
+
+        return ret
+
     def note_string(self, bpm: int):
         if self.piano_key == 0:
             note = "p"
@@ -54,41 +102,17 @@ class PtttlNote:
             note_index = (self.piano_key + 8) % len(self.note_octave_map)
             note = self.note_octave_map[note_index]
 
-        # Figure out how many times the note duration fits inside a whole note for the given BPM
-        whole_note_ms = (60000.0 / float(bpm)) * 4.0
-        whole_note_fraction = whole_note_ms / self.length_ms
-        duration_ratio = self.length_ms / whole_note_ms
+        durations = self._calculate_note_durations(bpm)
 
-        duration = None
-        dot = False
-        smallest_error = float("inf")
+        notes = []
+        for duration, dot in durations:
+            n = f"{duration}{note}{octave}"
+            if dot:
+                n += "."
 
-        for dur in self.note_durations:
-            fraction = 1.0 / float(dur)
+            notes.append(n)
 
-            # straight note
-            error = abs(duration_ratio - fraction)
-            if error < smallest_error:
-                smallest_error = error
-                duration = dur
-                dot = False
-
-            # dotted note
-            dotted = fraction * 1.5
-            error = abs(duration_ratio - dotted)
-            if error < smallest_error:
-                smallest_error = error
-                duration = dur
-                dot = True
-
-        if duration is None:
-            raise RuntimeError(f"Unsupported duration (ratio={duration_ratio:.5f}, length={self.length_ms}ms)")
-
-        ret = f"{duration}{note}{octave}"
-        if dot:
-            ret += "."
-
-        return ret
+        return ",".join(notes)
 
 def find_time_info(mid):
     tempo = None
@@ -160,7 +184,7 @@ def midi_to_ptttl(midi_filename: str):
 
     bpm = int(tempo2bpm(tempo.tempo, (4, 4)))
 
-    ret = f"midi_to_pttl.py outpu1Gt :\nb={bpm}, d=4, o=4, f=7, v=10:\n"
+    ret = f"midi_to_pttl.py output :\nb={bpm}, d=4, o=4, f=7, v=10:\n"
     tracks = []
     for track in mid.tracks:
         notes = midi_track_to_ptttl_notes(mid, track, tempo.tempo)
