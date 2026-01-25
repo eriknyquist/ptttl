@@ -3,8 +3,8 @@
 Polyphonic Tone Text Transfer Language
 ######################################
 
-Polyphonic Tone Text Transfer Language (PTTTL) is a way to describe polyphonic
-melodies, and is a superset of Nokia's
+Polyphonic Tone Text Transfer Language (PTTTL) describes polyphonic
+melodies in human-readable plain text files, and is a superset of Nokia's
 `RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ format, extending
 it to enable polyphony and vibrato.
 
