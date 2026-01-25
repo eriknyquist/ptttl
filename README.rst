@@ -16,6 +16,13 @@ Reference implementations in python and C are provided. The C implementation has
 been much more thoroughly tested and fuzzed, and I strongly recommend using the C
 version instead of the python version.
 
+Convert MIDI to RTTTL and PTTTL
+###############################
+
+A python script `midi_to_ptttl.py` is provided for converting single-track MIDI
+files to RTTTL, and multi-track MIDI files to PTTTL. Read the header comment at
+the top of the script to understand the limitations.
+
 API documentation
 ==================
 
@@ -123,6 +130,22 @@ values seperated by a ``-`` character. For example:
 * ``4c#v10-15`` refers to a C# quarter note with vibrato enabled, using a vibrato frequency of 10Hz,
   with a maximum vibrato variance of 15Hz from the main pitch.
 
+Comments
+--------
+
+Single-line comments are supported. A comment begins with a single forward slash
+(or you can use a double forward slash, if that's what you're used to) and
+end at the end of the line.
+
+::
+    Test Melody:
+    b=123, d=4, o=4:
+
+    // Comment on a line of its own
+    16c, 8p, 16c |
+    16e, 8p, 16e | // Comment after some notes
+    16g5, 8p, 16g5
+
 Example
 -------
 
@@ -130,7 +153,7 @@ Consider the following PTTTL string:
 
 ::
 
-    # 123 beats-per-minute, default quarter note, default 4th octave
+    // 123 beats-per-minute, default quarter note, default 4th octave
     Test Melody:
     b=123, d=4, o=4:
 
@@ -147,7 +170,7 @@ PTTTL:
 
 ::
 
-    # Nicely aligned
+    // Nicely aligned
     Test Melody:
     b=123, d=4, o=4:
 
@@ -165,7 +188,7 @@ or concatenated, in the final output.
 
 The semicolon does not affect any of the timings or pitch of the generated
 tones; it just makes the PTTTL source a bit more readable, and gives you more
-options for organizing the lines when writing music. Have a look at this larger 
+options for organizing the lines when writing music. Have a look at this larger
 PTTTL file, with 4 simultaneous melodies, for a good example of why the
 semicolon is useful:
 
@@ -174,7 +197,7 @@ semicolon is useful:
     All Star but it's a Bach chorale:
     d=4,o=5,b=100, f=7, v=10:
 
-    #some   bo  -   dy      once    told    me      the     world   was     go -
+    //some   bo  -   dy      once    told    me      the     world   was     go -
 
     4gb5v,  8db6,   8bb5,   4bb5,   8ab5v,  8gb5,   8gb5,   4b5v,   8bb5,   8bb5 |
     4gb4,   8gb4,   8gb4,   4gb4,   8f4,    8gb4,   8gb4,   4ab4,   8g4,    8g4  |
@@ -183,7 +206,7 @@ semicolon is useful:
 
 
 
-    #-na    roll    me,     I       aint    the     sharp - est     tool    in
+    //-na    roll    me,     I       aint    the     sharp - est     tool    in
 
     8ab5,   8ab5v,  4gb5,   8gb5v,  8db6v,  8bb5,   8bb5v,  8ab5,   8ab5v,  8gb5 |
     8ab4,   8eb4,   4eb4,   8eb4,   8gb4,   8gb4,   8gb4,   8f4,    8f4,    8eb4 |
@@ -192,7 +215,7 @@ semicolon is useful:
 
 
 
-    #the    she  -  ed,             she     was     loo  -  king    kind    of
+    //the    she  -  ed,             she     was     loo  -  king    kind    of
 
     8gb5,   4eb5v,  8db5v,  2p,     8gb5,   8gb5,   8db6v,  8bb5,   8bb5,   8ab5 |
     8eb4,   4b3,    8ab3,   2p,     8db4,   8db4,   8gb4,   8gb4,   8gb4,   8f4  |
@@ -201,7 +224,7 @@ semicolon is useful:
 
 
 
-    #dumb   with    her     fing  - er      and     her     thumb   in      the
+    //dumb   with    her     fing  - er      and     her     thumb   in      the
 
     8ab5v,  8gb5,   8gb5,   4b5v,   8bb5,   8bb5,   8ab5,   8ab5v,  8gb5,   8gb5 |
     8gb4,   8gb4,   8eb4,   4eb4,   8eb4,   8eb4,   8eb4,   8eb4,   8eb4,   8eb4 |
@@ -210,7 +233,7 @@ semicolon is useful:
 
 
 
-    #shape  of      an      L       on      her     for  -  head
+    //shape  of      an      L       on      her     for  -  head
 
     4db6v,  8bb5v,  8bb5v,  4ab5v,  8gb5,   8gb5,   4ab5v,  8eb5 |
     4gb4,   8gb4,   8gb4,   4f4,    8f4,    8eb4,   4eb4,   8b3  |

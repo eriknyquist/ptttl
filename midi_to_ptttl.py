@@ -226,7 +226,7 @@ def midi_to_ptttl(midi_filename: str):
 
     bpm = int(tempo2bpm(tempo.tempo, (4, 4)))
 
-    ret = f"midi_to_pttl.py output :\nb={bpm}, d=4, o=4, f=7, v=10:\n"
+    ret = f"midi_to_ptttl.py output :\nb={bpm}, d=4, o=4 :\n"
     tracks = []
     for track in mid.tracks:
         notes = midi_track_to_ptttl_notes(mid, track, tempo.tempo)
