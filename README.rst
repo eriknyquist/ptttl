@@ -1,9 +1,9 @@
 .. contents:: Table of Contents
 
-Polyphonic Tone Transfer Language
-#################################
+Polyphonic Tone Text Transfer Language
+######################################
 
-The Polyphonic Tone Text Transfer Language (PTTTL) is a way to describe polyphonic
+Polyphonic Tone Text Transfer Language (PTTTL) is a way to describe polyphonic
 melodies, and is a superset of Nokia's
 `RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ format, extending
 it to enable polyphony and vibrato.
@@ -40,20 +40,21 @@ A parser that properly handles PTTTL can also handle RTTTL.
 A PTTTL string is made up of three colon-seperated sections; **name** section,
 **default values** section, and **data** section.
 
-Whitespace characters, empty lines, and lines beginning with a "#" character
-are ignored.
+Whitespace characters, empty lines, and text beginning with a "/" character
+until the end of a line are ignored.
 
-The initial "name" section is intended to contain the name of the ringtone
-in the original RTTTL format. PTTTL requires this field to be present, to
-maintain backwards compatibility with RTTTL, but places no constraints on its
-contents.
+*name* section
+==============
+
+The first section in a PTTTL file is an arbitrary string up to 256 characters long,
+intended to be used as the name of the song.
 
 *default values* section
 ========================
 
-The very first statement is the *default values* section, and it is the same as
-the *default values* section from the RTTTL format, except with two additional
-vibrato-related settings:
+The next section after the "name" section is the *default values* section, and it
+is the same as the *default values* section from the RTTTL format, except with two
+additional vibrato-related settings:
 
 ::
 
@@ -75,9 +76,9 @@ pipe character ``|``, all of which will be played in unison.
 
 The format of a note is identical to that described by the RTTTL format. Each
 note includes, in sequence; a duration specifier, a standard music note, either
-a, b, c, d, e, f or g (optionally followed by '#' or 'b' for sharps and flats),
-and an octave specifier. If no duration or octave specifier are present, the
-default applies.
+a, b, c, d, e, f or g (optionally followed by '#' or 'b' for sharps and flats,
+or a dot '.' for dotted rhythms), and an octave specifier. If no duration or
+octave specifier are present, the default applies.
 
 Durations
 ---------
@@ -184,7 +185,7 @@ In order to keep things readable for large PTTTL files with multiple
 concurrent tracks, a semicolon character ``;`` can be used further break up
 melodies into more practical blocks. Just as the veritcal pipe character ``|``
 seperates *concurrent* tracks within a single polyphonic melody, the semicolon
-character seperates multiple *sequential* polyphonic melodies within a single
+character seperates multiple *sequential* polyphonic melodies within the
 data section. Blocks of notes seperated by semicolons will be "stitched together",
 or concatenated, in the final output.
 

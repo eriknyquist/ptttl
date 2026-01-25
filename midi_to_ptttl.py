@@ -52,12 +52,12 @@ class PtttlNote:
 
     def _calculate_note_durations(self, bpm):
         """
-        Returns a list of note durations required to represent the length this note,
-        given the song BPM and note length in milliseconds (self.length_ms).
-        Each note duration in the list is a tuple of the form (int, bool), where
-        the int is the note duration as a fraction of a whole note-- 1, 2, 4, 8,
-        16 or 32 -- and the bool indicates a dotted note, True for dotted, False
-        for not dotted.
+        Returns a list of note durations required to represent the length of
+        this note, given the song BPM and note length in milliseconds
+        (self.length_ms). Each note duration in the list is a tuple of the form
+        (int, bool), where the int is the note duration as a fraction of a whole
+        note-- 1, 2, 4, 8, 16 or 32 -- and the bool indicates a dotted note,
+        True for dotted, False for not dotted.
         """
         ret = []
         length_ms = self.length_ms
@@ -163,8 +163,8 @@ def midi_track_to_ptttl_notes(midi, track, usecs_per_quarternote):
     of the form:
 
     [
-        [PttlNote(..), PttlNote(..), ..],   # First MIDI track
-        [PttlNote(..), PttlNote(..), ..],   # Second MIDI track
+        [PtttlNote(..), PtttlNote(..), ..],   # First MIDI track
+        [PtttlNote(..), PtttlNote(..), ..],   # Second MIDI track
         ..
     ]
     """
