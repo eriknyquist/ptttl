@@ -22,7 +22,12 @@
 import sys
 from mido import MidiFile, tempo2bpm, tick2second
 
+
 class PtttlNote:
+    """
+    Represents a single note or a rest seen in a MIDI track: MIDI note number,
+    note length in milliseconds, and note start time (milliseconds since song start)
+    """
     note_durations = [1, 2, 4, 8, 16, 32]
     note_octave_map = ["c", "c#", "d", "eb", "e", "f", "f#", "g", "g#", "a", "bb", "b"]
 
@@ -46,6 +51,14 @@ class PtttlNote:
         return self.__str__()
 
     def _calculate_note_durations(self, bpm):
+        """
+        Returns a list of note durations required to represent the length this note,
+        given the song BPM and note length in milliseconds (self.length_ms).
+        Each note duration in the list is a tuple of the form (int, bool), where
+        the int is the note duration as a fraction of a whole note-- 1, 2, 4, 8,
+        16 or 32 -- and the bool indicates a dotted note, True for dotted, False
+        for not dotted.
+        """
         ret = []
         length_ms = self.length_ms
         tolerance_ms = 2
@@ -86,6 +99,9 @@ class PtttlNote:
                 curr_length_ms *= 1.5
 
             if int(curr_length_ms) > length_ms:
+                # The current note we've selected is too long, so we need
+                # try with shorter notes-- pop the longest note duration off the
+                # list and try again
                 durations.pop(0)
             else:
                 length_ms -= int(curr_length_ms)
@@ -94,6 +110,11 @@ class PtttlNote:
         return ret
 
     def note_string(self, bpm: int):
+        """
+        Returns the string that represents this note in PTTTL. May return a string
+        that contains multiple comma-separated PTTTL notes, if multiple sequential
+        PTTTL notes are required to approximate the duration of this note.
+        """
         if self.piano_key == 0:
             note = "p"
             octave = ""
@@ -115,6 +136,11 @@ class PtttlNote:
         return ",".join(notes)
 
 def find_time_info(mid):
+    """
+    Finds the tempo and time signature meta messages in a mido.MidiFile object
+    and returns them as a tuple of the form (tempo, time_sig). 'tempo' or 'time_sig'
+    may be None if the corresponding meta message could not be found in the MIDI file.
+    """
     tempo = None
     time_sig = None
 
@@ -132,6 +158,16 @@ def find_time_info(mid):
     return tempo, time_sig
 
 def midi_track_to_ptttl_notes(midi, track, usecs_per_quarternote):
+    """
+    Processes a mido.MidiFile object and converts it to a two-dimensional list
+    of the form:
+
+    [
+        [PttlNote(..), PttlNote(..), ..],   # First MIDI track
+        [PttlNote(..), PttlNote(..), ..],   # Second MIDI track
+        ..
+    ]
+    """
     ret = []
     notes_on = {}
     current_tick = 0
@@ -144,12 +180,14 @@ def midi_track_to_ptttl_notes(midi, track, usecs_per_quarternote):
             if msg.note in notes_on:
                 raise RuntimeError(f"note_on seen twice in a row without note_off (MIDI note {msg.note})")
 
-            # Figure out if a pause came before this note
+            # Figure out if a rest came before this note
             if len(ret) > 0:
+                # rest between two notes
                 last_note_end = ret[-1].start_ms + ret[-1].length_ms
                 if last_note_end < ms_elapsed:
                     ret.append(PtttlNote(0, ms_elapsed - last_note_end, last_note_end))
             else:
+                # rest at the beginning of the track
                 if ms_elapsed > 0:
                     ret.append(PtttlNote(0, ms_elapsed, 0))
 
@@ -173,6 +211,10 @@ def midi_track_to_ptttl_notes(midi, track, usecs_per_quarternote):
     return ret
 
 def midi_to_ptttl(midi_filename: str):
+    """
+    Processes a mido.MidiFile object and returns the corresponding PTTTL file
+    contents as a string
+    """
     mid = MidiFile(midi_filename)
     # Find tempo/time sig. settings
     tempo, time_sig = find_time_info(mid)
