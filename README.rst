@@ -135,7 +135,8 @@ Comments
 
 Single-line comments are supported. A comment begins with a single forward slash
 (or you can use a double forward slash, if that's what you're used to) and
-end at the end of the line.
+terminates at the end of the line. Everything between the first forward slash and
+the end of the line is ignored by the PTTTL parser.
 
 ::
 
