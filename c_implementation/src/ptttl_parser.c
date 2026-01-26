@@ -269,10 +269,7 @@ static int _peek_next_char(ptttl_parser_t *parser, char *nextchar)
 static int _seek_wrapper(ptttl_parser_t *parser, uint32_t position)
 {
     int ret = parser->iface.seek(position);
-    if (0 == ret)
-    {
-        parser->active_stream->position = position;
-    }
+    parser->active_stream->position = position;
 
     return ret;
 }

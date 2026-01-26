@@ -171,8 +171,8 @@ int main(int argc, char *argv[])
     if (_input_filename == NULL)
     {
         // If reading from stdin, need to read input file contents into malloc'd buffer
-        size_t total_buflen = 1024;
-        const size_t chunk_size = 512;
+        size_t total_buflen = 128u;
+        const size_t chunk_size = 128u;
         _input_buf = malloc(total_buflen);
         if (NULL == _input_buf)
         {
@@ -183,9 +183,15 @@ int main(int argc, char *argv[])
         size_t size_read = 0u;
         size_t bufpos = 0u;
 
-        while ((size_read = fread(_input_buf + bufpos, 1, chunk_size, stdin)) == chunk_size)
+        while ((size_read = fread(_input_buf + bufpos, 1, chunk_size, stdin)) > 0)
         {
             bufpos += size_read;
+
+            if (size_read == 0)
+            {
+                break;
+            }
+
             if ((bufpos + chunk_size) > total_buflen)
             {
                 total_buflen *= 2u;
@@ -198,7 +204,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        _buflen = (uint32_t) (bufpos + size_read);
+        _buflen = bufpos;
         iface.read = _read_mem;
         iface.seek = _seek_mem;
     }
