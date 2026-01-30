@@ -514,8 +514,7 @@ int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_
                 return ret;
             }
 
-            generator->channel_finished[chan] = ret;
-
+            generator->channel_finished[chan] = (uint8_t) ret;
             summed_sample += chan_sample;
         }
 

@@ -183,15 +183,8 @@ int main(int argc, char *argv[])
         size_t size_read = 0u;
         size_t bufpos = 0u;
 
-        while ((size_read = fread(_input_buf + bufpos, 1, chunk_size, stdin)) > 0)
+        do
         {
-            bufpos += size_read;
-
-            if (size_read == 0)
-            {
-                break;
-            }
-
             if ((bufpos + chunk_size) > total_buflen)
             {
                 total_buflen *= 2u;
@@ -202,7 +195,10 @@ int main(int argc, char *argv[])
                     return -1;
                 }
             }
-        }
+
+            size_read = fread(_input_buf + bufpos, 1, chunk_size, stdin);
+            bufpos += size_read;
+        } while (size_read == chunk_size);
 
         _buflen = bufpos;
         iface.read = _read_mem;

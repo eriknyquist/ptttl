@@ -252,7 +252,7 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
 
     int16_t *sample_buf_ptr = &sample_buf[0];
 
-    while ((ret = ptttl_sample_generator_generate(&generator, &num_samples, sample_buf_ptr)) != -1)
+    while ((ret = ptttl_sample_generator_generate(&generator, &num_samples, sample_buf_ptr)) == 0)
     {
         if (_big_endian)
         {
@@ -262,10 +262,6 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
             }
         }
 
-        if (1 == ret)
-        {
-            break;
-        }
 #if (PTTTL_WAVFILE_GENERATION_STRATEGY == 0) || (PTTTL_WAVFILE_GENERATION_STRATEGY == 2)
         size_t size_written = fwrite(&sample_buf, sizeof(uint16_t), num_samples, fp);
         if (num_samples != size_written)
