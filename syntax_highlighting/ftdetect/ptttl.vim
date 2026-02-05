@@ -1,1 +1,1 @@
-autocmd BufNewFile,BufRead *.ptttl setfiletype ptttl
+autocmd BufNewFile,BufRead *.ptttl,*.rtttl setfiletype ptttl
