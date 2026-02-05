@@ -1,0 +1,107 @@
+/* gen_samples_from_file.c
+ *
+ * Sample main.c showing how to read RTTTL/PTTTL source from a file, generate PCM
+ * audio samples, and print the sample values to stdout.
+ *
+ * Requires ptttl_parser.c and ptttl_sample_generator.c
+ *
+ * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
+ *
+ * Erik Nyquist 2025
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include "ptttl_parser.h"
+#include "ptttl_sample_generator.h"
+
+// File pointer for RTTTL/PTTTL source file
+static FILE *fp = NULL;
+
+// ptttl_input_iface_t callback to read the next PTTTL/RTTTL source character from the open file
+static int _read(char *nextchar)
+{
+    size_t ret = fread(nextchar, 1, 1, fp);
+
+    // Return 0 for success, 1 for EOF (no error condition)
+    return (int) (1u != ret);
+}
+
+// ptttl_input_iface_t callback to seek to a specific position in the open file
+static int _seek(uint32_t position)
+{
+    int ret = fseek(fp, (long) position, SEEK_SET);
+    if (feof(fp))
+    {
+        return 1;
+    }
+
+    return ret;
+}
+
+
+int main(int argc, char *argv[])
+{
+    if (2 != argc)
+    {
+        printf("Usage: %s <PTTTL/RTTTL filename>\n", argv[0]);
+
+        return -1;
+    }
+
+    fp = fopen(argv[1], "rb");
+    if (NULL == fp)
+    {
+        printf("Unable to open file %s\n", argv[1]);
+        return -1;
+    }
+
+    // Create and initialize PTTTL parser object
+    ptttl_parser_t parser;
+    ptttl_parser_input_iface_t iface = {.read=_read, .seek=_seek};
+    int ret = ptttl_parse_init(&parser, iface);
+    if (ret < 0)
+    {
+        ptttl_parser_error_t err = ptttl_parser_error(&parser);
+        printf("Error in %s (line %d, column %d): %s\n", argv[1], err.line, err.column, err.error_message);
+        fclose(fp);
+        return ret;
+    }
+
+    // Create and initialize PTTTL sample generator object
+    ptttl_sample_generator_t generator;
+    ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
+    ret = ptttl_sample_generator_create(&parser, &generator, &config);
+    if (ret < 0)
+    {
+        ptttl_parser_error_t err = ptttl_parser_error(&parser);
+        printf("Error in %s (line %d, column %d): %s\n", argv[1], err.line, err.column, err.error_message);
+        fclose(fp);
+        return ret;
+    }
+
+    // Generate 8k samples at a time and print each sample value
+    const uint32_t sample_buf_len = 8192;
+    int16_t sample_buf[sample_buf_len];
+    uint32_t num_samples = sample_buf_len;
+
+    while ((ret = ptttl_sample_generator_generate(&generator, &num_samples, sample_buf)) == 0)
+    {
+        for (uint32_t i = 0; i < num_samples; i++)
+        {
+            printf("%d\n", sample_buf[i]);
+        }
+    }
+
+    if (ret < 0)
+    {
+        ptttl_parser_error_t err = ptttl_parser_error(&parser);
+        printf("Error in %s (line %d, column %d): %s\n", argv[1], err.line, err.column, err.error_message);
+    }
+
+    fclose(fp);
+
+    return ret;
+}

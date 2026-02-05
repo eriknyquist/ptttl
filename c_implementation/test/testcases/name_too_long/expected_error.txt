@@ -1,0 +1,8 @@
+# Expected error message:
+Maximum song name length exceeded
+
+# Expected line number:
+1
+
+# Expected column number:
+256

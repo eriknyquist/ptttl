@@ -1,0 +1,8 @@
+# Expected error message:
+Expecting a musical note name
+
+# Expected line number:
+4
+
+# Expected column number:
+27

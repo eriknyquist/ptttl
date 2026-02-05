@@ -1,6 +1,16 @@
-/* ptttl_parser.h
+/*! \mainpage
  *
- * Parser for RTTTL (Ring Tone Text Transfer Language) and PTTTL (Polyphonic Tone
+ * See \link ptttl_parser.h API documentation for ptttl_parser.h \endlink
+ *
+ * See \link ptttl_sample_generator.h API documentation for ptttl_sample_generator.h \endlink
+ *
+ * See \link ptttl_to_wav.h API documentation for ptttl_to_wav.h \endlink
+ */
+
+/**
+ * @file ptttl_parser.h
+ *
+ * @brief Parser for RTTTL (Ring Tone Text Transfer Language) and PTTTL (Polyphonic Tone
  * Text Transfer Language, superset of RTTTL which supports polyphony)
  *
  * Converts a PTTTL or RTTTL source file into a stream of ptttl_output_note_t objects,
@@ -11,7 +21,7 @@
  *
  * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
  *
- * Erik Nyquist 2025
+ * @author Erik K. Nyquist
  */
 
 #ifndef PTTTL_PARSER_H
@@ -25,6 +35,7 @@
     extern "C" {
 #endif
 
+#define PTTTL_VERSION "v0.2.0"
 
 /**
  * Maximum number of channels (note lanes) allowed in a single PTTTL file. This
@@ -92,6 +103,7 @@ typedef struct
     uint32_t position;       ///< Current position in input text stream
     uint32_t line;           ///< Current line number in input text
     uint32_t column;         ///< Current column number in input text
+    uint32_t block;          ///< Current block number, starting from 0
     uint8_t have_saved_char; ///< 1 if a character has been read but not yet used
     char saved_char;         ///< Unused character
 } ptttl_parser_input_stream_t;

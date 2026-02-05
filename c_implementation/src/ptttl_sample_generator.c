@@ -21,17 +21,34 @@
 // Max positive value of a signed 16-bit sample
 #define MAX_SAMPLE_VALUE   (0x7FFF)
 
+// Default waveform type for all channels
+#define DEFAULT_WAVEFORM_TYPE WAVEFORM_TYPE_SINE
 
-// Store an error message for reporting by ptttl_sample_generator_error()
-#define ERROR(_parser, _msg)                                \
-{                                                           \
-    _error.error_message = _msg;                            \
-    _error.line = _parser->active_stream->line;             \
-    _error.column = _parser->active_stream->column;         \
+#define PI 3.14159265358979323846f
+
+// Store an error message for reporting by ptttl_parser_error()
+#define ERROR(_parser, _msg)                                        \
+{                                                                   \
+    _parser->error.error_message = _msg;                            \
+    _parser->error.line = _parser->active_stream->line;             \
+    _parser->error.column = _parser->active_stream->column;         \
 }
 
-// Static storage for description of last error
-static ptttl_parser_error_t _error = {.line = 0u, .column = 0u, .error_message=NULL};
+
+// Forward declaration of built-in waveform generators
+static float _sine_generator(float x, float p, unsigned int s);
+static float _triangle_generator(float x, float p, unsigned int s);
+static float _sawtooth_generator(float x, float p, unsigned int s);
+static float _square_generator(float x, float p, unsigned int s);
+
+// Mapping of waveform type enums to waveform generator functions
+static ptttl_waveform_generator_t _waveform_generators[WAVEFORM_TYPE_COUNT] =
+{
+    _sine_generator,           // WAVEFORM_TYPE_SINE
+    _triangle_generator,       // WAVEFORM_TYPE_TRIANGLE
+    _sawtooth_generator,       // WAVEFORM_TYPE_SAWTOOTH
+    _square_generator          // WAVEFORM_TYPE_SQUARE
+};
 
 
 /**
@@ -41,10 +58,10 @@ static ptttl_parser_error_t _error = {.line = 0u, .column = 0u, .error_message=N
  *
  * @return Result
  */
-static unsigned int _raise_powerof2(unsigned int exp)
+static uint32_t _raise_powerof2(uint32_t exp)
 {
-    unsigned int ret = 1u;
-    for (unsigned int i = 0u; i < exp; i++)
+    uint32_t ret = 1u;
+    for (uint32_t i = 0u; i < exp; i++)
     {
         ret *= 2u;
     }
@@ -52,14 +69,96 @@ static unsigned int _raise_powerof2(unsigned int exp)
     return ret;
 }
 
+/**
+ * Square wave generator
+ *
+ * @see ptttl_waveform_generator_t
+ */
+static float _square_generator(float x, float p, unsigned int s)
+{
+    x = x - (int)x;
+    if (x < 0.0f) x += 1.0f;
+
+    // Calculate max. number of harmonics given the waveform frequency
+    int maxh = (int) ((((float) s) * 0.5f) / p);
+    if (maxh < 1) maxh = 1;               // At least the fundamental harmonic
+    int hcount = (maxh < PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS) ?
+                  maxh : PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS;
+
+    // Generate square point by summing points of sine waves of the harmonics
+    float sum = 0.0f;
+    // square only has odd harmonics
+    for (int n = 1; n <= hcount; n += 2)
+    {
+        sum += (4.0f / (PI * n)) * _sine_generator(n * x, 0.0f, 0u);
+    }
+
+    return sum;
+}
 
 /**
+ * Sawtooth wave generator
+ *
+ * @see ptttl_waveform_generator_t
+ */
+static float _sawtooth_generator(float x, float p, unsigned int s)
+{
+    x = x - (int)x;
+    if (x < 0.0f) x += 1.0f;
+
+    // Calculate max. number of harmonics given the waveform frequency
+    int maxh = (int) ((((float) s) * 0.5f) / p);
+    if (maxh < 1) maxh = 1;               // At least the fundamental harmonic
+    int hcount = (maxh < PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS) ?
+                  maxh : PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS;
+
+    // Generate sawtooth point by summing points of sine waves of the harmonics
+    float sum = 0.0f;
+    for (int n = 1; n <= hcount; ++n)
+    {
+        float sign = (n & 1) ? 1.0f : -1.0f;
+        sum += sign * (2.0f / (PI * n)) * _sine_generator(n * x, 0.0f, 0u);
+    }
+    return sum;
+}
+
+/**
+ * Triangle wave generator
+ *
+ * @see ptttl_waveform_generator_t
+ */
+static float _triangle_generator(float x, float p, unsigned int s)
+{
+    (void) p; // Unused
+    (void) s; // Unused
+
+    float value = 0.0f;
+
+    for (int k = 0; k < PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS; k++)
+    {
+        int n = 2 * k + 1;
+        float sign = (k & 1) ? -1.0f : 1.0f;
+        value += sign * _sine_generator(n * x, p, s) / (n * n);
+    }
+
+    value *= 8.0f / (float) (PI * PI);
+    return value;
+}
+
+/**
+ * Sine wave generator
+ *
+ * @see ptttl_waveform_generator_t
+ *
  * Fast sine approximation copied from:
  * https://github.com/skeeto/scratch/blob/master/misc/rtttl.c
- * x is in turns (0..1), not radians (0..2*pi)
+ *
  */
-static float fast_sinf(float x)
+static float _sine_generator(float x, float p, unsigned int s)
 {
+    (void) p; // Unused
+    (void) s; // Unused
+
     x  = x < 0 ? 0.5f - x : x;
     x -= 0.500f + (float)(int)x;
     x *= 16.00f * ((x < 0 ? -x : x) - 0.50f);
@@ -69,34 +168,38 @@ static float fast_sinf(float x)
 
 
 /**
- * Generate a single point on a sine wave, between 0.0-1.0, for a given sample rate and frequency
+ * Generate a single point on a waveform, between -1.0-1.0, for a given sample rate and frequency
  *
+ * @param wgen         Waveform generator function
  * @param sample_rate  Sampling rate
  * @param freq         Frequency of sine wave
  * @param sine_index   Index of sample within this note (0 is the first sample of the note)
  *
  * @return Sine wave sample
  */
-static float _generate_sine_point(unsigned int sample_rate, float freq, unsigned int sine_index)
+static float _generate_waveform_point(ptttl_waveform_generator_t wgen, unsigned int sample_rate,
+                                      float freq, unsigned int sine_index)
 {
     float sine_state = freq * (((float) sine_index) / (float) sample_rate);
-    return fast_sinf(sine_state);
+    return wgen(sine_state, freq, sample_rate);
 }
 
 
 /**
- * Generate a single sine wave sample between 0-65535 for a given sample rate and frequency
+ * Generate a single waveform sample between 0-65535 for a given sample rate and frequency
  *
+ * @param wgen         Waveform generator function
  * @param sample_rate  Sampling rate
- * @param freq         Frequency of sine wave
+ * @param freq         Frequency of the waveform
  * @param sine_index   Index of sample within this note (0 is the first sample of the note)
  *
  * @return Sine wave sample
  */
-static int32_t _generate_sine_sample(unsigned int sample_rate, float freq, unsigned int sine_index)
+static int32_t _generate_waveform_sample(ptttl_waveform_generator_t wgen, unsigned int sample_rate,
+                                         float freq, unsigned int sine_index)
 {
     // Calculate sample value between 0.0 - 1.0
-    float sample_norm = _generate_sine_point(sample_rate, freq, sine_index);
+    float sample_norm = _generate_waveform_point(wgen, sample_rate, freq, sine_index);
 
     // Convert to 0x0-0x7fff range
     return (int32_t) (sample_norm * (float) MAX_SAMPLE_VALUE);
@@ -129,29 +232,18 @@ static void _note_number_to_pitch(uint32_t note_number, float *pitch_hz)
         493.883301256f    // NOTE_B
     };
 
-    float result = 0.0f;
-
-    // Some nasty arithmetic to do a branchless conversion of note number to octave number
-    int octave = ((int) (((note_number - 3u) / 12u) + 1u)) * (int) !(note_number < 3);
-
-    if (0 == octave)
-    {
-        result = note_pitches[NOTE_A + (note_number - 1u)];
-    }
-    else
-    {
-        unsigned int note_pitch_index = note_number - _octave_starts[octave];
-        result = note_pitches[note_pitch_index];
-    }
+    uint32_t octave = ((note_number + 20u) / 12u) - 1u;
+    uint32_t note_pitch_index = (note_number + 8u) % NOTE_PITCH_COUNT;
+    float result = note_pitches[note_pitch_index];
 
     // Set true pitch based on octave, if octave is not 4
-    if (octave < 4)
+    if (octave < 4u)
     {
-        result = result / (float) _raise_powerof2((unsigned int) (4 - octave));
+        result = result / (float) _raise_powerof2(4u - octave);
     }
-    else if (octave > 4)
+    else if (octave > 4u)
     {
-        result = result * (float) _raise_powerof2((unsigned int) (octave - 4));
+        result = result * (float) _raise_powerof2(octave - 4u);
     }
 
     *pitch_hz = result;
@@ -208,13 +300,6 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
     }
 }
 
-/**
- * @see ptttl_sample_generator.h
- */
-ptttl_parser_error_t ptttl_sample_generator_error(void)
-{
-    return _error;
-}
 
 /**
  * @see ptttl_sample_generator.h
@@ -222,16 +307,9 @@ ptttl_parser_error_t ptttl_sample_generator_error(void)
 int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator_t *generator,
                                   ptttl_sample_generator_config_t *config)
 {
-    if (NULL == parser)
-    {
-        return -1;
-    }
-
-    if ((NULL == generator) || (NULL == config))
-    {
-        ERROR(parser, "NULL pointer passed to function");
-        return -1;
-    }
+    ASSERT(NULL != parser);
+    ASSERT(NULL != generator);
+    ASSERT(NULL != config);
 
     if (0u == parser->channel_count)
     {
@@ -260,11 +338,13 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
         int ret = ptttl_parse_next(generator->parser, chan, &note);
         if (ret != 0)
         {
-            _error = ptttl_parser_error(generator->parser);
             return ret;
         }
 
         _load_note_stream(generator, &note, &generator->note_streams[chan]);
+
+        // Set default waveform generator
+        generator->note_streams[chan].wgen = _waveform_generators[DEFAULT_WAVEFORM_TYPE];
     }
 
     return 0;
@@ -297,12 +377,12 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_n
 
         if ((0u != stream->vibrato_frequency) || (0u != stream->vibrato_variance))
         {
-            float vsine = _generate_sine_point(generator->config.sample_rate, stream->vibrato_frequency,
-                                               stream->sine_index);
+            float vsine = _generate_waveform_point(_sine_generator, generator->config.sample_rate,
+                                                   stream->vibrato_frequency, stream->sine_index);
             float pitch_change_hz = ((float) stream->vibrato_variance) * vsine;
             float note_pitch_hz = stream->pitch_hz + pitch_change_hz;
 
-            float vsample = fast_sinf(stream->phasor_state);
+            float vsample = stream->wgen(stream->phasor_state, note_pitch_hz, generator->config.sample_rate);
 
             float phasor_inc = note_pitch_hz / generator->config.sample_rate;
             stream->phasor_state += phasor_inc;
@@ -315,7 +395,8 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_n
         }
         else
         {
-            raw_sample = _generate_sine_sample(generator->config.sample_rate, stream->pitch_hz, stream->sine_index);
+            raw_sample = _generate_waveform_sample(stream->wgen, generator->config.sample_rate,
+                                                   stream->pitch_hz, stream->sine_index);
         }
 
         stream->sine_index += 1u;
@@ -348,10 +429,6 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_n
         {
             _load_note_stream(generator, &note, &generator->note_streams[channel_idx]);
         }
-        else if (ret < 0)
-        {
-            _error = ptttl_parser_error(generator->parser);
-        }
     }
 
     return ret;
@@ -360,19 +437,55 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_n
 /**
  * @see ptttl_sample_generator.h
  */
-int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_t *num_samples,
-                                    int16_t *samples)
+int ptttl_sample_generator_set_waveform(ptttl_sample_generator_t *generator,
+                                        uint32_t channel, ptttl_waveform_type_e type)
 {
-    if (NULL == generator)
+    ASSERT(NULL != generator);
+
+    if (channel >= generator->parser->channel_count)
     {
+        ERROR(generator->parser, "Invalid channel index");
         return -1;
     }
 
-    if ((NULL == num_samples) || (NULL == samples))
+    if ((type < 0) || (type >= WAVEFORM_TYPE_COUNT))
     {
-        ERROR(generator->parser, "NULL pointer passed to function");
+        ERROR(generator->parser, "Invalid waveform type");
         return -1;
     }
+
+    generator->note_streams[channel].wgen = _waveform_generators[type];
+    return 0;
+}
+
+/**
+ * @see ptttl_sample_generator.h
+ */
+int ptttl_sample_generator_set_custom_waveform(ptttl_sample_generator_t *generator,
+                                               uint32_t channel, ptttl_waveform_generator_t wgen)
+{
+    ASSERT(NULL != generator);
+    ASSERT(NULL != wgen);
+
+    if (channel >= generator->parser->channel_count)
+    {
+        ERROR(generator->parser, "Invalid channel index");
+        return -1;
+    }
+
+    generator->note_streams[channel].wgen = wgen;
+    return 0;
+}
+
+/**
+ * @see ptttl_sample_generator.h
+ */
+int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_t *num_samples,
+                                    int16_t *samples)
+{
+    ASSERT(NULL != generator);
+    ASSERT(NULL != num_samples);
+    ASSERT(NULL != samples);
 
     uint32_t samples_to_generate = *num_samples;
     *num_samples = 0u;
@@ -401,8 +514,7 @@ int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_
                 return ret;
             }
 
-            generator->channel_finished[chan] = ret;
-
+            generator->channel_finished[chan] = (uint8_t) ret;
             summed_sample += chan_sample;
         }
 

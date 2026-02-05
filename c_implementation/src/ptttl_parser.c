@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "ptttl_parser.h"
 #include "ptttl_common.h"
 
@@ -254,8 +255,12 @@ static int _peek_next_char(ptttl_parser_t *parser, char *nextchar)
     else
     {
         ret = _readchar_wrapper(parser, nextchar);
-        parser->active_stream->have_saved_char = 1u;
-        parser->active_stream->saved_char = *nextchar;
+
+        if (ret == 0)
+        {
+            parser->active_stream->have_saved_char = 1u;
+            parser->active_stream->saved_char = *nextchar;
+        }
     }
 
     return ret;
@@ -264,10 +269,7 @@ static int _peek_next_char(ptttl_parser_t *parser, char *nextchar)
 static int _seek_wrapper(ptttl_parser_t *parser, uint32_t position)
 {
     int ret = parser->iface.seek(position);
-    if (0 == ret)
-    {
-        parser->active_stream->position = position;
-    }
+    parser->active_stream->position = position;
 
     return ret;
 }
@@ -291,6 +293,8 @@ static int _eat_all_nonvisible_chars(ptttl_parser_t *parser)
 
     while ((readchar_ret = _peek_next_char(parser, &nextchar)) == 0)
     {
+        CHECK_IFACE_RET_EOF(parser, readchar_ret);
+
         if (1u == in_comment)
         {
             (void) _read_next_char(parser, &nextchar);
@@ -298,15 +302,13 @@ static int _eat_all_nonvisible_chars(ptttl_parser_t *parser)
             {
                 in_comment = 0u;
             }
-            else
-            {
-                continue;
-            }
+
+            continue;
         }
 
         if (!IS_WHITESPACE(nextchar))
         {
-            if ('#' == nextchar)
+            if ('/' == nextchar)
             {
                 (void) _read_next_char(parser, &nextchar);
                 in_comment = 1u;
@@ -321,8 +323,6 @@ static int _eat_all_nonvisible_chars(ptttl_parser_t *parser)
             (void) _read_next_char(parser, &nextchar);
         }
     }
-
-    CHECK_IFACE_RET_EOF(parser, readchar_ret);
 
     return readchar_ret;
 }
@@ -403,7 +403,24 @@ static int _parse_uint_from_input(ptttl_parser_t *parser, unsigned int *output,
         return -1;
     }
 
-    *output = (unsigned int) strtoul(buf, NULL, 0);
+    char *endptr = NULL;
+    unsigned long lval = 0;
+    lval = strtoul(buf, &endptr, 0);
+
+    if ((endptr == NULL) || (*endptr != '\0'))
+    {
+        ERROR(parser, "Invalid integer (too large?)");
+        return -1;
+    }
+
+    if ((ULONG_MAX == lval) || (UINT_MAX < lval))
+    {
+        ERROR(parser, "Integer is too large");
+        return -1;
+    }
+
+    *output = (unsigned int) lval;
+
     return 0;
 }
 
@@ -468,6 +485,14 @@ static int _parse_option(char opt, ptttl_parser_t *parser, uint8_t option_expect
     {
         case 'b':
             ret = _parse_uint_from_input(parser, &parser->bpm, 0u);
+            if (0 == ret)
+            {
+                if (0u == parser->bpm)
+                {
+                    ERROR(parser, "BPM cannot be zero");
+                    return -1;
+                }
+            }
             break;
         case 'd':
         {
@@ -831,6 +856,7 @@ static int _parse_ptttl_note(ptttl_parser_t *parser, ptttl_output_note_t *output
  */
 ptttl_parser_error_t ptttl_parser_error(ptttl_parser_t *parser)
 {
+    ASSERT(parser != NULL);
     return parser->error;
 }
 
@@ -839,15 +865,13 @@ ptttl_parser_error_t ptttl_parser_error(ptttl_parser_t *parser)
  */
 int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
 {
-    if (NULL == parser)
-    {
-        return -1;
-    }
+    ASSERT(NULL != parser);
 
     parser->stream.line = 1u;
     parser->stream.column = 0u;
     parser->stream.position = 0u;
     parser->stream.have_saved_char = 0u;
+    parser->stream.block = 0u;
     parser->channel_count = 0u;
     parser->error.line = 0;
     parser->error.column = 0;
@@ -862,13 +886,19 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
     parser->iface = iface;
     parser->active_stream = &parser->stream;
 
-    // Read name (first field)
-    int ret = _get_next_visible_char(parser, &parser->name[0]);
-    CHECK_IFACE_RET(parser, ret);
+    // Ensure stream position is at 0
+    parser->iface.seek(0);
 
-    unsigned int namepos = 1u;
+    // Read name (first field)
+    unsigned int namepos = 0u;
     int readchar_ret = 0;
     char namechar = '\0';
+    int ret = 0;
+    parser->name[0] = '\0';
+
+    ret = _eat_all_nonvisible_chars(parser);
+    CHECK_IFACE_RET(parser, ret);
+
     while ((readchar_ret = _read_next_char(parser, &namechar)) == 0)
     {
         if (':' == namechar)
@@ -880,7 +910,7 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
         {
             if ((PTTTL_MAX_NAME_LEN - 1u) == namepos)
             {
-                ERROR(parser, "Name too long, see PTTTL_MAX_NAME_LEN in ptttl_parser.h");
+                ERROR(parser, "Maximum song name length exceeded");
                 return -1;
             }
 
@@ -912,6 +942,7 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
             chan->column = parser->active_stream->column;
             chan->have_saved_char = parser->active_stream->have_saved_char;
             chan->saved_char = parser->active_stream->saved_char;
+            chan->block = 0u;
 
             parser->channel_count += 1u;
 
@@ -940,10 +971,10 @@ int ptttl_parse_init(ptttl_parser_t *parser, ptttl_parser_input_iface_t iface)
 }
 
 /**
- * Eat input until we reach the first note of the given channel in the next block
+ * Advance the active input stream to the first note of the corresponding channel in the next block
  *
  * @param parser         Pointer to ptttl parser object
- * @param channel_idx    Index of channel to find
+ * @param channel_idx    Index of channel for active input stream
  * @param find_semicolon If true, start by eating input until a ';' (block end) is seen
  *
  * @return  0 if next block was found, 1 if end of input was reached, and -1 if an error occurred
@@ -952,34 +983,91 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
 {
     int ret = 0;
     char nextchar = '\0';
+    uint32_t target_block = parser->active_stream->block + 1u;
+    ptttl_parser_input_stream_t *earlier_stream = NULL;
+    uint32_t earlier_idx = 0u;
 
-    if (1u == find_semicolon)
+    /* See if another lower channel is already in our target block -- if so, we can
+     * avoid reading characters that have already been read by lower channel's input stream */
+    if (channel_idx > 0u)
     {
-        while ((ret = _get_next_visible_char(parser, &nextchar)) == 0)
+        for (int eidx = ((int) channel_idx) - 1; eidx >= 0; eidx--)
         {
-            CHECK_IFACE_RET_EOF(parser, ret);
-            if (';' == nextchar)
+            if (parser->channels[eidx].block == target_block)
             {
+                earlier_stream = &parser->channels[eidx];
+                earlier_idx = (uint32_t) eidx;
                 break;
             }
         }
     }
 
-    ret = _eat_all_nonvisible_chars(parser);
-    if (ret != 0)
+    uint32_t pipes_to_skip = 0u;
+
+    // No suitable lower channel found- have to do it the slower way
+    if (earlier_stream == NULL)
     {
-        return ret;
+        if (1u == find_semicolon)
+        {
+            // See if another higher channel is at a further position in the current block
+            uint32_t furthest_pos = parser->active_stream->position;
+            ptttl_parser_input_stream_t *furthest_stream = NULL;
+            for (int fidx = channel_idx + 1; fidx < parser->channel_count; fidx++)
+            {
+                if ((parser->channels[fidx].block == parser->active_stream->block) &&
+                    (parser->channels[fidx].position > furthest_pos))
+                {
+                    furthest_stream = &parser->channels[fidx];
+                    furthest_pos = furthest_stream->position;
+                }
+            }
+
+            if (furthest_stream != NULL)
+            {
+                // Suitable higher channel found- we can skip ahead
+                int ret = _seek_wrapper(parser, furthest_stream->position);
+                CHECK_IFACE_RET_EOF(parser, ret);
+                *parser->active_stream = *furthest_stream;
+            }
+
+            // Find semicolon at the end of the current block
+            while ((ret = _get_next_visible_char(parser, &nextchar)) == 0)
+            {
+                CHECK_IFACE_RET_EOF(parser, ret);
+                if (';' == nextchar)
+                {
+                    break;
+                }
+            }
+        }
+
+        ret = _eat_all_nonvisible_chars(parser);
+        if (ret != 0)
+        {
+            return ret;
+        }
+
+        if (0u == channel_idx)
+        {
+            // If first channel, we're done
+            parser->active_stream->block = target_block;
+            return 0;
+        }
+
+        pipes_to_skip = channel_idx;
+    }
+    // Suitable lower channel found- we can skip ahead
+    else
+    {
+        pipes_to_skip = channel_idx - earlier_idx;
+        int ret = _seek_wrapper(parser, earlier_stream->position);
+        CHECK_IFACE_RET_EOF(parser, ret);
+        *parser->active_stream = *earlier_stream;
     }
 
-    if (0u == channel_idx)
-    {
-        // If first channel, we're done
-        return 0;
-    }
-
-    /* Skip 'channel_idx' pipe characters '|' to reach the first
-     * note of this channel in the next block */
-    for (uint32_t i = 0u; i < channel_idx; i++)
+    /* Skip pipe characters '|' until we reach the first note of this channel
+     * in the next block */
+    for (uint32_t i = 0u; i < pipes_to_skip; i++)
     {
         while ((ret = _get_next_visible_char(parser, &nextchar)) == 0)
         {
@@ -988,9 +1076,15 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
             {
                 break;
             }
+            else if (';' == nextchar)
+            {
+                ERROR(parser, "Unexpected end of block (all blocks must have the same channel count)");
+                return -1;
+            }
         }
     }
 
+    parser->active_stream->block = target_block;
     return _eat_all_nonvisible_chars(parser);
 }
 
@@ -1000,16 +1094,8 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
  */
 int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_note_t *note)
 {
-    if (NULL == parser)
-    {
-        return -1;
-    }
-
-    if (NULL == note)
-    {
-        ERROR(parser, "NULL output pointer provided");
-        return -1;
-    }
+    ASSERT(NULL != parser);
+    ASSERT(NULL != note);
 
     if (channel_idx >= parser->channel_count)
     {

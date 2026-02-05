@@ -1,0 +1,6 @@
+multiple tracks, first few notes are sharps (regression test for bug causing sharp symbols to be
+interpreted as comments):
+d=8,o=5,b=180:
+
+C4,C#4,D4,D#4,E4,F4,F#4,G4,G#4,A4,A#4,B4|
+E4,F4,F#4,G4,G#4,A4,A#4,B4,C5,C#5,D5,D#5

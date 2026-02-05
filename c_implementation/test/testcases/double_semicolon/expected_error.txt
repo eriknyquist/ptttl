@@ -1,5 +1,5 @@
 # Expected error message:
-Expecting a musical note name
+Unexpected end of block (all blocks must have the same channel count)
 
 # Expected line number:
 27

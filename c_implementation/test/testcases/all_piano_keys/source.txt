@@ -1,5 +1,5 @@
-# Plays all 88 notes on a piano, in sequence, lowest to highest. Useful as a smoke
-# test to manually check that things are working.
+// Plays all 88 notes on a piano, in sequence, lowest to highest. Useful as a smoke
+// test to manually check that things are working.
 
 Piano test:
 d=16,o=5,b=180:

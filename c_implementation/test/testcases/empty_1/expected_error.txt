@@ -1,8 +1,8 @@
 # Expected error message:
-Unexpected EOF encountered
+PTTTL parser object has a channel count of 0
 
 # Expected line number:
 2
 
 # Expected column number:
-1
+0

@@ -1,84 +1,35 @@
 .. contents:: Table of Contents
 
-Polyphonic Tone Transfer Language
-#################################
+Polyphonic Tone Text Transfer Language
+######################################
 
-``ptttl`` is a command-line utility for converting PTTTL and
-`RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ files to
-.wav audio files. `ptttl` also provides an API for parsing PTTTL and
-`RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ files to convert them
-into usable musical data.
-
-The Polyphonic Tone Text Transfer Language (PTTTL) is a way to describe polyphonic
-melodies, and is a superset of Nokia's
+Polyphonic Tone Text Transfer Language (PTTTL) describes polyphonic
+melodies in human-readable plain text files, and is a superset of Nokia's
 `RTTTL <https://en.wikipedia.org/wiki/Ring_Tone_Transfer_Language>`_ format, extending
 it to enable polyphony and vibrato.
 
 
-Python reference implementation
+Python & C reference implementations
+####################################
+
+Reference implementations in python and C are provided. The C implementation has
+been much more thoroughly tested and fuzzed, and I strongly recommend using the C
+version instead of the python version.
+
+Convert MIDI to RTTTL and PTTTL
 ###############################
 
-A reference implementation in python is provided for general purpose applications.
+A python script `midi_to_ptttl.py` is provided for converting single-track MIDI
+files to RTTTL, and multi-track MIDI files to PTTTL. Read the header comment at
+the top of the script to understand the limitations.
 
 API documentation
 ==================
-API documentation `can be found here <https://ptttl.readthedocs.io/>`_
 
+Python API documentation `can be found here <https://ptttl.readthedocs.io/>`_.
 
-Install
-=======
+C API documentation `can be found here <https://eriknyquist.github.io/ptttl>`_.
 
-Install from pip
-
-::
-
-    pip install -r ptttl
-
-
-Converting PTTTL/RTTTL files to .wav files from the command line
-================================================================
-
-::
-
-   python -m ptttl input.ptttl -f output.wav
-
-Run ``python -m ptttl -h`` to see available options.
-
-
-Parsing PTTTL/RTTTL files in a python script
-============================================
-
-::
-
-   >>> from ptttl.parser import PTTTLParser
-   >>> with open('input.pttl', 'r') as fh:
-   ...     ptttl_source = fh.read()
-   ...
-   >>> parser = PTTTLParser()
-   >>> ptttl_data = parser.parse(ptttl_source)
-   >>> ptttl_data
-   PTTTLData([PTTTLNote(pitch=195.9977, duration=0.5625), PTTTLNote(pitch=195.9977, duration=0.2812), ...], ...)
-
-
-Converting PTTTL/RTTTL files to .wav in a python script
-=======================================================
-
-::
-
-   >>> from ptttl.audio import ptttl_to_wav
-   >>> with open('input.pttl', 'r') as fh:
-   ...     ptttl_source = fh.read()
-   ...
-   >>> ptttl_to_wav(ptttl_source, 'output.wav')
-
-
-C reference implementation
-##########################
-
-A reference implemention written in C is provided, which is suitable for use in
-embedded applications, under the ``c_implementation`` directory.
-
-`See the README for the C implementation here. <c_implementation/README.rst>`_
 
 PTTTL format
 ############
@@ -89,20 +40,21 @@ A parser that properly handles PTTTL can also handle RTTTL.
 A PTTTL string is made up of three colon-seperated sections; **name** section,
 **default values** section, and **data** section.
 
-Whitespace characters, empty lines, and lines beginning with a "#" character
-are ignored.
+Whitespace characters, empty lines, and text beginning with a "/" character
+until the end of a line are ignored.
 
-The initial "name" section is intended to contain the name of the ringtone
-in the original RTTTL format. PTTTL requires this field to be present, to
-maintain backwards compatibility with RTTTL, but places no constraints on its
-contents.
+*name* section
+==============
+
+The first section in a PTTTL file is an arbitrary string up to 256 characters long,
+intended to be used as the name of the song.
 
 *default values* section
 ========================
 
-The very first statement is the *default values* section, and it is the same as
-the *default values* section from the RTTTL format, except with two additional
-vibrato-related settings:
+The next section after the "name" section is the *default values* section, and it
+is the same as the *default values* section from the RTTTL format, except with two
+additional vibrato-related settings:
 
 ::
 
@@ -124,9 +76,9 @@ pipe character ``|``, all of which will be played in unison.
 
 The format of a note is identical to that described by the RTTTL format. Each
 note includes, in sequence; a duration specifier, a standard music note, either
-a, b, c, d, e, f or g (optionally followed by '#' or 'b' for sharps and flats),
-and an octave specifier. If no duration or octave specifier are present, the
-default applies.
+a, b, c, d, e, f or g (optionally followed by '#' or 'b' for sharps and flats,
+or a dot '.' for dotted rhythms), and an octave specifier. If no duration or
+octave specifier are present, the default applies.
 
 Durations
 ---------
@@ -179,6 +131,24 @@ values seperated by a ``-`` character. For example:
 * ``4c#v10-15`` refers to a C# quarter note with vibrato enabled, using a vibrato frequency of 10Hz,
   with a maximum vibrato variance of 15Hz from the main pitch.
 
+Comments
+--------
+
+Single-line comments are supported. A comment begins with a single forward slash
+(or you can use a double forward slash, if that's what you're used to) and
+terminates at the end of the line. Everything between the first forward slash and
+the end of the line is ignored by the PTTTL parser.
+
+::
+
+    Test Melody:
+    b=123, d=4, o=4:
+
+    // Comment on a line of its own
+    16c, 8p, 16c |
+    16e, 8p, 16e | // Comment after some notes
+    16g5, 8p, 16g5
+
 Example
 -------
 
@@ -186,7 +156,7 @@ Consider the following PTTTL string:
 
 ::
 
-    # 123 beats-per-minute, default quarter note, default 4th octave
+    // 123 beats-per-minute, default quarter note, default 4th octave
     Test Melody:
     b=123, d=4, o=4:
 
@@ -203,7 +173,7 @@ PTTTL:
 
 ::
 
-    # Nicely aligned
+    // Nicely aligned
     Test Melody:
     b=123, d=4, o=4:
 
@@ -215,13 +185,13 @@ In order to keep things readable for large PTTTL files with multiple
 concurrent tracks, a semicolon character ``;`` can be used further break up
 melodies into more practical blocks. Just as the veritcal pipe character ``|``
 seperates *concurrent* tracks within a single polyphonic melody, the semicolon
-character seperates multiple *sequential* polyphonic melodies within a single
+character seperates multiple *sequential* polyphonic melodies within the
 data section. Blocks of notes seperated by semicolons will be "stitched together",
 or concatenated, in the final output.
 
 The semicolon does not affect any of the timings or pitch of the generated
 tones; it just makes the PTTTL source a bit more readable, and gives you more
-options for organizing the lines when writing music. Have a look at this larger 
+options for organizing the lines when writing music. Have a look at this larger
 PTTTL file, with 4 simultaneous melodies, for a good example of why the
 semicolon is useful:
 
@@ -230,7 +200,7 @@ semicolon is useful:
     All Star but it's a Bach chorale:
     d=4,o=5,b=100, f=7, v=10:
 
-    #some   bo  -   dy      once    told    me      the     world   was     go -
+    //some   bo  -   dy      once    told    me      the     world   was     go -
 
     4gb5v,  8db6,   8bb5,   4bb5,   8ab5v,  8gb5,   8gb5,   4b5v,   8bb5,   8bb5 |
     4gb4,   8gb4,   8gb4,   4gb4,   8f4,    8gb4,   8gb4,   4ab4,   8g4,    8g4  |
@@ -239,7 +209,7 @@ semicolon is useful:
 
 
 
-    #-na    roll    me,     I       aint    the     sharp - est     tool    in
+    //-na    roll    me,     I       aint    the     sharp - est     tool    in
 
     8ab5,   8ab5v,  4gb5,   8gb5v,  8db6v,  8bb5,   8bb5v,  8ab5,   8ab5v,  8gb5 |
     8ab4,   8eb4,   4eb4,   8eb4,   8gb4,   8gb4,   8gb4,   8f4,    8f4,    8eb4 |
@@ -248,7 +218,7 @@ semicolon is useful:
 
 
 
-    #the    she  -  ed,             she     was     loo  -  king    kind    of
+    //the    she  -  ed,             she     was     loo  -  king    kind    of
 
     8gb5,   4eb5v,  8db5v,  2p,     8gb5,   8gb5,   8db6v,  8bb5,   8bb5,   8ab5 |
     8eb4,   4b3,    8ab3,   2p,     8db4,   8db4,   8gb4,   8gb4,   8gb4,   8f4  |
@@ -257,7 +227,7 @@ semicolon is useful:
 
 
 
-    #dumb   with    her     fing  - er      and     her     thumb   in      the
+    //dumb   with    her     fing  - er      and     her     thumb   in      the
 
     8ab5v,  8gb5,   8gb5,   4b5v,   8bb5,   8bb5,   8ab5,   8ab5v,  8gb5,   8gb5 |
     8gb4,   8gb4,   8eb4,   4eb4,   8eb4,   8eb4,   8eb4,   8eb4,   8eb4,   8eb4 |
@@ -266,7 +236,7 @@ semicolon is useful:
 
 
 
-    #shape  of      an      L       on      her     for  -  head
+    //shape  of      an      L       on      her     for  -  head
 
     4db6v,  8bb5v,  8bb5v,  4ab5v,  8gb5,   8gb5,   4ab5v,  8eb5 |
     4gb4,   8gb4,   8gb4,   4f4,    8f4,    8eb4,   4eb4,   8b3  |

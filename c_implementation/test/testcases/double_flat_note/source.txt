@@ -1,4 +1,4 @@
-# Note written erroneously with two flat symbols ('bb')
+// Note written erroneously with two flat symbols ('bb')
 
 Piano test:
 d=16,o=5,b=180:

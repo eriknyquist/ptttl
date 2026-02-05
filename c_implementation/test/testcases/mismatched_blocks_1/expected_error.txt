@@ -1,0 +1,8 @@
+# Expected error message:
+Unexpected end of block (all blocks must have the same channel count)
+
+# Expected line number:
+7
+
+# Expected column number:
+45
