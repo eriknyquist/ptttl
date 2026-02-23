@@ -7,16 +7,14 @@
  * which is an intermediate representation that can be processed by ptttl_sample_generator.c
  * to obtain PCM audio samples.
  *
- * Requires stdint.h, strtoul() from stdlib.h, and memset() from string.h.
+ * Requires stdint.h and memset() from string.h.
  *
  * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
  *
  * Erik Nyquist 2025
  */
 
-#include <stdlib.h>
 #include <string.h>
-#include <limits.h>
 #include "ptttl_parser.h"
 #include "ptttl_common.h"
 
@@ -361,7 +359,7 @@ static int _get_next_visible_char(ptttl_parser_t *parser, char *output)
 static int _parse_uint_from_input(ptttl_parser_t *parser, unsigned int *output,
                                   uint8_t eof_allowed)
 {
-    char buf[32u];
+    char buf[5u];
     int pos = 0;
     int readchar_ret = 0;
     char nextchar = '\0';
@@ -371,7 +369,7 @@ static int _parse_uint_from_input(ptttl_parser_t *parser, unsigned int *output,
         if (IS_DIGIT(nextchar))
         {
             (void) _read_next_char(parser, &nextchar);
-            if (pos == (sizeof(buf) - 1))
+            if (pos == sizeof(buf))
             {
                 ERROR(parser, "Integer is too long");
                 return -1;
@@ -382,7 +380,6 @@ static int _parse_uint_from_input(ptttl_parser_t *parser, unsigned int *output,
         }
         else
         {
-            buf[pos] = '\0';
             break;
         }
     }
@@ -403,23 +400,27 @@ static int _parse_uint_from_input(ptttl_parser_t *parser, unsigned int *output,
         return -1;
     }
 
-    char *endptr = NULL;
-    unsigned long lval = 0;
-    lval = strtoul(buf, &endptr, 0);
+    unsigned int result = 0u;
+    int consumed = 0u;
 
-    if ((endptr == NULL) || (*endptr != '\0'))
+    for (int i = 0u; i < pos; i++)
+    {
+        if ((buf[i] < '0') || (buf[i] > '9'))
+        {
+            break;
+        }
+
+        result = (10 * result) + (buf[i] - '0');
+        consumed += 1;
+    }
+
+    if (consumed != pos)
     {
         ERROR(parser, "Invalid integer (too large?)");
         return -1;
     }
 
-    if ((ULONG_MAX == lval) || (UINT_MAX < lval))
-    {
-        ERROR(parser, "Integer is too large");
-        return -1;
-    }
-
-    *output = (unsigned int) lval;
+    *output = result;
 
     return 0;
 }

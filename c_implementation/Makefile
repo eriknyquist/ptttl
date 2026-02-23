@@ -32,6 +32,7 @@ make_build_dirs:
 	@$(MKDIR) $(OBJ_DIR)
 	@$(MKDIR) $(TEST_OBJ_DIR)
 
+examples: CFLAGS += -O2
 examples: make_build_dirs
 	@echo
 	@echo "Building core files..."

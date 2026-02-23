@@ -1,8 +1,8 @@
 # Expected error message:
-Integer is too large
+Integer is too long
 
 # Expected line number:
 2
 
 # Expected column number:
-18
+8
