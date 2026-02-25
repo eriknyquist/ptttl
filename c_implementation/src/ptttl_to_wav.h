@@ -31,7 +31,7 @@
  * available options make various trade-offs between dynamic memory usage,
  * performance, and composability:
  *
- * - 0 (default): <b>Seeking not allowed, dynamic memory allocation not allowed.</b>
+ * - 0: <b>Seeking not allowed, dynamic memory allocation not allowed.</b>
  *   This is the most portable and composable strategy. No dynamic/heap memory
  *   will be used, and no seek operations will be performed on the output file
  *   stream (allowing 'stdout' connected to a shell pipe to be used as the output
@@ -43,7 +43,7 @@
  *   points / frames the generated .wav file will contain, and again to obtain
  *   the sample point / frame values for writing to the output stream.
  *
- * - 1: <b>Seeking not allowed, dynamic memory allocation allowed</b>.
+ * - 1 (default): <b>Seeking not allowed, dynamic memory allocation allowed</b>.
  *      This option is more performant than 0, at the cost of dynamic memory
  *      allocation being required. Seek operations will not be performed on the
  *      output stream, but dynamic memory allocations will be performed.
@@ -54,7 +54,7 @@
  *      pass of the parser & sample generator are required. No dynamic memory
  *      allocation will be performed.
  */
-#define PTTTL_WAVFILE_GENERATION_STRATEGY 0
+#define PTTTL_WAVFILE_GENERATION_STRATEGY 1
 #endif
 
 /**
