@@ -17,7 +17,7 @@
  * which is an intermediate representation that can be processed by ptttl_sample_generator.c
  * to obtain PCM audio samples.
  *
- * Requires stdint.h, strtoul() from stdlib.h, and memset() from string.h.
+ * Requires stdint.h and memset() from string.h.
  *
  * See https://github.com/eriknyquist/ptttl for more details about PTTTL.
  *

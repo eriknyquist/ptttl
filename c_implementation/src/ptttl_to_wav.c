@@ -19,14 +19,16 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
+
+#include "ptttl_to_wav.h"
+
 #if PTTTL_WAVFILE_GENERATION_STRATEGY == 1
 #include <stdlib.h>
 #endif
 
-
-#include "ptttl_to_wav.h"
 #include "ptttl_sample_generator.h"
 #include "ptttl_common.h"
+
 
 // Sample width in bits
 #define BITS_PER_SAMPLE (16)
@@ -321,7 +323,7 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
 
 #if PTTTL_WAVFILE_GENERATION_STRATEGY == 1
     size_written = fwrite(sample_buf, 1u, generator.current_sample * sizeof(int16_t), fp);
-    if ((generator.current_sample) != size_written)
+    if ((generator.current_sample * sizeof(int16_t)) != size_written)
     {
         ERROR(parser, "Failed to write WAV data");
         return -1;
