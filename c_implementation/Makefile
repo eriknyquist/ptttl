@@ -25,14 +25,13 @@ CFLAGS := -Wall -pedantic -I$(SRC_DIR)
 
 AFL_CC := afl-clang-fast
 
-default: examples
+default: optimized
 
 make_build_dirs:
 	@$(MKDIR) $(BUILD_DIR)
 	@$(MKDIR) $(OBJ_DIR)
 	@$(MKDIR) $(TEST_OBJ_DIR)
 
-examples: CFLAGS += -O2
 examples: make_build_dirs
 	@echo
 	@echo "Building core files..."
@@ -58,6 +57,9 @@ examples: make_build_dirs
 
 debug: CFLAGS += -O0 -g -fsanitize=address,undefined
 debug: examples
+
+optimized: CFLAGS += -O2
+optimized: examples
 
 afl_fuzz_harness: CC=$(AFL_CC)
 afl_fuzz_harness: CFLAGS += -O0 -g3 -fsanitize=address,undefined
