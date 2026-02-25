@@ -1,7 +1,7 @@
 syntax match ptttlOptionSetting "=\s*\zs[0-9]\+\ze"
-syntax match ptttlNote "[0-9]\?[A-Ga-g][Bb\#]\?[0-9]\?\(v\([0-9]+\(-[0-9]+\)\?\)\?\)\?"
+syntax match ptttlNote "\(1\|2\|4\|8\|16\|32\)\?[A-Ga-g][Bb\#]\?\.\?[0-9]\?\.\?\(v\([0-9]+\(-[0-9]+\)\?\)\?\)\?"
 syntax match ptttlOptionKey "\zs\(d\|o\|b\|f\|v\)\ze\s*="
-syntax match ptttlPause "\(1\|2\|4\|8\|16\|32\)p"
+syntax match ptttlPause "\(1\|2\|4\|8\|16\|32\)p\.\?"
 syntax region ptttlComment start="/" end="$"
 syntax region ptttlDescription start="\%^" end="\ze:" contains=ptttlComment
 
