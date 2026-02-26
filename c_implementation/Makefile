@@ -61,6 +61,9 @@ debug: examples
 optimized: CFLAGS += -O2
 optimized: examples
 
+profiling: CFLAGS += -O0 -g -pg
+profiling: examples
+
 afl_fuzz_harness: CC=$(AFL_CC)
 afl_fuzz_harness: CFLAGS += -O0 -g3 -fsanitize=address,undefined
 afl_fuzz_harness: make_build_dirs

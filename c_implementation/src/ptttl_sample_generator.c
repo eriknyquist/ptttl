@@ -34,6 +34,35 @@
     _parser->error.column = _parser->active_stream->column;         \
 }
 
+// maps piano key number (0-87) to pitch in Hz
+static const float _note_pitches[88] =
+{
+    // Octave 0
+    27.50000f, 29.13524f, 30.86771f,
+    // Octave 1
+    32.70320f, 34.64783f, 36.70810f, 38.89087f, 41.20344f, 43.65353f, 46.24930f,
+    48.99943f, 51.91309f, 55.00000f, 58.27047f, 61.73541f,
+    // Octave 2
+    65.40639f, 69.29566f, 73.41619f, 77.78175f, 82.40689f, 87.30706f, 92.49861f,
+    97.99886f, 103.8262f, 110.0000f, 116.5409f, 123.4708f,
+    // Octave 3
+    130.8128f, 138.5913f, 146.8324f, 155.5635f, 164.8138f, 174.6141f, 184.9972f,
+    195.9977f, 207.6523f, 220.0000f, 233.0819f, 246.9417f,
+    // Octave 4
+    261.6256f, 277.1826f, 293.6648f, 311.1270f, 329.6276f, 349.2282f, 369.9944f,
+    391.9954f, 415.3047f, 440.0000f, 466.1638f, 493.8833f,
+    // Octave 5
+    523.2511f, 554.3653f, 587.3295f, 622.2540f, 659.2551f, 698.4565f, 739.9888f,
+    783.9909f, 830.6094f, 880.0000f, 932.3275f, 987.7666f,
+    // Octave 6
+    1046.502f, 1108.731f, 1174.659f, 1244.508f, 1318.510f, 1396.913f, 1479.978f,
+    1567.982f, 1661.219f, 1760.000f, 1864.655f, 1975.533f,
+    // Octave 7
+    2093.005f, 2217.461f, 2349.318f, 2489.016f, 2637.020f, 2793.826f, 2959.955f,
+    3135.963f, 3322.438f, 3520.000f, 3729.310f, 3951.066f,
+    // Octave 8
+    4186.009f
+};
 
 // Forward declaration of built-in waveform generators
 static float _sine_generator(float x, float p, unsigned int s);
@@ -50,24 +79,6 @@ static ptttl_waveform_generator_t _waveform_generators[WAVEFORM_TYPE_COUNT] =
     _square_generator          // WAVEFORM_TYPE_SQUARE
 };
 
-
-/**
- * Calculate the power of 2 for a given exponent
- *
- * @param exp  Exponent
- *
- * @return Result
- */
-static uint32_t _raise_powerof2(uint32_t exp)
-{
-    uint32_t ret = 1u;
-    for (uint32_t i = 0u; i < exp; i++)
-    {
-        ret *= 2u;
-    }
-
-    return ret;
-}
 
 /**
  * Square wave generator
@@ -206,51 +217,6 @@ static int32_t _generate_waveform_sample(ptttl_waveform_generator_t wgen, unsign
 }
 
 /**
- * Convert a piano key note number (1 through 88) to the corresponding pitch
- * in Hz.
- *
- * @param note_number Piano key note number from 1 through 88, where 1 is the lowest note
- *                    and 88 is the highest note.
- * @param pitch_hz    Pointer to location to store corresponding pitch in Hz
- */
-static void _note_number_to_pitch(uint32_t note_number, float *pitch_hz)
-{
-    // Maps note_pitch_e enum values to the corresponding pitch in Hz
-    static const float note_pitches[NOTE_PITCH_COUNT] =
-    {
-        261.625565301f,   // NOTE_C
-        277.182630977f,   // NOTE_CS & NOTE_DB
-        293.664767918f,   // NOTE_D
-        311.126983723f,   // NOTE_DS & NOTE_EB
-        329.627556913f,   // NOTE_E
-        349.228231433f,   // NOTE_ES & NOTE_F
-        369.994422712f,   // NOTE_FS & NOTE_GB
-        391.995435982f,   // NOTE_G
-        415.30469758f,    // NOTE_GS & NOTE_AB
-        440.0f,           // NOTE_A
-        466.163761518f,   // NOTE_AS & NOTE_BB
-        493.883301256f    // NOTE_B
-    };
-
-    uint32_t octave = ((note_number + 20u) / 12u) - 1u;
-    uint32_t note_pitch_index = (note_number + 8u) % NOTE_PITCH_COUNT;
-    float result = note_pitches[note_pitch_index];
-
-    // Set true pitch based on octave, if octave is not 4
-    if (octave < 4u)
-    {
-        result = result / (float) _raise_powerof2(4u - octave);
-    }
-    else if (octave > 4u)
-    {
-        result = result * (float) _raise_powerof2(octave - 4u);
-    }
-
-    *pitch_hz = result;
-}
-
-
-/**
  * Load a single PTTTL note from a specific channel into a note_stream_t object
  *
  * @param generator    Pointer to initialized sample generator
@@ -296,7 +262,7 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
 
     if (0u != note_stream->note_number)
     {
-        _note_number_to_pitch(note_stream->note_number, &note_stream->pitch_hz);
+        note_stream->pitch_hz = _note_pitches[note_stream->note_number - 1u];
     }
 }
 
