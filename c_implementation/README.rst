@@ -38,7 +38,7 @@ reference and/or development & testing, are also provided:
 This implementation has been quite thoroughly tested (see ``test/test_ptttl.c``)
 & fuzzed with AFL++.
 
-.. image:: afl_status.png
+.. figure:: afl_status.png
 
    AFL++ status screen at the end of a 5.5 hour session
 
