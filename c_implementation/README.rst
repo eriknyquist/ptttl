@@ -11,8 +11,7 @@ only the file(s) that you need:
   representation of the musical data which is easy to convert to audio samples.
   No dynamic memory allocation, and no loading the entire source file into memory
   (callback functions must be provided to read/fetch the next source character). See
-  ``ptttl_parser.h`` for more details. Requires ``stdint.h``, ``strtoul()`` from
-  ``stdlib.h``, and ``memset()`` from ``string.h``.
+  ``ptttl_parser.h`` for more details. Requires ``stdint.h`` and ``memset()`` from ``string.h``.
 
 * **ptttl_sample_generator.c**: Reads the output of ``ptttl_parser.c`` and produces
   signed 16-bit audio samples containing the tones described by the RTTTL/PTTTL source.
@@ -21,7 +20,7 @@ only the file(s) that you need:
   own waveform generator function. The attack / decay time of notes is configurable.
   The next audio sample is produced only on your request, so there is no need to store
   a large number of samples in memory. See ``ptttl_sample_generator.h`` for more details.
-  Requires ``stdint.h``, ``memset()`` from ``string.h``.
+  Requires ``stdint.h`` and ``memset()`` from ``string.h``.
 
 * **ptttl_to_wav.c**: Reads the output of ``ptttl_parser.c`` and produces a .wav file
   containing the tones described by the RTTTL/PTTTL source. Requires ``stdio.h`` and
@@ -35,6 +34,13 @@ reference and/or development & testing, are also provided:
 
 * **afl_fuzz_harness.c**: Implements a "harness" to fuzz the ``ptttl_to_wav()`` function
   using `AFL++ <https://github.com/AFLplusplus/AFLplusplus>`_
+
+This implementation has been quite thoroughly tested (see ``test/test_ptttl.c``)
+& fuzzed with AFL++.
+
+.. image:: afl_status.png
+
+AFL++ status screen at the end of a 5.5 hour session
 
 Building the sample applications
 --------------------------------
