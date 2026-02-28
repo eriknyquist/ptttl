@@ -40,7 +40,7 @@ This implementation has been quite thoroughly tested (see ``test/test_ptttl.c``)
 
 .. image:: afl_status.png
 
-.. centered:: *AFL++ status screen at the end of a 5.5 hour session*
+<center><em>AFL++ status screen at the end of a 5.5 hour session</em></center>
 
 Building the sample applications
 --------------------------------
