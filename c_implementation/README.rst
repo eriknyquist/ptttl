@@ -48,7 +48,8 @@ Building the sample applications
 `ptttl_cli`
 ###########
 
-Build the `ptttl_cli` application using `make` (it's the default target):
+Build the ``ptttl_cli`` application (and all other sample applications)
+using ``make`` (it's the default target):
 
 ::
 
@@ -58,7 +59,7 @@ Build the `ptttl_cli` application using `make` (it's the default target):
 `afl_fuzz_harness`
 ##################
 
-Build the `afl_fuzz_harness` application using the `afl_fuzz_harness` target:
+Build the ``afl_fuzz_harness`` application using the ``afl_fuzz_harness`` target:
 
 ::
 
@@ -67,7 +68,7 @@ Build the `afl_fuzz_harness` application using the `afl_fuzz_harness` target:
 Running tests
 -------------
 
-Build and run the test suite using the `test` target:
+Build and run the test suite using the ``test`` target:
 
 ::
 
