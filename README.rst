@@ -19,7 +19,7 @@ version instead of the python version.
 Convert MIDI to RTTTL and PTTTL
 ###############################
 
-A python script `midi_to_ptttl.py` is provided for converting single-track MIDI
+A python script ``midi_to_ptttl.py`` is provided for converting single-track MIDI
 files to RTTTL, and multi-track MIDI files to PTTTL. Read the header comment at
 the top of the script to understand the limitations.
 
@@ -27,7 +27,7 @@ Syntax highlighting
 ###################
 
 Syntax highlighting files for `Vim <https://en.wikipedia.org/wiki/Vim_(text_editor)>`_
-are provided in the `syntax_highlighting/vim` directory. Install them like so:
+are provided in the ``syntax_highlighting/vim`` directory. Install them like so:
 
 ::
 
