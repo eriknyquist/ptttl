@@ -63,9 +63,9 @@ class PtttlNote:
         """
         ret = []
         length_ms = self.length_ms
-        tolerance_ms = 5.0
         actual_ms = 0.0
         whole_note_ms = (60000.0 / float(bpm)) * 4.0
+        tolerance_ms = whole_note_ms / 64.0   # half a 32nd note
         durations = self.note_durations.copy()
 
         while length_ms >= tolerance_ms:
@@ -101,7 +101,7 @@ class PtttlNote:
             if dot:
                 curr_length_ms *= 1.5
 
-            if (curr_length_ms > (length_ms + tolerance_ms)) and (len(durations) > 1):
+            if (curr_length_ms > (length_ms * 2.0)) and (len(durations) > 1):
                 # The current note we've selected is too long, so we need
                 # try with shorter notes-- pop the longest note duration off the
                 # list and try again
@@ -168,6 +168,7 @@ def midi_track_to_ptttl_notes(midi, track, usecs_per_quarternote):
     """
     ret = []
     active_note = None
+    on_count = 0  # number of outstanding note_ons for active_note's pitch
     current_tick = 0
 
     for msg in track:
@@ -175,33 +176,39 @@ def midi_track_to_ptttl_notes(midi, track, usecs_per_quarternote):
         ms_elapsed = tick2second(current_tick, midi.ticks_per_beat, usecs_per_quarternote) * 1000
 
         if msg.type == "note_on":
+            # Same-pitch re-strike while a note is already playing: treat as a
+            # continuation of the current note. Just increment the counter so
+            # the matching note_off won't end the note prematurely.
+            if (active_note is not None) and (msg.note == active_note.midi_note):
+                on_count += 1
+                continue
+
             # Figure out if a rest came before this note
             if active_note is None:
                 if len(ret) > 0:
-                    # rest between two notes
                     last_note_end = ret[-1].start_ms + ret[-1].length_ms
                     if last_note_end < ms_elapsed:
                         ret.append(PtttlNote(0, ms_elapsed - last_note_end, last_note_end))
                 else:
-                    # rest at the beginning of the track
                     if ms_elapsed > 0:
                         ret.append(PtttlNote(0, ms_elapsed, 0))
 
             if active_note is not None:
-                # If this track already has an active note, "force" it off,
-                # since PTTTL can't represent overlapping/simultaneous notes
-                # in a single track
+                # Different-pitch overlap: force off the active note, since
+                # PTTTL can't represent simultaneous notes on a single track.
                 active_note.length_ms = ms_elapsed - active_note.start_ms
                 ret.append(active_note)
 
             active_note = PtttlNote(midi_note=msg.note, start_ms=ms_elapsed)
+            on_count = 1
 
         elif msg.type == "note_off":
             if (active_note is None) or (msg.note != active_note.midi_note):
-                # If we don't have an active note, *or* if the note number in
-                # this message doesn't match the note number for our active note, then
-                # this is the "note_off" message for a note that we already forced
-                # off to avoid overlapping. Ignore and continue.
+                continue
+
+            on_count -= 1
+            if on_count > 0:
+                # Still more overlapping note_ons outstanding; don't end yet.
                 continue
 
             active_note.length_ms = ms_elapsed - active_note.start_ms
