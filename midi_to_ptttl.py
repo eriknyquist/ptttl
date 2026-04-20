@@ -17,6 +17,8 @@
 # - Any notes playing simultaneously must be on separate tracks in the MIDI file.
 #   No notes can overlap within an individual MIDI track.
 #
+#   For more information about PTTTL format see github.com/eriknyquist/ptttl.
+#
 # Erik K. Nyquist 2026
 
 import sys
@@ -61,7 +63,8 @@ class PtttlNote:
         """
         ret = []
         length_ms = self.length_ms
-        tolerance_ms = 2
+        tolerance_ms = 5.0
+        actual_ms = 0.0
         whole_note_ms = (60000.0 / float(bpm)) * 4.0
         durations = self.note_durations.copy()
 
@@ -84,7 +87,7 @@ class PtttlNote:
 
                 # dotted note
                 dotted = fraction * 1.5
-                dotted_length_ms = int(whole_note_ms * dotted)
+                dotted_length_ms = whole_note_ms * dotted
 
                 # Only consider dotted rhythm if it would be the last note
                 if (length_ms - dotted_length_ms) <= tolerance_ms:
@@ -98,16 +101,17 @@ class PtttlNote:
             if dot:
                 curr_length_ms *= 1.5
 
-            if int(curr_length_ms) > length_ms:
+            if (curr_length_ms > (length_ms + tolerance_ms)) and (len(durations) > 1):
                 # The current note we've selected is too long, so we need
                 # try with shorter notes-- pop the longest note duration off the
                 # list and try again
                 durations.pop(0)
             else:
-                length_ms -= int(curr_length_ms)
+                length_ms -= curr_length_ms
+                actual_ms += curr_length_ms
                 ret.append((duration, dot))
 
-        return ret
+        return ret, actual_ms
 
     def note_string(self, bpm: int):
         """
@@ -123,7 +127,7 @@ class PtttlNote:
             note_index = (self.piano_key + 8) % len(self.note_octave_map)
             note = self.note_octave_map[note_index]
 
-        durations = self._calculate_note_durations(bpm)
+        durations, actual_ms = self._calculate_note_durations(bpm)
 
         notes = []
         for duration, dot in durations:
@@ -133,7 +137,7 @@ class PtttlNote:
 
             notes.append(n)
 
-        return ",".join(notes)
+        return ",".join(notes), actual_ms
 
 def find_time_info(mid):
     """
@@ -159,54 +163,50 @@ def find_time_info(mid):
 
 def midi_track_to_ptttl_notes(midi, track, usecs_per_quarternote):
     """
-    Processes a mido.MidiFile object and converts it to a two-dimensional list
-    of the form:
-
-    [
-        [PtttlNote(..), PtttlNote(..), ..],   # First MIDI track
-        [PtttlNote(..), PtttlNote(..), ..],   # Second MIDI track
-        ..
-    ]
+    Processes a single track from a mido.MidiFile object and converts it to a list
+    of PtttlNote objects:
     """
     ret = []
-    notes_on = {}
+    active_note = None
     current_tick = 0
 
     for msg in track:
         current_tick += int(msg.time)
-        ms_elapsed = int(tick2second(current_tick, midi.ticks_per_beat, usecs_per_quarternote) * 1000)
+        ms_elapsed = tick2second(current_tick, midi.ticks_per_beat, usecs_per_quarternote) * 1000
 
         if msg.type == "note_on":
-            if msg.note in notes_on:
-                raise RuntimeError(f"note_on seen twice in a row without note_off (MIDI note {msg.note})")
-
             # Figure out if a rest came before this note
-            if len(ret) > 0:
-                # rest between two notes
-                last_note_end = ret[-1].start_ms + ret[-1].length_ms
-                if last_note_end < ms_elapsed:
-                    ret.append(PtttlNote(0, ms_elapsed - last_note_end, last_note_end))
-            else:
-                # rest at the beginning of the track
-                if ms_elapsed > 0:
-                    ret.append(PtttlNote(0, ms_elapsed, 0))
+            if active_note is None:
+                if len(ret) > 0:
+                    # rest between two notes
+                    last_note_end = ret[-1].start_ms + ret[-1].length_ms
+                    if last_note_end < ms_elapsed:
+                        ret.append(PtttlNote(0, ms_elapsed - last_note_end, last_note_end))
+                else:
+                    # rest at the beginning of the track
+                    if ms_elapsed > 0:
+                        ret.append(PtttlNote(0, ms_elapsed, 0))
 
-            notes_on[msg.note] = PtttlNote(midi_note=msg.note, start_ms=ms_elapsed)
+            if active_note is not None:
+                # If this track already has an active note, "force" it off,
+                # since PTTTL can't represent overlapping/simultaneous notes
+                # in a single track
+                active_note.length_ms = ms_elapsed - active_note.start_ms
+                ret.append(active_note)
+
+            active_note = PtttlNote(midi_note=msg.note, start_ms=ms_elapsed)
 
         elif msg.type == "note_off":
-            if msg.note not in notes_on:
-                raise RuntimeError(f"note_off seen without preceding note_on (MIDI note {msg.note})")
+            if (active_note is None) or (msg.note != active_note.midi_note):
+                # If we don't have an active note, *or* if the note number in
+                # this message doesn't match the note number for our active note, then
+                # this is the "note_off" message for a note that we already forced
+                # off to avoid overlapping. Ignore and continue.
+                continue
 
-            new_note = notes_on[msg.note]
-            del notes_on[msg.note]
-            new_note.length_ms = ms_elapsed - new_note.start_ms
-
-            # Verify new note does not overlap with previous note
-            if len(ret) > 0:
-                if (ret[-1].start_ms + ret[-1].length_ms) > new_note.start_ms:
-                    raise RuntimeError(f"Notes within a MIDI track cannot overlap")
-
-            ret.append(new_note)
+            active_note.length_ms = ms_elapsed - active_note.start_ms
+            ret.append(active_note)
+            active_note = None
 
     return ret
 
@@ -222,16 +222,28 @@ def midi_to_ptttl(midi_filename: str):
         raise RuntimeError(f"Unable to find time_signature or set_tempo messages types in MIDI file")
 
     if (time_sig.numerator != 4) or (time_sig.denominator != 4):
-        raise RuntimeError(f"Only 4/4 time signature is supported")
+        raise RuntimeError(f"Only 4/4 time signature is supported "
+                           f"(got {time_sig.numerator}/{time_sig.denominator})")
 
-    bpm = int(tempo2bpm(tempo.tempo, (4, 4)))
+    bpm = tempo2bpm(tempo.tempo, (4, 4))
 
-    ret = f"midi_to_ptttl.py output :\nb={bpm}, d=4, o=4 :\n"
+    ret = f"midi_to_ptttl.py output :\nb={int(bpm)}, d=4, o=4 :\n"
     tracks = []
     for track in mid.tracks:
         notes = midi_track_to_ptttl_notes(mid, track, tempo.tempo)
         if notes:
-            tracks.append(','.join([f"{n.note_string(bpm)}" for n in notes]))
+            note_strings = []
+            elapsed_ms = 0.0
+            for n in notes:
+                n.length_ms = (n.start_ms + n.length_ms) - elapsed_ms
+                if n.length_ms < 5.0:
+                    continue
+
+                s, consumed_ms = n.note_string(bpm)
+                note_strings.append(s)
+                elapsed_ms += consumed_ms
+
+            tracks.append(','.join(note_strings))
 
     return ret + "|\n".join(tracks)
 
