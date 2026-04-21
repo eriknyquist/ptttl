@@ -21,6 +21,7 @@
 #
 # Erik K. Nyquist 2026
 
+import argparse
 import sys
 from mido import MidiFile, tempo2bpm, tick2second
 
@@ -217,7 +218,60 @@ def midi_track_to_ptttl_notes(midi, track, usecs_per_quarternote):
 
     return ret
 
-def midi_to_ptttl(midi_filename: str):
+class WrapableTrack:
+    """
+    Helper class to split a single channel of PTTTL/RTTTL notes into multiple
+    lines with a maximum line length
+    """
+    def __init__(self, track_string: str, wrap_columns: int):
+        self.track_string = track_string
+        self.split_track = track_string.split(",")
+        self.wrap_columns = wrap_columns
+
+    def notes_remaining(self):
+        return len(self.split_track)
+
+    def get_line(self):
+        ret = ""
+        while len(self.split_track) > 0:
+            new_note = "" if not ret else " "
+            new_note += self.split_track[0]
+
+            if len(self.split_track) > 1:
+                # This is not the last note in the track
+                new_note += ","
+
+            if (len(new_note) + len(ret)) > self.wrap_columns:
+                # Line is full, break out
+                break
+
+            # Line not full yet, continue
+            ret += new_note
+            _ = self.split_track.pop(0)
+
+        return ret
+
+def format_tracks(track_strings, wrap_columns):
+    ret = ""
+
+    if wrap_columns is None:
+        # No wrapping
+        ret = "|\n".join(track_strings)
+
+    elif len(track_strings) == 1:
+        # Only one track- format for valid RTTTL
+        lines = []
+        track = WrapableTrack(track_strings[0], wrap_columns)
+        while track.notes_remaining() > 0:
+            lines.append(track.get_line())
+
+        ret = "\n".join(lines)
+    else:
+        pass
+
+    return ret
+
+def midi_to_ptttl(midi_filename: str, wrap_columns: int | None):
     """
     Processes a mido.MidiFile object and returns the corresponding PTTTL file
     contents as a string
@@ -252,14 +306,19 @@ def midi_to_ptttl(midi_filename: str):
 
             tracks.append(','.join(note_strings))
 
-    return ret + "|\n".join(tracks)
+    #return ret + format_tracks(tracks, wrap_columns)
+    return ret + format_tracks([tracks[0]], wrap_columns)
 
 def main():
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <MIDI filename>")
-        return
+    parser = argparse.ArgumentParser(description='Convert MIDI to RTTTL or PTTTL. Reads the passed '
+                                     'MIDI file and prints the corresponding RTTTL/PTTTL source to stdout.',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    print(midi_to_ptttl(sys.argv[1]))
+    parser.add_argument('midi_file', help='Path to MIDI file to convert')
+    parser.add_argument('-w', '--wrap', default=None, type=int, help="Ensure column width in output RTTTL/PTTTL "
+                                                                     "doesn't exceed this value")
+    args = parser.parse_args()
+    print(midi_to_ptttl(args.midi_file, args.wrap))
 
 if __name__ == "__main__":
     main()

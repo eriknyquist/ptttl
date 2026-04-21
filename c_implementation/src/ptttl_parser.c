@@ -771,6 +771,12 @@ static int _parse_ptttl_note(ptttl_parser_t *parser, ptttl_output_note_t *output
     int readchar_ret = _peek_next_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
 
+    if (nextchar == '|')
+    {
+        // Empty channel
+        return 0;
+    }
+
     if (IS_DIGIT(nextchar))
     {
         int ret = _parse_uint_from_input(parser, &duration, 0u);
