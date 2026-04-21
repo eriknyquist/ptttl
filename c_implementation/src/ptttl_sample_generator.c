@@ -302,6 +302,13 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
     {
         ptttl_output_note_t note;
         int ret = ptttl_parse_next(generator->parser, chan, &note);
+
+        // Skip any empty-track sentinels until we get a real note or EOF/error
+        while ((ret == 0) && IS_EMPTY_TRACK_SENTINEL(&note))
+        {
+            ret = ptttl_parse_next(generator->parser, chan, &note);
+        }
+
         if (ret != 0)
         {
             return ret;
@@ -391,6 +398,14 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_n
         // Load the next note for this channel
         ptttl_output_note_t note;
         ret = ptttl_parse_next(generator->parser, channel_idx, &note);
+
+        // Skip any empty-track sentinels — keep fetching until we get
+        // a real note or EOF/error
+        while ((ret == 0) && IS_EMPTY_TRACK_SENTINEL(&note))
+        {
+            ret = ptttl_parse_next(generator->parser, channel_idx, &note);
+        }
+
         if (ret == 0)
         {
             _load_note_stream(generator, &note, &generator->note_streams[channel_idx]);

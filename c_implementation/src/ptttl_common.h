@@ -58,6 +58,9 @@ typedef enum
  * of the first key for octave 1, and so on. */
 static const uint32_t _octave_starts[NOTE_OCTAVE_MAX + 1u] = {0u, 3u, 15u, 27u, 39u, 51u, 63u, 75u, 87u};
 
+// Check if a ptttl_output_note_t is an empty track sentinel
+#define IS_EMPTY_TRACK_SENTINEL(note) (((note)->note_settings == 0u) && ((note)->vibrato_settings == 0u))
+
 
 #define ASSERT(cond) { if (!(cond)) __builtin_trap(); }
 

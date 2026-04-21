@@ -155,6 +155,9 @@
 // Set note settings for a ptttl_output_note_t instance
 #define SET_NOTE(note, value, duration) ((note)->note_settings = ((value) & 0x7fu) | (((duration) & 0xffffu) << 7u))
 
+// Set a ptttl_output_note_t as an empty track sentinel
+#define EMPTY_TRACK_SENTINEL(note) {(note)->note_settings=0u; (note)->vibrato_settings=0u;}
+
 
 // Valid values for note duration
 static const unsigned int _valid_note_durations[NOTE_DURATION_COUNT] = {1u, 2u, 4u, 8u, 16u, 32u};
@@ -771,6 +774,13 @@ static int _parse_ptttl_note(ptttl_parser_t *parser, ptttl_output_note_t *output
     int readchar_ret = _peek_next_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
 
+    if ((nextchar == '|') || (nextchar == ';'))
+    {
+        // Empty channel
+        EMPTY_TRACK_SENTINEL(output);
+        return 0;
+    }
+
     if (IS_DIGIT(nextchar))
     {
         int ret = _parse_uint_from_input(parser, &duration, 0u);
@@ -1034,7 +1044,7 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
             // Find semicolon at the end of the current block
             while ((ret = _get_next_visible_char(parser, &nextchar)) == 0)
             {
-                CHECK_IFACE_RET_EOF(parser, ret);
+                //CHECK_IFACE_RET_EOF(parser, ret);
                 if (';' == nextchar)
                 {
                     break;
@@ -1115,6 +1125,59 @@ int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_
         return ret;
     }
 
+    /* Handle empty track sentinel: advance past the delimiter so the parser
+     * is positioned for the next block, then return 0 with the sentinel note.
+     * The caller (sample generator) is responsible for skipping sentinels. */
+    if (IS_EMPTY_TRACK_SENTINEL(note))
+    {
+        char next_char;
+        ret = _get_next_visible_char(parser, &next_char);
+        if (ret == 1)
+        {
+            // EOF right after empty track — no more blocks
+            parser->active_stream->have_saved_char = 0u;
+            return 1;
+        }
+        else if (ret != 0)
+        {
+            return ret;
+        }
+
+        if ('|' == next_char)
+        {
+            ret = _jump_to_next_block(parser, channel_idx, 1u);
+        }
+        else if (';' == next_char)
+        {
+            ret = _jump_to_next_block(parser, channel_idx, 0u);
+        }
+        else
+        {
+            ERROR(parser, "Expected '|' or ';' after empty track");
+            return -1;
+        }
+
+        if (ret < 0)
+        {
+            return ret;
+        }
+
+        /* ret == 1 means no more blocks. Return 0 with sentinel so the caller
+         * sees the empty track; the NEXT call will return 1 (EOF). */
+        if (ret == 1)
+        {
+            parser->active_stream->have_saved_char = 0u;
+
+            /* Invalidate this channel's block number so that other channels
+             * don't use this channel's (now stale/EOF) position as a shortcut
+             * in _jump_to_next_block's "earlier_stream" optimization. */
+            parser->active_stream->block = UINT32_MAX;
+        }
+
+        return 0;
+    }
+
+    // Normal note - handle the delimiter after it
     char next_char;
     ret = _get_next_visible_char(parser, &next_char);
     if (ret == 1)
@@ -1130,6 +1193,7 @@ int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_
             if (ret == 1)
             {
                 parser->active_stream->have_saved_char = 0u;
+                parser->active_stream->block = UINT32_MAX;
                 return 0;
             }
         }
@@ -1139,6 +1203,7 @@ int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_
             if (ret == 1)
             {
                 parser->active_stream->have_saved_char = 0u;
+                parser->active_stream->block = UINT32_MAX;
                 return 0;
             }
         }
