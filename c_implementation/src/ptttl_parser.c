@@ -1101,6 +1101,14 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
         }
     }
 
+    char peek_char = '\0';
+    int peek_ret = _peek_next_char(parser, &peek_char);
+    if ((peek_ret == 0) && ('|' == peek_char))
+    {
+        ERROR(parser, "Too many channels in block (all blocks must have the same channel count)");
+        return -1;
+    }
+
     parser->active_stream->block = target_block;
     return _eat_all_nonvisible_chars(parser);
 }
@@ -1216,10 +1224,18 @@ int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_
         else if (',' == next_char)
         {
             ret = _eat_all_nonvisible_chars(parser);
-            if (ret == 1)
+            if (ret != 0)
             {
-                parser->active_stream->have_saved_char = 0u;
-                return 0;
+                ERROR(parser, "Expecting a musical note name");
+                return -1;
+            }
+
+            char peek_char = '\0';
+            int peek_ret = _peek_next_char(parser, &peek_char);
+            if ((peek_ret != 0) || ('|' == peek_char) || (';' == peek_char) || (',' == peek_char))
+            {
+                ERROR(parser, "Expecting a musical note name (2)");
+                return -1;
             }
         }
         else
