@@ -35,8 +35,13 @@ class PtttlNote:
     note_octave_map = ["c", "c#", "d", "eb", "e", "f", "f#", "g", "g#", "a", "bb", "b"]
 
     def __init__(self, midi_note: int = None, length_ms: int = None, start_ms: int = None):
-        if (midi_note != 0) and ((midi_note < 21) or (midi_note > 108)):
-            raise RuntimeError(f"Invalid MIDI note (midi_note), valid values are 21-108")
+        if midi_note != 0:
+            # Shift out-of-range notes by octaves until they fall within the
+            # 88-key piano range (MIDI notes 21-108), preserving pitch class.
+            while midi_note < 21:
+                midi_note += 12
+            while midi_note > 108:
+                midi_note -= 12
 
         self.midi_note = midi_note
         # Piano key number, 1 through 88. Zero denotes a pause.
@@ -324,10 +329,13 @@ def midi_to_ptttl(midi_filename: str, wrap_columns: int | None):
     if any(x is None for x in [tempo, time_sig]):
         raise RuntimeError(f"Unable to find time_signature or set_tempo messages types in MIDI file")
 
-    if (time_sig.numerator != 4) or (time_sig.denominator != 4):
-        raise RuntimeError(f"Only 4/4 time signature is supported "
+    if time_sig.denominator != 4 or time_sig.numerator not in (2, 4):
+        raise RuntimeError(f"Only 4/4 and 2/4 time signatures are supported "
                            f"(got {time_sig.numerator}/{time_sig.denominator})")
 
+    # 2/4 is interpreted as 4/4 for PTTTL purposes: note durations and BPM
+    # are calculated the same way since PTTTL's whole-note reference is always
+    # a 4/4 whole note.
     bpm = tempo2bpm(tempo.tempo, (4, 4))
 
     ret = f"midi_to_ptttl.py output :\nb={int(bpm)}, d=4, o=4 :\n"
@@ -343,6 +351,10 @@ def midi_to_ptttl(midi_filename: str, wrap_columns: int | None):
                     continue
 
                 s, consumed_ms = n.note_string(bpm)
+                if not s:
+                    # Note too short to represent in PTTTL (shorter than half
+                    # a 32nd note at this BPM) -- skip it entirely.
+                    continue
                 note_strings.append(s)
                 elapsed_ms += consumed_ms
 
