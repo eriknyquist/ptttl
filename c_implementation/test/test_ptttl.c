@@ -98,7 +98,7 @@ static uint8_t *_testcase_buf = NULL;
 static int _buflen = 0;
 
 // Chunk buffer for reading test case info from files
-static char _fbuf[8192];
+static char _fbuf[65536];
 static size_t _fbufsize = 0;
 static size_t _fbufpos = 0;
 
@@ -202,6 +202,34 @@ static size_t _buffered_readchar(FILE *fp, char *c)
     *c = _fbuf[_fbufpos++];
     return 1u;
 }
+
+// Used for reading audio samples from .bin file in testcase directory
+static size_t _buffered_readsample(FILE *fp, uint8_t *s)
+{
+    size_t remaining = _fbufsize - _fbufpos; 
+    if (0u == remaining)
+    {
+        _fbufsize = fread(_fbuf, 1, sizeof(_fbuf), fp);
+        if (_fbufsize == 0)
+        {
+            return 0;
+        }
+
+        _fbufpos = 0;
+    }
+    else if (2 > remaining)
+    {
+        // Return 1 (only 1 char available) to force a failure from the caller,
+        // We dont actually need to provide a char here
+        return 1u;
+    }
+
+    s[0] = _fbuf[_fbufpos++];
+    s[1] = _fbuf[_fbufpos++];
+
+    return 2u;
+}
+
 
 static bool _get_next_noncomment_char(FILE *fp, char *c)
 {
@@ -324,7 +352,6 @@ static int verify_expected_samples(const char *input_filename, uint32_t num_samp
     }
 
     uint32_t input_sample_buf_pos = 0u;
-    int ret = 0;
 
     while (1)
     {
@@ -335,39 +362,41 @@ static int verify_expected_samples(const char *input_filename, uint32_t num_samp
             return -1;
         }
 
-        ret =_load_ints_from_file(input_filename, fp, SAMPLE_CHUNK_SIZE, false,
-                                  _input_sample_buf + input_sample_buf_pos);
-        if (ret < 0)
+        uint8_t intbuf[2] = {0u};
+        size_t size_read = _buffered_readsample(fp, intbuf);
+        if (size_read == 0u)
         {
+            // Finished
             break;
+        }
+        else if (size_read != sizeof(intbuf))
+        {
+            printf("Size of %s is not divisible by 2", input_filename);
+            fclose(fp);
+            return -1;
         }
 
-        input_sample_buf_pos += ret;
-        if (ret < SAMPLE_CHUNK_SIZE)
-        {
-            break;
-        }
+        int16_t sample = (int16_t)(((uint16_t) intbuf[0]) | (((uint16_t)(intbuf[1])) << 8u));
+        _input_sample_buf[input_sample_buf_pos] = sample;
+        input_sample_buf_pos += 1u;
     }
 
     fclose(fp);
 
-    if (ret >= 0)
+    if (num_samples_generated != input_sample_buf_pos)
     {
-        if (num_samples_generated != input_sample_buf_pos)
-        {
-            printf("Error: generated %u samples, but %s contains %u samples\n",
-                   num_samples_generated, input_filename, input_sample_buf_pos);
-            return -1;
-        }
+        printf("Error: generated %u samples, but %s contains %u samples\n",
+               num_samples_generated, input_filename, input_sample_buf_pos);
+        return -1;
+    }
 
-        for (uint32_t i = 0; i < num_samples_generated; i++)
+    for (uint32_t i = 0; i < num_samples_generated; i++)
+    {
+        if (_input_sample_buf[i] != _output_sample_buf[i])
         {
-            if (_input_sample_buf[i] != _output_sample_buf[i])
-            {
-                printf("Error : expected value %d for sample #%d (from %s), but generated value was %d\n",
-                       _input_sample_buf[i], i + 1, input_filename, _output_sample_buf[i]);
-                return -1;
-            }
+            printf("Error : expected value %d for sample #%d (from %s), but generated value was %d\n",
+                   _input_sample_buf[i], i + 1, input_filename, _output_sample_buf[i]);
+            return -1;
         }
     }
 
@@ -445,7 +474,7 @@ static int _run_testcase(const char *testcase_dir, ptttl_parser_input_iface_t *i
 
     (void) snprintf(source_path, sizeof(source_path), "%s/source.txt", testcase_dir);
     (void) snprintf(error_path, sizeof(error_path), "%s/expected_error.txt", testcase_dir);
-    (void) snprintf(expected_samples_path, sizeof(expected_samples_path), "%s/expected_samples.txt", testcase_dir);
+    (void) snprintf(expected_samples_path, sizeof(expected_samples_path), "%s/expected_samples.bin", testcase_dir);
 
     _src_fp = NULL;
     _src_fp = fopen(source_path, "r");

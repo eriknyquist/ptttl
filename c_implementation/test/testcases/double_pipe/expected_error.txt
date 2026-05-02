@@ -1,8 +1,8 @@
 # Expected error message:
-Expecting a musical note name
+Too many channels in block (all blocks must have the same channel count)
 
 # Expected line number:
 24
 
 # Expected column number:
-79
+78
