@@ -253,7 +253,7 @@ class WrapableTrack:
             ret += new_note
             _ = self.split_track.pop(0)
 
-        return ret
+        return ret.rstrip(",").rstrip()
 
 def format_tracks(track_strings, wrap_columns):
     if wrap_columns is None:
