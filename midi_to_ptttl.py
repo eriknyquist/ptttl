@@ -252,24 +252,66 @@ class WrapableTrack:
         return ret
 
 def format_tracks(track_strings, wrap_columns):
-    ret = ""
-
     if wrap_columns is None:
         # No wrapping
-        ret = "|\n".join(track_strings)
+        return "|\n".join(track_strings)
 
-    elif len(track_strings) == 1:
+    if len(track_strings) == 1:
         # Only one track- format for valid RTTTL
         lines = []
         track = WrapableTrack(track_strings[0], wrap_columns)
         while track.notes_remaining() > 0:
             lines.append(track.get_line())
 
-        ret = "\n".join(lines)
-    else:
-        pass
+        return "\n".join(lines)
 
-    return ret
+    # Multiple tracks with wrapping:
+    # Consume notes from all tracks together one block at a time. In each block,
+    # every track gets one line of notes (up to wrap_columns wide). Tracks that
+    # have run out of notes emit an empty segment so the parser can still
+    # identify which track is which within a block. Blocks are separated by ";"
+    # and tracks within a block are separated by "|".
+
+    # Reserve 2 chars for the delimiter (" |" or " ;") so content stays within
+    # wrap_columns and the delimiter always lands exactly at wrap_columns.
+    content_width = wrap_columns - 2
+    tracks = [WrapableTrack(s, content_width) for s in track_strings]
+    num_tracks = len(tracks)
+    blocks = []  # blocks[block_idx][track_idx] = line string
+
+    while any(t.notes_remaining() > 0 for t in tracks):
+        block_lines = []
+        for t in tracks:
+            if t.notes_remaining() > 0:
+                block_lines.append(t.get_line())
+            else:
+                # This track has no more notes: emit an empty segment so the
+                # parser knows this track is silent for the duration of this block
+                block_lines.append("")
+        blocks.append(block_lines)
+
+    # Render each block: track lines are joined with " |\n" within a block,
+    # and blocks are separated by " ;\n\n" (the last block has no trailing ";").
+    # Delimiters are right-justified at wrap_columns so they form a neat column.
+    rendered_blocks = []
+    for block_idx, block_lines in enumerate(blocks):
+        is_last_block = (block_idx == len(blocks) - 1)
+        track_lines = []
+        for track_idx, line in enumerate(block_lines):
+            is_last_track = (track_idx == num_tracks - 1)
+            if is_last_track:
+                if is_last_block:
+                    # Final track of final block: no delimiter
+                    track_lines.append(line)
+                else:
+                    # Pad content to content_width so ";" lands at wrap_columns
+                    track_lines.append(line.ljust(content_width) + " ;")
+            else:
+                # Pad content to content_width so "|" lands at wrap_columns
+                track_lines.append(line.ljust(content_width) + " |")
+        rendered_blocks.append("\n".join(track_lines))
+
+    return "\n\n".join(rendered_blocks)
 
 def midi_to_ptttl(midi_filename: str, wrap_columns: int | None):
     """
@@ -306,8 +348,7 @@ def midi_to_ptttl(midi_filename: str, wrap_columns: int | None):
 
             tracks.append(','.join(note_strings))
 
-    #return ret + format_tracks(tracks, wrap_columns)
-    return ret + "|\n".join(tracks)
+    return ret + format_tracks(tracks, wrap_columns)
 
 def main():
     parser = argparse.ArgumentParser(description='Convert MIDI to RTTTL or PTTTL. Reads the passed '
