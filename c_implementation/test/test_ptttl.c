@@ -67,7 +67,8 @@ static const char* _testcase_dirs[] =
     "test/testcases/afl_testcase_1",
     "test/testcases/bpm_zero",
     "test/testcases/large_leading_comment",
-    "test/testcases/early_sharps_multitrack"
+    "test/testcases/early_sharps_multitrack",
+    "test/testcases/empty_track"
 };
 
 #define NUM_TESTCASES (sizeof(_testcase_dirs) / sizeof(_testcase_dirs[0]))
