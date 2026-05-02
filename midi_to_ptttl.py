@@ -75,47 +75,38 @@ class PtttlNote:
         durations = self.note_durations.copy()
 
         while length_ms >= tolerance_ms:
-            whole_note_fraction = whole_note_ms / length_ms
             duration_ratio = length_ms / whole_note_ms
 
             dot = False
-            smallest_error = float("inf")
+            best_duration = None
+            best_length_ms = 0.0
 
             for dur in durations:
                 fraction = 1.0 / float(dur)
+                straight_ms = whole_note_ms * fraction
+                dotted_ms = straight_ms * 1.5
 
-                # straight note
-                error = abs(duration_ratio - fraction)
-                if error < smallest_error:
-                    smallest_error = error
-                    duration = dur
-                    dot = False
+                # Straight note: only consider if it fits within length_ms
+                if straight_ms <= length_ms + tolerance_ms:
+                    if straight_ms > best_length_ms:
+                        best_length_ms = straight_ms
+                        best_duration = dur
+                        dot = False
 
-                # dotted note
-                dotted = fraction * 1.5
-                dotted_length_ms = whole_note_ms * dotted
-
-                # Only consider dotted rhythm if it would be the last note
-                if (length_ms - dotted_length_ms) <= tolerance_ms:
-                    error = abs(duration_ratio - dotted)
-                    if error < smallest_error:
-                        smallest_error = error
-                        duration = dur
+                # Dotted note: only consider if it fits within length_ms
+                if dotted_ms <= length_ms + tolerance_ms:
+                    if dotted_ms > best_length_ms:
+                        best_length_ms = dotted_ms
+                        best_duration = dur
                         dot = True
 
-            curr_length_ms = whole_note_ms * (1.0 / duration)
-            if dot:
-                curr_length_ms *= 1.5
-
-            if (curr_length_ms > (length_ms * 2.0)) and (len(durations) > 1):
-                # The current note we've selected is too long, so we need
-                # try with shorter notes-- pop the longest note duration off the
-                # list and try again
+            if best_duration is None or (best_length_ms > (length_ms * 2.0) and len(durations) > 1):
+                # Nothing fits; try with shorter notes
                 durations.pop(0)
             else:
-                length_ms -= curr_length_ms
-                actual_ms += curr_length_ms
-                ret.append((duration, dot))
+                length_ms -= best_length_ms
+                actual_ms += best_length_ms
+                ret.append((best_duration, dot))
 
         return ret, actual_ms
 
@@ -167,11 +158,17 @@ def find_time_info(mid):
 
     return tempo, time_sig
 
-def midi_track_to_ptttl_notes(midi, track, usecs_per_quarternote):
+def midi_track_to_ptttl_notes(midi, track, usecs_per_quarternote, ptttl_bpm):
     """
     Processes a single track from a mido.MidiFile object and converts it to a list
     of PtttlNote objects:
     """
+    # Duration of a PTTTL 32nd note in milliseconds, used for quantizing note
+    # starts. Must match the PTTTL BPM grid (which may differ from the raw MIDI
+    # BPM for e.g. 2/4 files) so that every quantized duration maps cleanly to
+    # a PTTTL note value.
+    thirty_second_ms = (60000.0 / ptttl_bpm) * 4.0 / 32.0
+
     ret = []
     active_note = None
     on_count = 0  # number of outstanding note_ons for active_note's pitch
@@ -180,6 +177,8 @@ def midi_track_to_ptttl_notes(midi, track, usecs_per_quarternote):
     for msg in track:
         current_tick += int(msg.time)
         ms_elapsed = tick2second(current_tick, midi.ticks_per_beat, usecs_per_quarternote) * 1000
+        # Quantize note start to the nearest 32nd note boundary
+        ms_elapsed = round(ms_elapsed / thirty_second_ms) * thirty_second_ms
 
         if msg.type == "note_on":
             # Same-pitch re-strike while a note is already playing: treat as a
@@ -338,22 +337,35 @@ def midi_to_ptttl(midi_filename: str, wrap_columns: int | None):
     # a 4/4 whole note.
     bpm = tempo2bpm(tempo.tempo, (4, 4))
 
-    ret = f"midi_to_ptttl.py output :\nb={int(bpm)}, d=4, o=4 :\n"
+    # PTTTL always models tempo as quarter-note BPM with a whole note = 4 beats.
+    # For 2/4 time, a measure is only 2 quarter notes, so we double the BPM so
+    # that PTTTL's "whole note" duration matches one 2/4 measure in length.
+    ptttl_bpm = bpm * (4 / time_sig.numerator)
+
+    ret = f"midi_to_ptttl.py output :\nb={int(ptttl_bpm)}, d=4, o=4 :\n"
     tracks = []
     for track in mid.tracks:
-        notes = midi_track_to_ptttl_notes(mid, track, tempo.tempo)
+        notes = midi_track_to_ptttl_notes(mid, track, tempo.tempo, ptttl_bpm)
         if notes:
             note_strings = []
+            # elapsed_ms tracks how much time the PTTTL output has consumed
+            # in absolute milliseconds. Each note's length is computed as the
+            # gap from elapsed_ms to the note's MIDI end time, so that rounding
+            # error from one note is absorbed into the next rather than
+            # accumulating independently. This keeps all tracks locked to the
+            # same absolute timeline and prevents inter-track drift.
             elapsed_ms = 0.0
             for n in notes:
+                # Stretch/shrink this note to fill from elapsed_ms to its MIDI
+                # end, correcting for any rounding in the previous note.
                 n.length_ms = (n.start_ms + n.length_ms) - elapsed_ms
                 if n.length_ms < 5.0:
+                    elapsed_ms = n.start_ms + n.length_ms
                     continue
-
-                s, consumed_ms = n.note_string(bpm)
+                s, consumed_ms = n.note_string(ptttl_bpm)
                 if not s:
-                    # Note too short to represent in PTTTL (shorter than half
-                    # a 32nd note at this BPM) -- skip it entirely.
+                    # Note too short to represent in PTTTL -- skip it.
+                    elapsed_ms = n.start_ms + n.length_ms
                     continue
                 note_strings.append(s)
                 elapsed_ms += consumed_ms

@@ -83,6 +83,7 @@ typedef struct
     unsigned int note_number;        ///< Piano key number for this note, 1-88
     float pitch_hz;                  ///< Note pitch in Hz
     float phasor_state;              ///< Phasor state for vibrato (frequency modulation)
+    float sample_error;              ///< Accumulated sample count error for this note
 } ptttl_note_stream_t;
 
 /**

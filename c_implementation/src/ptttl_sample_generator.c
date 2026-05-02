@@ -231,10 +231,33 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
 
     note_stream->phasor_state = 0.0f;
 
-    // Calculate note time in samples
-    uint32_t time_ms = PTTTL_NOTE_DURATION(note);
-    float num_samples = ((float) time_ms) * (((float) generator->config.sample_rate) / 1000.0f);
-    note_stream->num_samples = (unsigned int) num_samples;
+    /* Compute note duration directly from BPM and fraction index to avoid
+     * any integer truncation in the time encoding. This gives exact sample
+     * counts regardless of BPM and sample rate.
+     *
+     * Duration fractions: index 0=whole(1), 1=half(2), 2=quarter(4),
+     *                     3=8th(8), 4=16th(16), 5=32nd(32) */
+    static const unsigned int duration_divisors[6] = {1u, 2u, 4u, 8u, 16u, 32u};
+    unsigned int dur_idx = PTTTL_NOTE_DURATION_IDX(note);
+    unsigned int dot     = PTTTL_NOTE_DOT(note);
+    unsigned int divisor = (dur_idx < 6u) ? duration_divisors[dur_idx] : 32u;
+
+    // whole_note_samples = (60 / bpm) * 4 * sample_rate
+    float whole_note_samples = (60.0f / (float) generator->parser->bpm)
+                               * 4.0f
+                               * (float) generator->config.sample_rate;
+    float num_samples = whole_note_samples / (float) divisor;
+    if (dot)
+    {
+        num_samples *= 1.5f;
+    }
+
+    // Carry forward the fractional sample remainder from previous notes on
+    // this channel so truncation error never accumulates beyond one sample.
+    num_samples += note_stream->sample_error;
+    unsigned int num_samples_int = (unsigned int) num_samples;
+    note_stream->sample_error = num_samples - (float) num_samples_int;
+    note_stream->num_samples = num_samples_int;
 
     // Handle case where attack + delay is longer than note length
     unsigned int attack = generator->config.attack_samples;
@@ -296,6 +319,7 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
     generator->current_sample = 0u;
 
     memset(generator->channel_finished, 0, sizeof(generator->channel_finished));
+    memset(generator->note_streams, 0, sizeof(generator->note_streams));
 
     // Populate note streams for initial note on all channels
     for (uint32_t chan = 0u; chan < parser->channel_count; chan++)

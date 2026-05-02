@@ -66,8 +66,13 @@
 // Read the musical note value from note settings
 #define PTTTL_NOTE_VALUE(note) (((note)->note_settings) & 0x7fu)
 
-// Read the note duration from note settings
-#define PTTTL_NOTE_DURATION(note) ((((note)->note_settings) >> 7u) & 0xffffu)
+/* Read the note duration fraction index from note settings
+ * Index maps to note duration: 0=1(whole), 1=2(half), 2=4(quarter),
+ * 3=8(8th), 4=16(16th), 5=32(32nd) */
+#define PTTTL_NOTE_DURATION_IDX(note) ((((note)->note_settings) >> 7u) & 0x7u)
+
+// Read the note dot flag from note settings (1 = dotted, 0 = not dotted)
+#define PTTTL_NOTE_DOT(note) ((((note)->note_settings) >> 10u) & 0x1u)
 
 
 /**
@@ -76,13 +81,16 @@
 typedef struct
 {
     /**
-     * Bits 0-6   : Note value. Valid values are 0 through 88, with 1 through 88 representing
-     *              the 88 keys on a piano keyboard (1 is the lowest note and 88 is the highest
-     *              note), and 0 representing a pause/rest.
+     * Bits 0-6  : Note value. Valid values are 0 through 88, with 1 through 88 representing
+     *             the 88 keys on a piano keyboard (1 is the lowest note and 88 is the highest
+     *             note), and 0 representing a pause/rest.
      *
-     * Bits 7-22  : Note duration in milliseconds. Valid values are 0x0 through 0xffff.
+     * Bits 7-9  : Note duration fraction index. Maps as follows:
+     *             0=whole(1), 1=half(2), 2=quarter(4), 3=8th(8), 4=16th(16), 5=32nd(32)
      *
-     * Bits 23-31 : Unused
+     * Bit  10   : Dot flag. 1 if the note is dotted (duration *= 1.5), 0 if not.
+     *
+     * Bits 11-31: Unused.
      */
     uint32_t note_settings;
 

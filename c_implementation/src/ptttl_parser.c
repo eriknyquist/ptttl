@@ -152,12 +152,18 @@
 // Set vibrato settings for a ptttl_output_note_t instance
 #define SET_VIBRATO(note, freq, var) ((note)->vibrato_settings = ((freq) & 0xffffu) | (((var) & 0xffffu) << 16u))
 
-// Set note settings for a ptttl_output_note_t instance
-#define SET_NOTE(note, value, duration) ((note)->note_settings = ((value) & 0x7fu) | (((duration) & 0xffffu) << 7u))
+/* Set note settings for a ptttl_output_note_t instance.
+ * duration_idx: index into {1,2,4,8,16,32} (0=whole .. 5=32nd), stored in bits 7-9.
+ * dot: 1 if dotted, 0 if not, stored in bit 10. */
+#define SET_NOTE(note, value, duration_idx, dot) \
+    ((note)->note_settings = ((value) & 0x7fu) | (((duration_idx) & 0x7u) << 7u) | (((dot) & 0x1u) << 10u))
 
-// Set a ptttl_output_note_t as an empty track sentinel
-#define EMPTY_TRACK_SENTINEL(note) {(note)->note_settings=0u; (note)->vibrato_settings=0u;}
-
+/* Set a ptttl_output_note_t as an empty track sentinel.
+ * Uses dur_idx=7 (bits 7-9 = 0b111), which is an impossible value since
+ * valid duration indices are only 0-5. This avoids collision with real notes,
+ * including whole-note rests (note_value=0, dur_idx=0) which would also
+ * produce note_settings=0 if we used the all-zeros sentinel. */
+#define EMPTY_TRACK_SENTINEL(note) {(note)->note_settings=(7u << 7u); (note)->vibrato_settings=0u;}
 
 // Valid values for note duration
 static const unsigned int _valid_note_durations[NOTE_DURATION_COUNT] = {1u, 2u, 4u, 8u, 16u, 32u};
@@ -846,17 +852,17 @@ static int _parse_ptttl_note(ptttl_parser_t *parser, ptttl_output_note_t *output
         }
     }
 
-    // Set note time in seconds based on note duration + BPM
-    float whole_time = (60.0f / (float) parser->bpm) * 4.0f;
-    float duration_secs = whole_time / (float) duration;
-
-    // Handle dotted rhythm
-    if (dot_seen == 1u)
+    // Find the index of this duration in the valid durations array (0=1, 1=2, ... 5=32)
+    unsigned int duration_idx = 0u;
+    for (unsigned int i = 0u; i < NOTE_DURATION_COUNT; i++)
     {
-        duration_secs += (duration_secs / 2.0f);
+        if (_valid_note_durations[i] == duration)
+        {
+            duration_idx = i;
+            break;
+        }
     }
-
-    SET_NOTE(output, note_number, (uint32_t) (duration_secs * 1000.0f));
+    SET_NOTE(output, note_number, duration_idx, (dot_seen == 1u) ? 1u : 0u);
 
     return _parse_note_vibrato(parser, output);
 }
