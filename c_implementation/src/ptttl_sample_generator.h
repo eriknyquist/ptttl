@@ -78,7 +78,7 @@ typedef struct
     unsigned int sine_index;         ///< Monotonically increasing index for sinf() function, note pitch
     unsigned int start_sample;       ///< The sample index on which this note started
     unsigned int num_samples;        ///< Number of samples this note runs for
-    unsigned int attack;             ///< Note decay length, in samples
+    unsigned int attack;             ///< Note attack length, in samples
     unsigned int decay;              ///< Note decay length, in samples
     unsigned int note_number;        ///< Piano key number for this note, 1-88
     float pitch_hz;                  ///< Note pitch in Hz

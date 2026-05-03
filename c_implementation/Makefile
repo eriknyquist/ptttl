@@ -44,7 +44,7 @@ examples: make_build_dirs
 	@echo
 	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/ptttl_cli.c -o $(OBJ_DIR)/ptttl_cli.o
 	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/gen_samples_from_file.c -o $(OBJ_DIR)/gen_samples_from_file.o
-	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/gen_samples_from_file.c -o $(OBJ_DIR)/gen_samples_from_mem.o
+	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/gen_samples_from_mem.c -o $(OBJ_DIR)/gen_samples_from_mem.o
 	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/generator_config.c -o $(OBJ_DIR)/generator_config.o
 	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/set_waveform.c -o $(OBJ_DIR)/set_waveform.o
 	$(CC) $(CFLAGS) -c $(EXAMPLES_DIR)/set_custom_waveform.c -o $(OBJ_DIR)/set_custom_waveform.o

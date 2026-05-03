@@ -276,13 +276,15 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
         if ((generator.current_sample + sample_buf_len) > alloc_size)
         {
             alloc_size *= 2u;
-            sample_buf = realloc(sample_buf, alloc_size * sizeof(int16_t));
-            sample_buf_ptr = &sample_buf[generator.current_sample];
+            int16_t *new_buf = realloc(sample_buf, alloc_size * sizeof(int16_t));
             if (NULL == sample_buf)
             {
+                free(sample_buf);
                 ERROR(parser, "Failed to allocate memory");
                 return -1;
             }
+            sample_buf = new_buf;
+            sample_buf_ptr = &sample_buf[generator.current_sample];
         }
         else
         {
@@ -295,6 +297,9 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
 
     if (ret < 0)
     {
+#if PTTTL_WAVFILE_GENERATION_STRATEGY == 1
+        free(sample_buf);
+#endif
         return ret;
     }
 
@@ -316,6 +321,9 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
     size_t size_written = fwrite(&header, 1u, sizeof(header), fp);
     if (sizeof(header) != size_written)
     {
+#if PTTTL_WAVFILE_GENERATION_STRATEGY == 1
+        free(sample_buf);
+#endif
         ERROR(parser, "Failed to write WAV data");
         return -1;
     }
@@ -325,6 +333,7 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
     size_written = fwrite(sample_buf, 1u, generator.current_sample * sizeof(int16_t), fp);
     if ((generator.current_sample * sizeof(int16_t)) != size_written)
     {
+        free(sample_buf);
         ERROR(parser, "Failed to write WAV data");
         return -1;
     }

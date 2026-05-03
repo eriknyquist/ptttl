@@ -1042,7 +1042,7 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
             if (furthest_stream != NULL)
             {
                 // Suitable higher channel found- we can skip ahead
-                int ret = _seek_wrapper(parser, furthest_stream->position);
+                ret = _seek_wrapper(parser, furthest_stream->position);
                 CHECK_IFACE_RET_EOF(parser, ret);
                 *parser->active_stream = *furthest_stream;
             }
@@ -1077,7 +1077,7 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
     else
     {
         pipes_to_skip = channel_idx - earlier_idx;
-        int ret = _seek_wrapper(parser, earlier_stream->position);
+        ret = _seek_wrapper(parser, earlier_stream->position);
         CHECK_IFACE_RET_EOF(parser, ret);
         *parser->active_stream = *earlier_stream;
     }
