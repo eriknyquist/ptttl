@@ -114,9 +114,12 @@ Macros</h2></td></tr>
 <tr class="memitem:aef774f53b3ceee216cc37211b9b45995"><td class="memItemLeft" align="right" valign="top"><a id="aef774f53b3ceee216cc37211b9b45995"></a>
 #define&#160;</td><td class="memItemRight" valign="bottom"><b>PTTTL_NOTE_VALUE</b>(note)&#160;&#160;&#160;(((note)-&gt;note_settings) &amp; 0x7fu)</td></tr>
 <tr class="separator:aef774f53b3ceee216cc37211b9b45995"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa007aad401108afd06072aea8d3b4d47"><td class="memItemLeft" align="right" valign="top"><a id="aa007aad401108afd06072aea8d3b4d47"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>PTTTL_NOTE_DURATION</b>(note)&#160;&#160;&#160;((((note)-&gt;note_settings) &gt;&gt; 7u) &amp; 0xffffu)</td></tr>
-<tr class="separator:aa007aad401108afd06072aea8d3b4d47"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a76ec3b6aebd4ddbf6dd42c0a0ebb174e"><td class="memItemLeft" align="right" valign="top"><a id="a76ec3b6aebd4ddbf6dd42c0a0ebb174e"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>PTTTL_NOTE_DURATION_IDX</b>(note)&#160;&#160;&#160;((((note)-&gt;note_settings) &gt;&gt; 7u) &amp; 0x7u)</td></tr>
+<tr class="separator:a76ec3b6aebd4ddbf6dd42c0a0ebb174e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af259f4db654c830a4b0c59dad48e298d"><td class="memItemLeft" align="right" valign="top"><a id="af259f4db654c830a4b0c59dad48e298d"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>PTTTL_NOTE_DOT</b>(note)&#160;&#160;&#160;((((note)-&gt;note_settings) &gt;&gt; 10u) &amp; 0x1u)</td></tr>
+<tr class="separator:af259f4db654c830a4b0c59dad48e298d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>

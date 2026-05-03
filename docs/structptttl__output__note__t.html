@@ -96,8 +96,9 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Bits 0-6 : Note value. Valid values are 0 through 88, with 1 through 88 representing the 88 keys on a piano keyboard (1 is the lowest note and 88 is the highest note), and 0 representing a pause/rest.</p>
-<p>Bits 7-22 : Note duration in milliseconds. Valid values are 0x0 through 0xffff.</p>
-<p>Bits 23-31 : Unused </p>
+<p>Bits 7-9 : Note duration fraction index. Maps as follows: 0=whole(1), 1=half(2), 2=quarter(4), 3=8th(8), 4=16th(16), 5=32nd(32)</p>
+<p>Bit 10 : Dot flag. 1 if the note is dotted (duration *= 1.5), 0 if not.</p>
+<p>Bits 11-31: Unused. </p>
 
 </div>
 </div>
