@@ -88,6 +88,8 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
 Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structptttl__waveform__t.html">ptttl_waveform_t</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structptttl__note__stream__t.html">ptttl_note_stream_t</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structptttl__sample__generator__config__t.html">ptttl_sample_generator_config_t</a></td></tr>
@@ -104,8 +106,10 @@ Macros</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:a10683bd5b78117262f2270e2c2f86bb5"><td class="memItemLeft" align="right" valign="top">typedef float(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="ptttl__sample__generator_8h.html#a10683bd5b78117262f2270e2c2f86bb5">ptttl_waveform_generator_t</a>) (float x, float p, unsigned int s)</td></tr>
-<tr class="separator:a10683bd5b78117262f2270e2c2f86bb5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a695ef098815421d23f161faa44b89581"><td class="memItemLeft" align="right" valign="top">typedef float(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="ptttl__sample__generator_8h.html#a695ef098815421d23f161faa44b89581">ptttl_waveform_generator_t</a>) (float x, float p, unsigned int s, void *wgendata)</td></tr>
+<tr class="separator:a695ef098815421d23f161faa44b89581"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac1ad15fd670da41e105b4f1270696b0c"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="ptttl__sample__generator_8h.html#ac1ad15fd670da41e105b4f1270696b0c">ptttl_waveform_note_setup_t</a>) (uint32_t channel_idx, uint8_t note_number, unsigned int sample_rate, void *wgendata)</td></tr>
+<tr class="separator:ac1ad15fd670da41e105b4f1270696b0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="enum-members"></a>
 Enumerations</h2></td></tr>
@@ -115,7 +119,8 @@ Enumerations</h2></td></tr>
 , <a class="el" href="ptttl__sample__generator_8h.html#a2cd4a11daac44dffe8622847668a238ead3710647de630ec226fba20769386a5b">WAVEFORM_TYPE_SAWTOOTH</a>
 , <a class="el" href="ptttl__sample__generator_8h.html#a2cd4a11daac44dffe8622847668a238ea85d64bb432b4a0e78b06d8e424e4ee3f">WAVEFORM_TYPE_SQUARE</a>
 , <br />
-&#160;&#160;<b>WAVEFORM_TYPE_COUNT</b>
+&#160;&#160;<a class="el" href="ptttl__sample__generator_8h.html#a2cd4a11daac44dffe8622847668a238ea0c0efb59cffd9b2079325bfce3784986">WAVEFORM_TYPE_NOKIA</a>
+, <b>WAVEFORM_TYPE_COUNT</b>
 <br />
  }</td></tr>
 <tr class="separator:a2cd4a11daac44dffe8622847668a238e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -126,8 +131,8 @@ Functions</h2></td></tr>
 <tr class="separator:ae137370e277f0b4b968dad4897877ffe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af6845ad89a777f856e48fa3b7b1fd02d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="ptttl__sample__generator_8h.html#af6845ad89a777f856e48fa3b7b1fd02d">ptttl_sample_generator_set_waveform</a> (<a class="el" href="structptttl__sample__generator__t.html">ptttl_sample_generator_t</a> *generator, uint32_t channel, <a class="el" href="ptttl__sample__generator_8h.html#a2cd4a11daac44dffe8622847668a238e">ptttl_waveform_type_e</a> type)</td></tr>
 <tr class="separator:af6845ad89a777f856e48fa3b7b1fd02d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae16f0bf92a7bf5216ea93c483d450846"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="ptttl__sample__generator_8h.html#ae16f0bf92a7bf5216ea93c483d450846">ptttl_sample_generator_set_custom_waveform</a> (<a class="el" href="structptttl__sample__generator__t.html">ptttl_sample_generator_t</a> *generator, uint32_t channel, <a class="el" href="ptttl__sample__generator_8h.html#a10683bd5b78117262f2270e2c2f86bb5">ptttl_waveform_generator_t</a> wgen)</td></tr>
-<tr class="separator:ae16f0bf92a7bf5216ea93c483d450846"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ba67e75bc5f959a4c175d4e4d600f62"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="ptttl__sample__generator_8h.html#a8ba67e75bc5f959a4c175d4e4d600f62">ptttl_sample_generator_set_custom_waveform</a> (<a class="el" href="structptttl__sample__generator__t.html">ptttl_sample_generator_t</a> *generator, uint32_t channel, const <a class="el" href="structptttl__waveform__t.html">ptttl_waveform_t</a> *waveform)</td></tr>
+<tr class="separator:a8ba67e75bc5f959a4c175d4e4d600f62"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad1780a1d1d2d3e486ce35c1a51036cca"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="ptttl__sample__generator_8h.html#ad1780a1d1d2d3e486ce35c1a51036cca">ptttl_sample_generator_generate</a> (<a class="el" href="structptttl__sample__generator__t.html">ptttl_sample_generator_t</a> *generator, uint32_t *num_samples, int16_t *samples)</td></tr>
 <tr class="separator:ad1780a1d1d2d3e486ce35c1a51036cca"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -171,14 +176,14 @@ Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Typedef Documentation</h2>
-<a id="a10683bd5b78117262f2270e2c2f86bb5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a10683bd5b78117262f2270e2c2f86bb5">&#9670;&nbsp;</a></span>ptttl_waveform_generator_t</h2>
+<a id="a695ef098815421d23f161faa44b89581"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a695ef098815421d23f161faa44b89581">&#9670;&nbsp;</a></span>ptttl_waveform_generator_t</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef float(* ptttl_waveform_generator_t) (float x, float p, unsigned int s)</td>
+          <td class="memname">typedef float(* ptttl_waveform_generator_t) (float x, float p, unsigned int s, void *wgendata)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -187,11 +192,38 @@ Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">x</td><td>Phase; current position on the waveform, in turns (0.0 through 1.0) </td></tr>
     <tr><td class="paramname">p</td><td>Wave frequency in Hz </td></tr>
-    <tr><td class="paramname">s</td><td>Sampling rate in Hz</td></tr>
+    <tr><td class="paramname">s</td><td>Sampling rate in Hz </td></tr>
+    <tr><td class="paramname">wgendata</td><td>Pointer to waveform-specific data set up by ptttl_waveform_note_setup_t, may be NULL if no setup function is provided</td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value for the given position, in the range -1.0 through 1.0 </dd></dl>
+
+</div>
+</div>
+<a id="ac1ad15fd670da41e105b4f1270696b0c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac1ad15fd670da41e105b4f1270696b0c">&#9670;&nbsp;</a></span>ptttl_waveform_note_setup_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef void(* ptttl_waveform_note_setup_t) (uint32_t channel_idx, uint8_t note_number, unsigned int sample_rate, void *wgendata)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Optional per-note setup callback for a waveform generator.</p>
+<p>Called once each time a new note starts. The implementation should write any note-specific data it needs (e.g. precomputed harmonic coefficients) into the wgendata buffer pointed to by the wgendata parameter, which is backed by ptttl_note_stream_t.wgendata_storage. The same pointer is passed as wgendata to the ptttl_waveform_generator_t on every subsequent sample for this note.</p>
+<p>May be NULL if the waveform generator requires no per-note setup.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">channel_idx</td><td>Channel number the note belongs to. Channel numbers are in the same order that the channel occurs in the PTTTL/RTTTL source text, starting from 0. </td></tr>
+    <tr><td class="paramname">note_number</td><td>Piano key number of the new note (1-88), or 0 for a rest </td></tr>
+    <tr><td class="paramname">sample_rate</td><td>Sample rate in Hz </td></tr>
+    <tr><td class="paramname">wgendata</td><td>Pointer to ptttl_note_stream_t.wgendata_storage; write note-specific data here </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -216,6 +248,8 @@ Functions</h2></td></tr>
 <tr><td class="fieldname"><a id="a2cd4a11daac44dffe8622847668a238ead3710647de630ec226fba20769386a5b"></a>WAVEFORM_TYPE_SAWTOOTH&#160;</td><td class="fielddoc"><p>Generates a sawtooth wave. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="a2cd4a11daac44dffe8622847668a238ea85d64bb432b4a0e78b06d8e424e4ee3f"></a>WAVEFORM_TYPE_SQUARE&#160;</td><td class="fielddoc"><p>Generates a square wave. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a2cd4a11daac44dffe8622847668a238ea0c0efb59cffd9b2079325bfce3784986"></a>WAVEFORM_TYPE_NOKIA&#160;</td><td class="fielddoc"><p>Mimics the sound of a Nokia 3310 phone. </p>
 </td></tr>
 </table>
 
@@ -310,8 +344,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ae16f0bf92a7bf5216ea93c483d450846"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae16f0bf92a7bf5216ea93c483d450846">&#9670;&nbsp;</a></span>ptttl_sample_generator_set_custom_waveform()</h2>
+<a id="a8ba67e75bc5f959a4c175d4e4d600f62"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8ba67e75bc5f959a4c175d4e4d600f62">&#9670;&nbsp;</a></span>ptttl_sample_generator_set_custom_waveform()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -331,8 +365,8 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="ptttl__sample__generator_8h.html#a10683bd5b78117262f2270e2c2f86bb5">ptttl_waveform_generator_t</a>&#160;</td>
-          <td class="paramname"><em>wgen</em>&#160;</td>
+          <td class="paramtype">const <a class="el" href="structptttl__waveform__t.html">ptttl_waveform_t</a> *&#160;</td>
+          <td class="paramname"><em>waveform</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -341,16 +375,16 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Set a custom waveform generator function for a specific channel of the sample generator</p>
+<p>Set a fully custom waveform for a specific channel, including an optional per-note setup callback. The waveform struct pairs a generator function with an optional note_setup callback for precomputing per-note data.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">generator</td><td>Pointer to initialized generator object </td></tr>
-    <tr><td class="paramname">channel</td><td>Channel index to set the waveform type for. Channel index is 0-based, and channels are indexed in the order in which they appear in the PTTTL source text. For example, channel 0 is the first channel that appears in the source text, channel 1 is the second channel, and so on. </td></tr>
-    <tr><td class="paramname">wgen</td><td>Waveform generator function to use for the specified channel.</td></tr>
+    <tr><td class="paramname">channel</td><td>Channel index (0-based) </td></tr>
+    <tr><td class="paramname">waveform</td><td>Pointer to waveform definition struct</td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>0 if successful, -1 if an error occurred. Call <a class="el" href="ptttl__parser_8h.html#a87bf37f225921f3e1af57df81ab4f3cc">ptttl_parser_error</a> for an error description if -1 is returned. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>0 if successful, -1 if an error occurred. </dd></dl>
 
 </div>
 </div>
