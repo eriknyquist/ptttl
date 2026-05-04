@@ -1,8 +1,11 @@
 Portable C implementation of PTTTL/RTTTL parser
 -----------------------------------------------
 
-This is a reference implementation of a PTTTL/RTTTL parser in C, suitable for embedded
-applications (no dynamic memory allocation, low static memory usage, minimal dependencies).
+This is a reference implementation of a PTTTL/RTTTL parser in C. The parser API
+allows you to read PTTTL/RTTTL text from an arbitrary source (i.e. filesystem, memory,
+socket) and produce a stream of signed 16-bit PCM audio samples. This implementation
+is suitable for embedded applications (no dynamic memory allocation, low static
+memory usage, minimal dependencies).
 
 This implementation is split into 3 main parts, to make it easier for you to take
 only the file(s) that you need:
@@ -15,12 +18,14 @@ only the file(s) that you need:
 
 * **ptttl_sample_generator.c**: Reads the output of ``ptttl_parser.c`` and produces
   signed 16-bit audio samples containing the tones described by the RTTTL/PTTTL source.
-  The type fo waveform generated is configurable- sine, triangle, sawtooth and square
-  are available as built-in waveform types, and there is also an option to provide your
-  own waveform generator function. The attack / decay time of notes is configurable.
-  The next audio sample is produced only on your request, so there is no need to store
-  a large number of samples in memory. See ``ptttl_sample_generator.h`` for more details.
-  Requires ``stdint.h`` and ``memset()`` from ``string.h``.
+  The type of waveform generated is configurable; sine, triangle, sawtooth and square
+  are available as built-in waveform types, and there is also a "nokia" waveform
+  type that emulates the sound of the original Nokia 3310 phone. As well as the
+  built-in waveforms, there is also an option to plug in your own waveform generator.
+  The attack / decay time of notes is configurable. The next audio sample is produced
+  only on your request, so there is no need to store a large number of samples in
+  memory. See ``ptttl_sample_generator.h`` for more details. Requires ``stdint.h``
+  and ``memset()`` from ``string.h``.
 
 * **ptttl_to_wav.c**: Reads the output of ``ptttl_parser.c`` and produces a .wav file
   containing the tones described by the RTTTL/PTTTL source. Requires ``stdio.h`` and
