@@ -45,16 +45,18 @@ static int _seek(uint32_t position)
 /**
  * Triangle wave generator
  *
- * @param x   Phase; current position on the waveform, in turns (0.0 through 1.0)
- * @param p   Wave frequency in Hz
- * @param s   Sampling rate in Hz
+ * @param x         Phase; current position on the waveform, in turns (0.0 through 1.0)
+ * @param p         Wave frequency in Hz
+ * @param s         Sampling rate in Hz
+ * @param wgendata  Waveform-specific data
  *
  * @return Value for the given phase, in the range -1.0 through 1.0
  */
-static float _triangle_generator(float x, float p, unsigned int s)
+static float _triangle_generator(float x, float p, unsigned int s, void *wgendata)
 {
     (void) p; // Unused
     (void) s; // Unused
+    (void) wgendata; // Unused
 
     int ix = (int)x;
     float t = x - ix;
@@ -111,11 +113,13 @@ int main(int argc, char *argv[])
         return ret;
     }
 
+    ptttl_waveform_t waveform = {_triangle_generator, NULL, NULL};
+
     // Iterate over all channel indices
     for (uint32_t i = 0u; i < parser.channel_count; i++)
     {
         // Use custom waveform generator for each channel in the input text
-        ret = ptttl_sample_generator_set_custom_waveform(&generator, i, _triangle_generator);
+        ret = ptttl_sample_generator_set_custom_waveform(&generator, i, &waveform);
         if (ret < 0)
         {
             printf("Unable to set waveform type to square\n");

@@ -72,6 +72,11 @@ static int _get_file_size(FILE *fp)
         return -1;
     }
 
+    if (fseek(fp, 0, SEEK_SET) != 0)
+    {
+        return -1;
+    }
+
     return (int) size;
 }
 
@@ -109,8 +114,15 @@ int main(int argc, char *argv[])
     }
 
     // Read the entire file into memory
-    (void) fread(_file_buf, 1, _buflen, fp);
+    size_t size_read = fread(_file_buf, 1, _buflen, fp);
     fclose(fp);
+
+    if (size_read != _buflen)
+    {
+        printf("Failed to read file %s (read %zu bytes, expected %u)\n",
+                argv[1], size_read, _buflen);
+        return -1;
+    }
 
     // Create and initialize PTTTL parser object
     ptttl_parser_t parser;

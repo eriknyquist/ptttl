@@ -51,6 +51,7 @@ typedef enum
     WAVEFORM_TYPE_TRIANGLE,  ///< Generates a triangle wave
     WAVEFORM_TYPE_SAWTOOTH,  ///< Generates a sawtooth wave
     WAVEFORM_TYPE_SQUARE,    ///< Generates a square wave
+    WAVEFORM_TYPE_NOKIA,     ///< Mimics the sound of a Nokia 3310 phone
     WAVEFORM_TYPE_COUNT
 } ptttl_waveform_type_e;
 
@@ -58,21 +59,62 @@ typedef enum
 /**
  * Callback function for a waveform generator
  *
- * @param x   Phase; current position on the waveform, in turns (0.0 through 1.0)
- * @param p   Wave frequency in Hz
- * @param s   Sampling rate in Hz
+ * @param x        Phase; current position on the waveform, in turns (0.0 through 1.0)
+ * @param p        Wave frequency in Hz
+ * @param s        Sampling rate in Hz
+ * @param wgendata Pointer to waveform-specific data set up by ptttl_waveform_note_setup_t,
+ *                 may be NULL if no setup function is provided
  *
  * @return Value for the given position, in the range -1.0 through 1.0
  */
-typedef float (*ptttl_waveform_generator_t)(float x, float p, unsigned int s);
+typedef float (*ptttl_waveform_generator_t)(float x, float p, unsigned int s, void *wgendata);
 
+/**
+ * Optional per-note setup callback for a waveform generator.
+ *
+ * Called once each time a new note starts. The implementation should write any
+ * note-specific data it needs (e.g. precomputed harmonic coefficients) into
+ * the wgendata buffer pointed to by the wgendata parameter, which is backed by
+ * ptttl_note_stream_t.wgendata_storage. The same pointer is passed as wgendata
+ * to the ptttl_waveform_generator_t on every subsequent sample for this note.
+ *
+ * May be NULL if the waveform generator requires no per-note setup.
+ *
+ * @param channel_idx  Channel number the note belongs to. Channel numbers are in
+ *                     the same order that the channel occurs in the PTTTL/RTTTL
+ *                     source text, starting from 0.
+ * @param note_number  Piano key number of the new note (1-88), or 0 for a rest
+ * @param sample_rate  Sample rate in Hz
+ * @param wgendata     Pointer to ptttl_note_stream_t.wgendata_storage; write
+ *                     note-specific data here
+ */
+typedef void (*ptttl_waveform_note_setup_t)(uint32_t channel_idx,
+                                            uint8_t note_number,
+                                            unsigned int sample_rate,
+                                            void *wgendata);
+
+/**
+ * Pairs a waveform generator function with an optional per-note setup callback.
+ * Used with ptttl_sample_generator_set_custom_waveform to define a fully custom
+ * waveform including any note-specific precomputation.
+ */
+typedef struct
+{
+    ptttl_waveform_generator_t  wgen;        ///< Per-sample waveform function (must not be NULL)
+    ptttl_waveform_note_setup_t note_setup;  ///< Per-note setup callback, may be NULL
+    /**
+     * Pointer to waveform-specific data, will be passed to the note_setup and wgen
+     * callbacks, may be NULL
+     */
+    void *wgendata;
+} ptttl_waveform_t;
 
 /**
  * Represents the current note that samples are being generated for on any one channel
  */
 typedef struct
 {
-    ptttl_waveform_generator_t wgen; ///< Waveform generator function
+    ptttl_waveform_t waveform;       ///< Waveform generator functions
     uint32_t vibrato_frequency;      ///< Vibrato frequency, in HZ
     uint32_t vibrato_variance;       ///< Vibrato variance, in HZ
     unsigned int sine_index;         ///< Monotonically increasing index for sinf() function, note pitch
@@ -140,20 +182,19 @@ int ptttl_sample_generator_set_waveform(ptttl_sample_generator_t *generator,
                                         uint32_t channel, ptttl_waveform_type_e type);
 
 /**
- * Set a custom waveform generator function for a specific channel of the sample generator
+ * Set a fully custom waveform for a specific channel, including an optional per-note
+ * setup callback. The waveform struct pairs a generator function with an optional
+ * note_setup callback for precomputing per-note data.
  *
  * @param generator    Pointer to initialized generator object
- * @param channel      Channel index to set the waveform type for. Channel index
- *                     is 0-based, and channels are indexed in the order in which they appear
- *                     in the PTTTL source text. For example, channel 0 is the first channel
- *                     that appears in the source text, channel 1 is the second channel, and so on.
- * @param wgen         Waveform generator function to use for the specified channel.
+ * @param channel      Channel index (0-based)
+ * @param waveform     Pointer to waveform definition struct
  *
- * @return 0 if successful, -1 if an error occurred. Call #ptttl_parser_error
- *         for an error description if -1 is returned.
+ * @return 0 if successful, -1 if an error occurred.
  */
 int ptttl_sample_generator_set_custom_waveform(ptttl_sample_generator_t *generator,
-                                               uint32_t channel, ptttl_waveform_generator_t wgen);
+                                               uint32_t channel,
+                                               const ptttl_waveform_t *waveform);
 
 /**
  * Generate the next audio sample(s) for an initialized generator object

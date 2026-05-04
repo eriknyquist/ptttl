@@ -45,9 +45,16 @@ static void _print_usage(void)
     printf("\nIf no input file is given, input will be read from stdin.\n");
     printf("If no output file is given, output will be written to stdout.\n\n");
     printf("\nOPTIONS:\n\n");
-    printf("-w --wave-type [sine|triangle|square|sawtooth]  Waveform type (default: sine)\n");
-    printf("-o --output-filename [string]                   Output filename (default: print to stdout)\n");
-    printf("-h --help                                       Show this output and exit\n");
+    printf("-w --wave-type [sine|triangle|square|sawtooth|nokia]  Waveform type (default: sine)\n");
+    printf("-o --output-filename [string]                         Output filename (default: print to stdout)\n");
+    printf("-h --help                                             Show this output and exit\n");
+    printf("\n");
+    printf("Waveform types:\n");
+    printf("     sine: Sine waveform\n");
+    printf(" triangle: Triangle waveform\n");
+    printf("   square: Square waveform\n");
+    printf(" sawtooth: Sawtooth waveform\n");
+    printf("    nokia: Waveform that emulates the tone of a Nokia 3310\n");
     printf("\n");
 }
 
@@ -80,6 +87,10 @@ static int _parse_args(int argc, char *argv[])
                 else if (strncmp(optarg, "square", 6) == 0)
                 {
                     _wave_type = WAVEFORM_TYPE_SQUARE;
+                }
+                else if (strncmp(optarg, "nokia", 5) == 0)
+                {
+                    _wave_type = WAVEFORM_TYPE_NOKIA;
                 }
                 else
                 {
