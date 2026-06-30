@@ -85,7 +85,8 @@ static const float _note_pitches[88] =
  * Notes outside this range are octave-folded to the nearest available entry.
  * Source: https://github.com/edwardball/monophonic-ringtone-synthesizer */
 #define NOKIA_TABLE_SIZE (36u)
-static const float _nokia_coeffs[NOKIA_TABLE_SIZE][PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS] =
+#define NOKIA_MAX_NUM_HARMONICS (16u)
+static const float _nokia_coeffs[NOKIA_TABLE_SIZE][NOKIA_MAX_NUM_HARMONICS] =
 {
     /* [ 0] C4  (12) */
     {0.000014f, 0.001459f, 0.004722f, 0.032332f, 0.095089f, 0.090496f, 0.058699f, 0.042720f,
@@ -392,7 +393,10 @@ static float _nokia_generator(float x, float p, unsigned int s, void *wgendata)
     if (x < 0.0f) x += 1.0f;
 
     float sum = 0.0f;
-    int hcount = data->count;
+    int hcount = (PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS >= data->count) ?
+                 data->count :
+                 PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS;
+
     const float *coeffs = data->coeffs;
 
     for (int n = 0; n < hcount; n++)
