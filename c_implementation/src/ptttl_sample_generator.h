@@ -36,6 +36,16 @@
 #endif // PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS
 
 /**
+ * Max. number of samples mixed per internal pass of ptttl_sample_generator_generate.
+ * Determines the size of a stack-allocated mix buffer in that function, which is
+ * (4 * PTTTL_SAMPLE_GENERATOR_CHUNK_SAMPLES) bytes. Larger values amortize
+ * per-note bookkeeping over more samples, at the cost of increased stack usage.
+ */
+#ifndef PTTTL_SAMPLE_GENERATOR_CHUNK_SAMPLES
+#define PTTTL_SAMPLE_GENERATOR_CHUNK_SAMPLES 64u
+#endif // PTTTL_SAMPLE_GENERATOR_CHUNK_SAMPLES
+
+/**
  * ptttl_sample_generator_config_t object initialization with sane defaults
  */
 #define PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT {.sample_rate=44100u, .attack_samples=100u, \

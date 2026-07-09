@@ -220,7 +220,21 @@ static const uint8_t _nokia_key_to_table[88] =
     33, 34, 35, 24
 };
 
-// Forward declaration of built-in waveform generators and Nokia setup
+/* Per-channel harmonic count for the square & sawtooth waveform generators,
+ * computed once per note by _harmonic_note_setup so the per-sample path needs
+ * no division or clamping. Used as the wgendata layout when
+ * WAVEFORM_TYPE_SQUARE or WAVEFORM_TYPE_SAWTOOTH is active. */
+static int _harmonic_hcount[PTTTL_MAX_CHANNELS_PER_FILE];
+
+/* Per-harmonic amplitude coefficients for the square, sawtooth & triangle
+ * waveform generators, populated by _init_coeff_tables so the per-sample
+ * path needs no divisions.
+ * Square uses odd harmonics n only, indexed by n >> 1. */
+static float _square_coeffs[(PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS + 1) / 2];
+static float _sawtooth_coeffs[PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS];
+static float _triangle_coeffs[PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS];
+
+// Forward declaration of built-in waveform generators and per-note setups
 static float _sine_generator(float x, float p, unsigned int s, void *wgendata);
 static float _triangle_generator(float x, float p, unsigned int s, void *wgendata);
 static float _sawtooth_generator(float x, float p, unsigned int s, void *wgendata);
@@ -228,17 +242,76 @@ static float _square_generator(float x, float p, unsigned int s, void *wgendata)
 static float _nokia_generator(float x, float p, unsigned int s, void *wgendata);
 static void  _nokia_note_setup(uint32_t channel_idx, uint8_t note_number,
                                unsigned int sample_rate, void *wgendata);
+static void  _harmonic_note_setup(uint32_t channel_idx, uint8_t note_number,
+                                  unsigned int sample_rate, void *wgendata);
 
 // Maps waveform type enums to built-in ptttl_waveform_t definitions.
-// note_setup is NULL for all waveforms except Nokia.
+// note_setup is NULL for waveforms needing no per-note precomputation.
 static ptttl_waveform_t _builtin_waveforms[WAVEFORM_TYPE_COUNT] =
 {
-    { _sine_generator,     NULL, NULL},           // WAVEFORM_TYPE_SINE
-    { _triangle_generator, NULL, NULL},           // WAVEFORM_TYPE_TRIANGLE
-    { _sawtooth_generator, NULL, NULL},           // WAVEFORM_TYPE_SAWTOOTH
-    { _square_generator,   NULL, NULL},           // WAVEFORM_TYPE_SQUARE
-    { _nokia_generator, _nokia_note_setup, NULL}, // WAVEFORM_TYPE_NOKIA
+    { _sine_generator,     NULL, NULL},                 // WAVEFORM_TYPE_SINE
+    { _triangle_generator, NULL, NULL},                 // WAVEFORM_TYPE_TRIANGLE
+    { _sawtooth_generator, _harmonic_note_setup, NULL}, // WAVEFORM_TYPE_SAWTOOTH
+    { _square_generator,   _harmonic_note_setup, NULL}, // WAVEFORM_TYPE_SQUARE
+    { _nokia_generator, _nokia_note_setup, NULL},       // WAVEFORM_TYPE_NOKIA
 };
+
+/**
+ * Populate the harmonic coefficient tables used by the square, sawtooth and
+ * triangle waveform generators. Idempotent; called from
+ * ptttl_sample_generator_create.
+ */
+static void _init_coeff_tables(void)
+{
+    // Square: odd harmonics n with amplitude 4/(pi*n), indexed by n >> 1
+    for (int n = 1; n <= PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS; n += 2)
+    {
+        _square_coeffs[n >> 1] = 4.0f / (PI * (float) n);
+    }
+
+    // Sawtooth: all harmonics n with amplitude 2/(pi*n), alternating sign
+    for (int n = 1; n <= PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS; n++)
+    {
+        float sign = (n & 1) ? 1.0f : -1.0f;
+        _sawtooth_coeffs[n - 1] = sign * (2.0f / (PI * (float) n));
+    }
+
+    /* Triangle: odd harmonics n = 2k+1 with amplitude 8/(pi^2 * n^2),
+     * alternating sign, indexed by k */
+    for (int k = 0; k < PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS; k++)
+    {
+        int n = (2 * k) + 1;
+        float sign = (k & 1) ? -1.0f : 1.0f;
+        _triangle_coeffs[k] = sign * (8.0f / (float) (PI * PI)) / (float) (n * n);
+    }
+}
+
+/**
+ * Per-note setup callback shared by the square & sawtooth waveform generators.
+ * Computes the number of harmonics that fit below the Nyquist frequency for the
+ * new note's base pitch, and stores it in wgendata (cast to int *).
+ */
+static void _harmonic_note_setup(uint32_t channel_idx, uint8_t note_number,
+                                 unsigned int sample_rate, void *wgendata)
+{
+    (void) channel_idx;
+
+    int *hcount = (int *) wgendata;
+
+    if (0u == note_number)
+    {
+        // Rest; the waveform generator is never called for rests
+        *hcount = 0;
+        return;
+    }
+
+    // Calculate max. number of harmonics given the note pitch
+    float pitch = _note_pitches[note_number - 1u];
+    int maxh = (int) ((((float) sample_rate) * 0.5f) / pitch);
+    if (maxh < 1) maxh = 1;               // At least the fundamental harmonic
+    *hcount = (maxh < PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS) ?
+               maxh : PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS;
+}
 
 
 /**
@@ -248,22 +321,21 @@ static ptttl_waveform_t _builtin_waveforms[WAVEFORM_TYPE_COUNT] =
  */
 static float _square_generator(float x, float p, unsigned int s, void *wgendata)
 {
-    (void) wgendata;
-    x = x - (int)x;
-    if (x < 0.0f) x += 1.0f;
+    (void) p; // Unused
+    (void) s; // Unused
 
-    // Calculate max. number of harmonics given the waveform frequency
-    int maxh = (int) ((((float) s) * 0.5f) / p);
-    if (maxh < 1) maxh = 1;               // At least the fundamental harmonic
-    int hcount = (maxh < PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS) ?
-                  maxh : PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS;
+    // Number of harmonics, precomputed per-note by _harmonic_note_setup
+    int hcount = *(const int *) wgendata;
+
+    x = x - (int)x;
+    x += (float) (x < 0.0f); // Branchless wrap into [0, 1)
 
     // Generate square point by summing points of sine waves of the harmonics
     float sum = 0.0f;
     // square only has odd harmonics
     for (int n = 1; n <= hcount; n += 2)
     {
-        sum += (4.0f / (PI * n)) * _sine_generator(n * x, 0.0f, 0u, NULL);
+        sum += _square_coeffs[n >> 1] * _sine_generator(n * x, 0.0f, 0u, NULL);
     }
 
     return sum;
@@ -276,22 +348,20 @@ static float _square_generator(float x, float p, unsigned int s, void *wgendata)
  */
 static float _sawtooth_generator(float x, float p, unsigned int s, void *wgendata)
 {
-    (void) wgendata;
-    x = x - (int)x;
-    if (x < 0.0f) x += 1.0f;
+    (void) p; // Unused
+    (void) s; // Unused
 
-    // Calculate max. number of harmonics given the waveform frequency
-    int maxh = (int) ((((float) s) * 0.5f) / p);
-    if (maxh < 1) maxh = 1;               // At least the fundamental harmonic
-    int hcount = (maxh < PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS) ?
-                  maxh : PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS;
+    // Number of harmonics, precomputed per-note by _harmonic_note_setup
+    int hcount = *(const int *) wgendata;
+
+    x = x - (int)x;
+    x += (float) (x < 0.0f); // Branchless wrap into [0, 1)
 
     // Generate sawtooth point by summing points of sine waves of the harmonics
     float sum = 0.0f;
     for (int n = 1; n <= hcount; ++n)
     {
-        float sign = (n & 1) ? 1.0f : -1.0f;
-        sum += sign * (2.0f / (PI * n)) * _sine_generator(n * x, 0.0f, 0u, NULL);
+        sum += _sawtooth_coeffs[n - 1] * _sine_generator(n * x, 0.0f, 0u, NULL);
     }
     return sum;
 }
@@ -309,14 +379,14 @@ static float _triangle_generator(float x, float p, unsigned int s, void *wgendat
 
     float value = 0.0f;
 
+    // Sign, harmonic amplitude and the overall 8/pi^2 factor are all folded
+    // into the precomputed coefficient table
     for (int k = 0; k < PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS; k++)
     {
-        int n = 2 * k + 1;
-        float sign = (k & 1) ? -1.0f : 1.0f;
-        value += sign * _sine_generator(n * x, p, s, NULL) / (n * n);
+        int n = (2 * k) + 1;
+        value += _triangle_coeffs[k] * _sine_generator(n * x, 0.0f, 0u, NULL);
     }
 
-    value *= 8.0f / (float) (PI * PI);
     return value;
 }
 
@@ -362,9 +432,19 @@ static void _nokia_note_setup(uint32_t channel_idx, uint8_t note_number,
     }
 
     uint8_t table_idx = _nokia_key_to_table[note_number - 1u];
-    data->count = _nokia_harmonic_count[table_idx];
+    int count = _nokia_harmonic_count[table_idx];
 
-    for (int i = 0; i < data->count; i++)
+    /* Clamp once here so the per-sample generator needs no bounds check, and
+     * so the copy below cannot overrun coeffs when
+     * PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS < NOKIA_MAX_NUM_HARMONICS */
+    if (count > PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS)
+    {
+        count = PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS;
+    }
+
+    data->count = count;
+
+    for (int i = 0; i < count; i++)
     {
         data->coeffs[i] = _nokia_coeffs[table_idx][i];
     }
@@ -382,21 +462,15 @@ static float _nokia_generator(float x, float p, unsigned int s, void *wgendata)
     (void) p;
     (void) s;
 
-    ptttl_nokia_wgendata_t *data = (ptttl_nokia_wgendata_t *) wgendata;
-
-    if ((NULL == data) || (0 == data->count))
-    {
-        return 0.0f;
-    }
+    const ptttl_nokia_wgendata_t *data = (const ptttl_nokia_wgendata_t *) wgendata;
 
     x = x - (int) x;
-    if (x < 0.0f) x += 1.0f;
+    x += (float) (x < 0.0f); // Branchless wrap into [0, 1)
 
+    /* data->count is pre-clamped by _nokia_note_setup, and is 0 for rests,
+     * which never reach the per-sample path */
     float sum = 0.0f;
-    int hcount = (PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS >= data->count) ?
-                 data->count :
-                 PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS;
-
+    int hcount = data->count;
     const float *coeffs = data->coeffs;
 
     for (int n = 0; n < hcount; n++)
@@ -531,6 +605,67 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
 
 
 /**
+ * Load the next note for a channel into its note stream, skipping any
+ * empty-track sentinels.
+ *
+ * @param generator    Pointer to initialized sample generator
+ * @param channel_idx  Channel number to advance
+ *
+ * @return 0 if a note was loaded, 1 if the channel has no notes remaining,
+ *         -1 if an error occurred
+ */
+static int _advance_note_stream(ptttl_sample_generator_t *generator, uint32_t channel_idx)
+{
+    ptttl_output_note_t note;
+    int ret = ptttl_parse_next(generator->parser, channel_idx, &note);
+
+    // Skip any empty-track sentinels until we get a real note or EOF/error
+    while ((ret == 0) && IS_EMPTY_TRACK_SENTINEL(&note))
+    {
+        ret = ptttl_parse_next(generator->parser, channel_idx, &note);
+    }
+
+    if (ret == 0)
+    {
+        _load_note_stream(generator, &note, &generator->note_streams[channel_idx], channel_idx);
+    }
+
+    return ret;
+}
+
+/**
+ * Assign a built-in waveform to a channel's note stream, including any
+ * per-channel wgendata storage the waveform requires, and run the waveform's
+ * note_setup for the current note so it takes effect right away.
+ *
+ * @param generator    Pointer to initialized sample generator
+ * @param channel      Channel number to assign the waveform to
+ * @param type         Built-in waveform type
+ */
+static void _set_builtin_waveform(ptttl_sample_generator_t *generator, uint32_t channel,
+                                  ptttl_waveform_type_e type)
+{
+    ptttl_note_stream_t *stream = &generator->note_streams[channel];
+    stream->waveform = _builtin_waveforms[type];
+
+    if (WAVEFORM_TYPE_NOKIA == type)
+    {
+        stream->waveform.wgendata = &_nokia_wgendata[channel];
+    }
+    else if ((WAVEFORM_TYPE_SQUARE == type) || (WAVEFORM_TYPE_SAWTOOTH == type))
+    {
+        stream->waveform.wgendata = &_harmonic_hcount[channel];
+    }
+
+    if (NULL != stream->waveform.note_setup)
+    {
+        stream->waveform.note_setup(channel, (uint8_t) stream->note_number,
+                                    generator->config.sample_rate,
+                                    stream->waveform.wgendata);
+    }
+}
+
+/**
  * @see ptttl_sample_generator.h
  */
 int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator_t *generator,
@@ -561,90 +696,80 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
     memset(generator->channel_finished, 0, sizeof(generator->channel_finished));
     memset(generator->note_streams, 0, sizeof(generator->note_streams));
 
+    _init_coeff_tables();
+
     // Populate note streams for initial note on all channels
     for (uint32_t chan = 0u; chan < parser->channel_count; chan++)
     {
-        ptttl_output_note_t note;
-        int ret = ptttl_parse_next(generator->parser, chan, &note);
-
-        // Skip any empty-track sentinels until we get a real note or EOF/error
-        while ((ret == 0) && IS_EMPTY_TRACK_SENTINEL(&note))
-        {
-            ret = ptttl_parse_next(generator->parser, chan, &note);
-        }
-
+        int ret = _advance_note_stream(generator, chan);
         if (ret != 0)
         {
             return ret;
         }
 
-        _load_note_stream(generator, &note, &generator->note_streams[chan], chan);
-
         // Set default waveform generator
-        generator->note_streams[chan].waveform = _builtin_waveforms[DEFAULT_WAVEFORM_TYPE];
+        _set_builtin_waveform(generator, chan, DEFAULT_WAVEFORM_TYPE);
     }
 
     return 0;
 }
 
 /**
- * Generate the next sample for the given note stream on the given channel
+ * Generate a run of samples for the given note stream and mix them into the
+ * provided buffer. The run must not extend past the end of the stream's
+ * current note (the caller guarantees this), so no per-sample note-boundary
+ * or note-type checks are needed inside the loop.
  *
  * @param generator      Pointer to initialized sample generator
- * @param stream         Pointer to ptttl_note_stream_t instance to generate a sample for
- * @param channel_idx    Channel index of channel the generated sample is for
- * @param sample         Pointer to location to store generated sample
- *
- * @return 0 if there are more samples remaining for the provided note stream,
-             1 if no more samples, -1 if an error occurred
+ * @param stream         Pointer to ptttl_note_stream_t instance to generate samples for
+ * @param chunk          Mix buffer to add generated samples into
+ * @param run            Number of samples to generate
  */
-static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_note_stream_t *stream,
-                                    unsigned int channel_idx, float *sample)
+static void _generate_channel_run(ptttl_sample_generator_t *generator, ptttl_note_stream_t *stream,
+                                  float *chunk, unsigned int run)
 {
-    int ret = 0;
-
-    // Generate next sample value for this channel
     if (0u == stream->note_number) // Note number 0 indicates pause/rest
     {
-        *sample = 0.0f;
+        // Rest; contributes nothing to the mix buffer
+        return;
     }
-    else
+
+    unsigned int sample_rate = generator->config.sample_rate;
+    float amplitude = generator->config.amplitude;
+    unsigned int samples_elapsed = generator->current_sample - stream->start_sample;
+
+    for (unsigned int i = 0u; i < run; i++)
     {
         int32_t raw_sample = 0;
 
         if ((0u != stream->vibrato_frequency) || (0u != stream->vibrato_variance))
         {
-            float vsine = _generate_waveform_point(&_builtin_waveforms[WAVEFORM_TYPE_SINE],
-                                                   generator->config.sample_rate,
-                                                   stream->vibrato_frequency,
-                                                   stream->sine_index);
+            float vsine = _sine_generator(((float) stream->vibrato_frequency) *
+                                          (((float) stream->sine_index) / (float) sample_rate),
+                                          0.0f, 0u, NULL);
             float pitch_change_hz = ((float) stream->vibrato_variance) * vsine;
             float note_pitch_hz = stream->pitch_hz + pitch_change_hz;
 
             float vsample = stream->waveform.wgen(stream->phasor_state, note_pitch_hz,
-                                                   generator->config.sample_rate,
-                                                   stream->waveform.wgendata);
+                                                   sample_rate, stream->waveform.wgendata);
 
-            float phasor_inc = note_pitch_hz / generator->config.sample_rate;
+            float phasor_inc = note_pitch_hz / sample_rate;
             stream->phasor_state += phasor_inc;
-            if (stream->phasor_state >= 1.0f)
-            {
-                stream->phasor_state -= 1.0f;
-            }
+            /* Branchless wrap into [0, 1): phasor_state is always < 2 here, so
+             * subtracting the truncated integer part equals the conditional
+             * "if >= 1.0f subtract 1.0f", without the unpredictable branch */
+            stream->phasor_state -= (float) (int) stream->phasor_state;
 
             raw_sample = (int32_t) (vsample * (float) MAX_SAMPLE_VALUE);
         }
         else
         {
-            raw_sample = _generate_waveform_sample(&stream->waveform,
-                                                   generator->config.sample_rate,
+            raw_sample = _generate_waveform_sample(&stream->waveform, sample_rate,
                                                    stream->pitch_hz, stream->sine_index);
         }
 
         stream->sine_index += 1u;
 
-        // Handle attack & decay
-        unsigned int samples_elapsed = generator->current_sample - stream->start_sample;
         unsigned int samples_remaining = stream->num_samples - samples_elapsed;
 
         // Modify channel sample amplitude based on attack/decay settings
@@ -657,32 +782,11 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_n
             raw_sample *= ((float) samples_remaining) / ((float) stream->decay);
         }
 
-        // Set final desired amplitude for channel sample
-        *sample = ((float) raw_sample) * generator->config.amplitude;
+        samples_elapsed += 1u;
+
+        // Mix final desired amplitude for channel sample into the buffer
+        chunk[i] += ((float) raw_sample) * amplitude;
     }
-
-    // Check if last sample for this note stream
-    if ((generator->current_sample - stream->start_sample) >= stream->num_samples)
-    {
-        // Load the next note for this channel
-        ptttl_output_note_t note;
-        ret = ptttl_parse_next(generator->parser, channel_idx, &note);
-
-        // Skip any empty-track sentinels — keep fetching until we get
-        // a real note or EOF/error
-        while ((ret == 0) && IS_EMPTY_TRACK_SENTINEL(&note))
-        {
-            ret = ptttl_parse_next(generator->parser, channel_idx, &note);
-        }
-
-        if (ret == 0)
-        {
-            _load_note_stream(generator, &note, &generator->note_streams[channel_idx],
-                              channel_idx);
-        }
-    }
-
-    return ret;
 }
 
 /**
@@ -705,22 +809,9 @@ int ptttl_sample_generator_set_waveform(ptttl_sample_generator_t *generator,
         return -1;
     }
 
-    ptttl_note_stream_t *stream = &generator->note_streams[channel];
-    stream->waveform = _builtin_waveforms[type];
-
-    if (WAVEFORM_TYPE_NOKIA == type)
-    {
-        stream->waveform.wgendata = &_nokia_wgendata[channel];
-    }
-
-    // Run note_setup immediately for the current note so the waveform takes
-    // effect right away
-    if (NULL != stream->waveform.note_setup)
-    {
-        stream->waveform.note_setup(channel, (uint8_t) stream->note_number,
-                                    generator->config.sample_rate,
-                                    stream->waveform.wgendata);
-    }
+    // Assigns per-channel wgendata storage if the waveform needs it, and runs
+    // note_setup immediately so the waveform takes effect right away
+    _set_builtin_waveform(generator, channel, type);
 
     return 0;
 }
@@ -770,43 +861,109 @@ int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_
     uint32_t samples_to_generate = *num_samples;
     *num_samples = 0u;
 
-    for (unsigned int samplenum = 0u; samplenum < samples_to_generate; samplenum++)
-    {
-        float summed_sample = 0.0f;
-        unsigned int num_channels_provided = 0u;
+    unsigned int channel_count = generator->parser->channel_count;
+    float inv_channel_count = 1.0f / (float) channel_count;
+    float chunk[PTTTL_SAMPLE_GENERATOR_CHUNK_SAMPLES];
 
-        // Sum the current state of all channels to generate the next sample
-        for (unsigned int chan = 0u; chan < generator->parser->channel_count; chan++)
+    uint32_t samplenum = 0u;
+    while (samplenum < samples_to_generate)
+    {
+        /* Run length for this pass: bounded by the remaining request, the mix
+         * buffer size, and the nearest note boundary across all unfinished
+         * channels. Within the run, no per-sample bookkeeping is needed. */
+        unsigned int run = samples_to_generate - samplenum;
+        if (run > PTTTL_SAMPLE_GENERATOR_CHUNK_SAMPLES)
+        {
+            run = PTTTL_SAMPLE_GENERATOR_CHUNK_SAMPLES;
+        }
+
+        unsigned int active_channels = 0u;
+        for (unsigned int chan = 0u; chan < channel_count; chan++)
         {
             if (1u == generator->channel_finished[chan])
             {
-                // No more samples to generate for this channel
                 continue;
             }
 
-            num_channels_provided += 1u;
+            active_channels += 1u;
             ptttl_note_stream_t *stream = &generator->note_streams[chan];
 
-            float chan_sample = 0.0f;
-            int ret = _generate_channel_sample(generator, stream, chan, &chan_sample);
-            if (ret < 0)
+            /* Samples left for this note, including the boundary sample on
+             * which the next note is loaded. A note always provides at least
+             * its boundary sample, even when num_samples is 0. */
+            unsigned int consumed = generator->current_sample - stream->start_sample;
+            unsigned int note_left = (stream->num_samples >= consumed) ?
+                                     (stream->num_samples - consumed) + 1u : 1u;
+            if (note_left < run)
             {
-                return ret;
+                run = note_left;
             }
-
-            generator->channel_finished[chan] = (uint8_t) ret;
-            summed_sample += chan_sample;
         }
 
-        if (num_channels_provided == 0u)
+        if (0u == active_channels)
         {
             // Finished-- no samples left on any channel
             return 1;
         }
 
+        // Mix the current note of every unfinished channel into the buffer
+        memset(chunk, 0, sizeof(float) * run);
+
+        for (unsigned int chan = 0u; chan < channel_count; chan++)
+        {
+            if (1u != generator->channel_finished[chan])
+            {
+                _generate_channel_run(generator, &generator->note_streams[chan], chunk, run);
+            }
+        }
+
+        /* Advance to the boundary sample index; channels whose note ended
+         * there load their next note while current_sample still equals the
+         * boundary index, so note start times match the previous per-sample
+         * implementation exactly. */
+        generator->current_sample += run - 1u;
+
+        int err = 0;
+        for (unsigned int chan = 0u; chan < channel_count; chan++)
+        {
+            if (1u == generator->channel_finished[chan])
+            {
+                continue;
+            }
+
+            ptttl_note_stream_t *stream = &generator->note_streams[chan];
+            if ((generator->current_sample - stream->start_sample) >= stream->num_samples)
+            {
+                int ret = _advance_note_stream(generator, chan);
+                if (ret < 0)
+                {
+                    err = ret;
+                    break;
+                }
+
+                generator->channel_finished[chan] = (uint8_t) ret;
+            }
+        }
+
+        /* On a parser error, the boundary sample is not emitted, matching the
+         * previous implementation (which returned the error before writing
+         * the sample it had just generated) */
+        unsigned int emit = (err < 0) ? run - 1u : run;
+
+        for (unsigned int i = 0u; i < emit; i++)
+        {
+            samples[samplenum + i] = (int16_t) (chunk[i] * inv_channel_count);
+        }
+
+        samplenum += emit;
+        *num_samples += emit;
+
+        if (err < 0)
+        {
+            return err;
+        }
+
         generator->current_sample += 1u;
-        samples[samplenum] = (int16_t) (summed_sample / (float) generator->parser->channel_count);
-        *num_samples += 1u;
     }
 
     return 0;
