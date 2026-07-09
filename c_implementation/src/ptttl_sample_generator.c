@@ -546,6 +546,12 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
         return -1;
     }
 
+    if (config->sample_rate > 96000u)
+    {
+        ERROR(parser, "Invalid sample rate, greater than 96KHz not supported");
+        return -1;
+    }
+
     if ((config->amplitude > 1.0f) || (config->amplitude < 0.0f))
     {
         ERROR(parser, "Sample generator amplitude must be between 0.0 - 1.0");

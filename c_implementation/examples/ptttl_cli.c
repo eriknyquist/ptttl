@@ -21,6 +21,7 @@
 static char *_input_filename = NULL;
 static ptttl_waveform_type_e _wave_type = WAVEFORM_TYPE_SINE;
 static char *_output_filename = NULL;
+static uint32_t _max_seconds = 0u;
 
 static char *_input_buf = NULL;
 static uint32_t _input_pos = 0u;
@@ -30,6 +31,7 @@ static struct option _long_options[] =
 {
     {"wave-type", required_argument, NULL, 'w'},
     {"output-filename", required_argument, NULL, 'o'},
+    {"time-limit", required_argument, NULL, 't'},
     {"help", no_argument, NULL, 'h'},
     {NULL, 0, NULL, 0}
 };
@@ -47,6 +49,8 @@ static void _print_usage(void)
     printf("\nOPTIONS:\n\n");
     printf("-w --wave-type [sine|triangle|square|sawtooth|nokia]  Waveform type (default: sine)\n");
     printf("-o --output-filename [string]                         Output filename (default: print to stdout)\n");
+    printf("-t --time-limit [integer]                             Sets time limit (seconds) on generated .wav file.\n");
+    printf("                                                      Early failure/abort if output exceeds this limit.\n");
     printf("-h --help                                             Show this output and exit\n");
     printf("\n");
     printf("Waveform types:\n");

@@ -16,6 +16,7 @@
 #ifndef PTTTL_TO_WAV_H
 #define PTTTL_TO_WAV_H
 
+#include <stdint.h>
 
 #include "ptttl_parser.h"
 #include "ptttl_sample_generator.h"
@@ -66,12 +67,15 @@
  * @param config         Pointer to configuration for sample generator. May be NULL.
  *                       If NULL, a default configuration will be used.
  * @param wave_type      Waveform type to use for all channels
+ * @param max_seconds    Upper limit on number of samples to generate. If length of
+ *                       generated sample stream in seconds exceeds this value,
+ *                       sample generation will stop and -1 will be returned.
  *
  * @return 0 if successful, -1 if an error occurred. Call #ptttl_parser_error for
  *         an error description if -1 is returned.
  */
 int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config_t *config,
-                 ptttl_waveform_type_e wave_type);
+                 ptttl_waveform_type_e wave_type, uint32_t max_seconds);
 
 
 #ifdef __cplusplus

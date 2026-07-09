@@ -180,7 +180,7 @@ static int _init_sample_generation(ptttl_sample_generator_t *generator,
  * @see ptttl_to_wav.h
  */
 int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config_t *config,
-                 ptttl_waveform_type_e wave_type)
+                 ptttl_waveform_type_e wave_type, uint32_t max_seconds)
 {
     ASSERT(NULL != parser);
     ASSERT(NULL != fp);
@@ -199,6 +199,9 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
     {
         return ret;
     }
+
+    // Calculate max. number of samples to generate
+    uint32_t max_samples = max_seconds * config_to_use->sample_rate;
 
     // Generate 1k samples at a time and write to file, until all samples are generated
     const uint32_t sample_buf_len = 1024;
