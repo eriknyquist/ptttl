@@ -68,7 +68,10 @@ static const char* _testcase_dirs[] =
     "test/testcases/bpm_zero",
     "test/testcases/large_leading_comment",
     "test/testcases/early_sharps_multitrack",
-    "test/testcases/empty_track"
+    "test/testcases/empty_track",
+    "test/testcases/eof_after_note",
+    "test/testcases/eof_after_note_vibrato",
+    "test/testcases/eof_after_note_multitrack"
 };
 
 #define NUM_TESTCASES (sizeof(_testcase_dirs) / sizeof(_testcase_dirs[0]))
@@ -497,7 +500,12 @@ static int _run_testcase(const char *testcase_dir, ptttl_parser_input_iface_t *i
         ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
 
         ret = ptttl_sample_generator_create(&parser, &generator, &config);
-        if (ret == 0)
+        if (ret == 1)
+        {
+            // No notes available-- nothing generated, but still verify (0 samples)
+            ret = 0;
+        }
+        else if (ret == 0)
         {
             uint32_t num_samples = SAMPLE_CHUNK_SIZE;
             while ((ret = ptttl_sample_generator_generate(&generator,
@@ -511,11 +519,11 @@ static int _run_testcase(const char *testcase_dir, ptttl_parser_input_iface_t *i
                     break;
                 }
             }
+        }
 
-            if (ret == 0)
-            {
-                samples_mismatch = (verify_expected_samples(expected_samples_path, output_sample_buf_pos) != 0);
-            }
+        if (ret == 0)
+        {
+            samples_mismatch = (verify_expected_samples(expected_samples_path, output_sample_buf_pos) != 0);
         }
     }
 

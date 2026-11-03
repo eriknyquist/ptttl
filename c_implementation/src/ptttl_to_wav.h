@@ -54,7 +54,7 @@
  *      pass of the parser & sample generator are required. No dynamic memory
  *      allocation will be performed.
  */
-#define PTTTL_WAVFILE_GENERATION_STRATEGY 1
+#define PTTTL_WAVFILE_GENERATION_STRATEGY 0
 #endif
 
 /**

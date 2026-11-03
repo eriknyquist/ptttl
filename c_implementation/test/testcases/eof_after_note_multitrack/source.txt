@@ -1,0 +1,3 @@
+eof test:d=4,o=5,b=120:
+c, e |
+g

@@ -273,12 +273,50 @@ static int _peek_next_char(ptttl_parser_t *parser, char *nextchar)
     return ret;
 }
 
-static int _seek_wrapper(ptttl_parser_t *parser, uint32_t position)
+/**
+ * Peek at the next character, for an optional element that may legitimately be
+ * absent because the input ends (e.g. octave, dot or vibrato settings after the
+ * last note). On EOF, provides '\0' (which matches no PTTTL syntax) instead of
+ * reporting EOF.
+ *
+ * @param parser    Pointer to parser object
+ * @param nextchar  Pointer to location to store peeked character
+ *
+ * @return 0 if successful (including EOF), -1 if an error occurred
+ */
+static int _peek_optional_char(ptttl_parser_t *parser, char *nextchar)
 {
-    int ret = parser->iface.seek(position);
-    parser->active_stream->position = position;
+    int ret = _peek_next_char(parser, nextchar);
+    if (1 == ret)
+    {
+        *nextchar = '\0';
+        ret = 0;
+    }
 
     return ret;
+}
+
+/**
+ * Seek the input to the current position of the active input stream. If the active
+ * stream has a peeked-but-unconsumed character, seek back to that character so that
+ * it is read again, rather than seeking past it; the position after it may be the end
+ * of the input, which an input interface may reject as an invalid seek position.
+ *
+ * @param parser  Pointer to parser object
+ *
+ * @return Return value of the 'seek' interface callback
+ */
+static int _seek_to_active_stream(ptttl_parser_t *parser)
+{
+    ptttl_parser_input_stream_t *stream = parser->active_stream;
+
+    if (1u == stream->have_saved_char)
+    {
+        stream->have_saved_char = 0u;
+        stream->position -= 1u;
+    }
+
+    return parser->iface.seek(stream->position);
 }
 
 
@@ -361,7 +399,7 @@ static int _get_next_visible_char(ptttl_parser_t *parser, char *output)
  *
  * @param parser       Pointer to parser object
  * @param output       Pointer to location to store parsed integer value
- * @param eof_allowed  if 1, error will not be reported on EOF
+ * @param eof_allowed  if 1, EOF ends the integer instead of being reported as an error
  *
  * @return 0 if successful, -1 otherwise
  */
@@ -393,14 +431,13 @@ static int _parse_uint_from_input(ptttl_parser_t *parser, unsigned int *output,
         }
     }
 
-    if (eof_allowed)
+    if (eof_allowed && (1 == readchar_ret))
     {
-        CHECK_IFACE_RET_EOF(parser, readchar_ret);
+        // EOF just ends the integer
+        readchar_ret = 0;
     }
-    else
-    {
-        CHECK_IFACE_RET(parser, readchar_ret);
-    }
+
+    CHECK_IFACE_RET(parser, readchar_ret);
 
     if (0 == pos)
     {
@@ -651,6 +688,12 @@ static int _parse_musical_note(ptttl_parser_t *parser, note_pitch_e *note_pitch)
         notepos += 1;
     }
 
+    if ((1 == readchar_ret) && (notepos > 0))
+    {
+        // EOF right after the note name is fine, the note is complete
+        readchar_ret = 0;
+    }
+
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
 
     if (notepos == 0)
@@ -694,7 +737,7 @@ static int _parse_note_vibrato(ptttl_parser_t *parser, ptttl_output_note_t *outp
     int readchar_ret = 0;
     char nextchar = '\0';
 
-    readchar_ret = _peek_next_char(parser, &nextchar);
+    readchar_ret = _peek_optional_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
     if ('v' != nextchar)
     {
@@ -710,7 +753,7 @@ static int _parse_note_vibrato(ptttl_parser_t *parser, ptttl_output_note_t *outp
     uint32_t var_hz = 0u;
 
     // Parse vibrato frequency, if any
-    readchar_ret = _peek_next_char(parser, &nextchar);
+    readchar_ret = _peek_optional_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
     if (IS_DIGIT(nextchar))
     {
@@ -734,7 +777,7 @@ static int _parse_note_vibrato(ptttl_parser_t *parser, ptttl_output_note_t *outp
         return -1;
     }
 
-    readchar_ret = _peek_next_char(parser, &nextchar);
+    readchar_ret = _peek_optional_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
     if ('-' == nextchar)
     {
@@ -810,7 +853,7 @@ static int _parse_ptttl_note(ptttl_parser_t *parser, ptttl_output_note_t *output
     }
 
     // Check for dot after note letter
-    readchar_ret = _peek_next_char(parser, &nextchar);
+    readchar_ret = _peek_optional_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
     if ('.' == nextchar)
     {
@@ -820,7 +863,7 @@ static int _parse_ptttl_note(ptttl_parser_t *parser, ptttl_output_note_t *output
 
     // Read octave, if it exists
     unsigned int octave = parser->default_octave;
-    readchar_ret = _peek_next_char(parser, &nextchar);
+    readchar_ret = _peek_optional_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
     if (IS_DIGIT(nextchar))
     {
@@ -834,7 +877,7 @@ static int _parse_ptttl_note(ptttl_parser_t *parser, ptttl_output_note_t *output
     }
 
     // Check for dot again after octave
-    readchar_ret = _peek_next_char(parser, &nextchar);
+    readchar_ret = _peek_optional_char(parser, &nextchar);
     CHECK_IFACE_RET_EOF(parser, readchar_ret);
     if ('.' == nextchar)
     {
@@ -1042,9 +1085,9 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
             if (furthest_stream != NULL)
             {
                 // Suitable higher channel found- we can skip ahead
-                ret = _seek_wrapper(parser, furthest_stream->position);
-                CHECK_IFACE_RET_EOF(parser, ret);
                 *parser->active_stream = *furthest_stream;
+                ret = _seek_to_active_stream(parser);
+                CHECK_IFACE_RET_EOF(parser, ret);
             }
 
             // Find semicolon at the end of the current block
@@ -1077,9 +1120,9 @@ static int _jump_to_next_block(ptttl_parser_t *parser, uint32_t channel_idx, uin
     else
     {
         pipes_to_skip = channel_idx - earlier_idx;
-        ret = _seek_wrapper(parser, earlier_stream->position);
-        CHECK_IFACE_RET_EOF(parser, ret);
         *parser->active_stream = *earlier_stream;
+        ret = _seek_to_active_stream(parser);
+        CHECK_IFACE_RET_EOF(parser, ret);
     }
 
     /* Skip pipe characters '|' until we reach the first note of this channel
@@ -1130,7 +1173,7 @@ int ptttl_parse_next(ptttl_parser_t *parser, uint32_t channel_idx, ptttl_output_
 
     ptttl_parser_input_stream_t *chan = &parser->channels[channel_idx];
     parser->active_stream = chan;
-    int ret = _seek_wrapper(parser, parser->active_stream->position);
+    int ret = _seek_to_active_stream(parser);
     CHECK_IFACE_RET_EOF(parser, ret);
 
     ret = _parse_ptttl_note(parser, note);
