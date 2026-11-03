@@ -518,6 +518,44 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
     }
 }
 
+/**
+ * Fetch the next note for a specific channel from the parser, and load it into the
+ * channel's note stream. Empty-track sentinels are skipped, and so are notes that are
+ * too short to produce any samples at the configured sample rate (their fractional
+ * sample count is still carried forward to the next note).
+ *
+ * @param generator    Pointer to initialized sample generator
+ * @param channel_idx  Channel number to load the next note for
+ *
+ * @return 0 if a note was loaded, 1 if there are no more notes for this channel,
+ *         and -1 if an error occurred
+ */
+static int _load_next_note(ptttl_sample_generator_t *generator, uint32_t channel_idx)
+{
+    ptttl_note_stream_t *stream = &generator->note_streams[channel_idx];
+
+    while (1)
+    {
+        ptttl_output_note_t note;
+        int ret = ptttl_parse_next(generator->parser, channel_idx, &note);
+        if (ret != 0)
+        {
+            return ret;
+        }
+
+        if (IS_EMPTY_TRACK_SENTINEL(&note))
+        {
+            continue;
+        }
+
+        _load_note_stream(generator, &note, stream, channel_idx);
+        if (stream->num_samples > 0u)
+        {
+            return 0;
+        }
+    }
+}
+
 
 /**
  * @see ptttl_sample_generator.h
@@ -553,24 +591,17 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
     // Populate note streams for initial note on all channels
     for (uint32_t chan = 0u; chan < parser->channel_count; chan++)
     {
-        ptttl_output_note_t note;
-        int ret = ptttl_parse_next(generator->parser, chan, &note);
+        // Set default waveform generator
+        generator->note_streams[chan].waveform = _builtin_waveforms[DEFAULT_WAVEFORM_TYPE];
 
-        // Skip any empty-track sentinels until we get a real note or EOF/error
-        while ((ret == 0) && IS_EMPTY_TRACK_SENTINEL(&note))
-        {
-            ret = ptttl_parse_next(generator->parser, chan, &note);
-        }
-
-        if (ret != 0)
+        int ret = _load_next_note(generator, chan);
+        if (ret < 0)
         {
             return ret;
         }
 
-        _load_note_stream(generator, &note, &generator->note_streams[chan], chan);
-
-        // Set default waveform generator
-        generator->note_streams[chan].waveform = _builtin_waveforms[DEFAULT_WAVEFORM_TYPE];
+        // A channel with no notes at all is finished before it starts
+        generator->channel_finished[chan] = (uint8_t) ret;
     }
 
     return 0;
@@ -584,13 +615,21 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
  * @param channel_idx    Channel index of channel the generated sample is for
  * @param sample         Pointer to location to store generated sample
  *
- * @return 0 if there are more samples remaining for the provided note stream,
-             1 if no more samples, -1 if an error occurred
+ * @return 0 if a sample was generated, 1 if there are no more samples for this channel
+ *         (no sample generated), -1 if an error occurred
  */
 static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_note_stream_t *stream,
                                     unsigned int channel_idx, float *sample)
 {
-    int ret = 0;
+    // Load the next note for this channel if the current note is finished
+    if ((generator->current_sample - stream->start_sample) >= stream->num_samples)
+    {
+        int ret = _load_next_note(generator, channel_idx);
+        if (ret != 0)
+        {
+            return ret;
+        }
+    }
 
     // Generate next sample value for this channel
     if (0u == stream->note_number) // Note number 0 indicates pause/rest
@@ -632,9 +671,11 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_n
 
         stream->sine_index += 1u;
 
-        // Handle attack & decay
+        /* Handle attack & decay. samples_elapsed counts from 0 at the first sample of
+         * the note, samples_remaining counts down to 0 at the last sample of the note,
+         * so a note starts and ends at zero amplitude */
         unsigned int samples_elapsed = generator->current_sample - stream->start_sample;
-        unsigned int samples_remaining = stream->num_samples - samples_elapsed;
+        unsigned int samples_remaining = (stream->num_samples - 1u) - samples_elapsed;
 
         // Modify channel sample amplitude based on attack/decay settings
         if (samples_elapsed < stream->attack)
@@ -650,28 +691,7 @@ static int _generate_channel_sample(ptttl_sample_generator_t *generator, ptttl_n
         *sample = ((float) raw_sample) * generator->config.amplitude;
     }
 
-    // Check if last sample for this note stream
-    if ((generator->current_sample - stream->start_sample) >= stream->num_samples)
-    {
-        // Load the next note for this channel
-        ptttl_output_note_t note;
-        ret = ptttl_parse_next(generator->parser, channel_idx, &note);
-
-        // Skip any empty-track sentinels — keep fetching until we get
-        // a real note or EOF/error
-        while ((ret == 0) && IS_EMPTY_TRACK_SENTINEL(&note))
-        {
-            ret = ptttl_parse_next(generator->parser, channel_idx, &note);
-        }
-
-        if (ret == 0)
-        {
-            _load_note_stream(generator, &note, &generator->note_streams[channel_idx],
-                              channel_idx);
-        }
-    }
-
-    return ret;
+    return 0;
 }
 
 /**
@@ -773,7 +793,6 @@ int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_
                 continue;
             }
 
-            num_channels_provided += 1u;
             ptttl_note_stream_t *stream = &generator->note_streams[chan];
 
             float chan_sample = 0.0f;
@@ -782,8 +801,14 @@ int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_
             {
                 return ret;
             }
+            else if (ret == 1)
+            {
+                // Channel just ran out of notes, no sample provided
+                generator->channel_finished[chan] = 1u;
+                continue;
+            }
 
-            generator->channel_finished[chan] = (uint8_t) ret;
+            num_channels_provided += 1u;
             summed_sample += chan_sample;
         }
 

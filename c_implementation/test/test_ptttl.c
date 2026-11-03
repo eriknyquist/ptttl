@@ -71,7 +71,11 @@ static const char* _testcase_dirs[] =
     "test/testcases/empty_track",
     "test/testcases/eof_after_note",
     "test/testcases/eof_after_note_vibrato",
-    "test/testcases/eof_after_note_multitrack"
+    "test/testcases/eof_after_note_multitrack",
+    "test/testcases/empty_channel_last",
+    "test/testcases/empty_channel_first",
+    "test/testcases/empty_channel_all_blocks",
+    "test/testcases/all_channels_empty"
 };
 
 #define NUM_TESTCASES (sizeof(_testcase_dirs) / sizeof(_testcase_dirs[0]))
