@@ -110,11 +110,22 @@ typedef struct
 } ptttl_waveform_t;
 
 /**
+ * Holds per-note data for the built-in Nokia waveform generator.
+ * Used as the wgendata layout when WAVEFORM_TYPE_NOKIA is active.
+ */
+typedef struct
+{
+    int count;                                            ///< Number of valid harmonic coefficients
+    float coeffs[PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS];   ///< Linear-amplitude Fourier coefficients
+} ptttl_nokia_wgendata_t;
+
+/**
  * Represents the current note that samples are being generated for on any one channel
  */
 typedef struct
 {
     ptttl_waveform_t waveform;       ///< Waveform generator functions
+    ptttl_nokia_wgendata_t nokia_wgendata; ///< wgendata storage for WAVEFORM_TYPE_NOKIA
     uint32_t vibrato_frequency;      ///< Vibrato frequency, in HZ
     uint32_t vibrato_variance;       ///< Vibrato variance, in HZ
     unsigned int sine_index;         ///< Monotonically increasing index for sinf() function, note pitch

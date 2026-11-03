@@ -34,21 +34,6 @@
     _parser->error.column = _parser->active_stream->column;         \
 }
 
-/**
- * Holds per-note data for the Nokia waveform generator.
- * Used as the wgendata layout when WAVEFORM_TYPE_NOKIA is active.
- */
-typedef struct
-{
-    int count;                                            ///< Number of valid harmonic coefficients
-    float coeffs[PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS];   ///< Linear-amplitude Fourier coefficients
-} ptttl_nokia_wgendata_t;
-
-/**
- * Holds per-note data for the Nokia waveform generator for all channels.
- */
-static ptttl_nokia_wgendata_t _nokia_wgendata[PTTTL_MAX_CHANNELS_PER_FILE];
-
 
 // maps piano key number (0-87) to pitch in Hz
 static const float _note_pitches[88] =
@@ -710,7 +695,7 @@ int ptttl_sample_generator_set_waveform(ptttl_sample_generator_t *generator,
 
     if (WAVEFORM_TYPE_NOKIA == type)
     {
-        stream->waveform.wgendata = &_nokia_wgendata[channel];
+        stream->waveform.wgendata = &stream->nokia_wgendata;
     }
 
     // Run note_setup immediately for the current note so the waveform takes
