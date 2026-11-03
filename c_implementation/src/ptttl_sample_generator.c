@@ -289,14 +289,18 @@ static float _sawtooth_generator(float x, float p, unsigned int s, void *wgendat
 static float _triangle_generator(float x, float p, unsigned int s, void *wgendata)
 {
     (void) wgendata;
-    (void) p; // Unused
-    (void) s; // Unused
 
+    float nyquist = ((float) s) * 0.5f;
     float value = 0.0f;
 
+    // triangle only has odd harmonics
     for (int k = 0; k < PTTTL_SAMPLE_GENERATOR_NUM_HARMONICS; k++)
     {
         int n = 2 * k + 1;
+
+        // Stop at harmonics above the Nyquist frequency (always keep the fundamental)
+        if ((k > 0) && (((float) n) * p > nyquist)) break;
+
         float sign = (k & 1) ? -1.0f : 1.0f;
         value += sign * _sine_generator(n * x, p, s, NULL) / (n * n);
     }
