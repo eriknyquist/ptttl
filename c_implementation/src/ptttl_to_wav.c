@@ -254,8 +254,17 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
 
     int16_t *sample_buf_ptr = &sample_buf[0];
 
-    while ((ret = ptttl_sample_generator_generate(&generator, &num_samples, sample_buf_ptr)) == 0)
+    do
     {
+        num_samples = sample_buf_len;
+        ret = ptttl_sample_generator_generate(&generator, &num_samples, sample_buf_ptr);
+        if (ret < 0)
+        {
+            break;
+        }
+
+        /* Samples may have been generated even if ret is 1 (finished), if the
+         * final chunk is shorter than sample_buf_len, so always handle them */
         if (_big_endian)
         {
             for (uint32_t i = 0; i < num_samples; i++)
@@ -291,9 +300,7 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
             sample_buf_ptr += sample_buf_len;
         }
 #endif
-
-        num_samples = sample_buf_len;
-    }
+    } while (ret == 0);
 
     if (ret < 0)
     {
