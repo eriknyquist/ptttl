@@ -277,7 +277,7 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
         {
             alloc_size *= 2u;
             int16_t *new_buf = realloc(sample_buf, alloc_size * sizeof(int16_t));
-            if (NULL == sample_buf)
+            if (NULL == new_buf)
             {
                 free(sample_buf);
                 ERROR(parser, "Failed to allocate memory");
