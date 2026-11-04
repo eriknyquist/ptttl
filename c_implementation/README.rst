@@ -24,7 +24,10 @@ only the file(s) that you need:
   built-in waveforms, there is also an option to plug in your own waveform generator.
   The attack / decay time of notes is configurable. The next audio sample is produced
   only on your request, so there is no need to store a large number of samples in
-  memory. See ``ptttl_sample_generator.h`` for more details. Requires ``stdint.h``
+  memory. You can also get the exact number of samples that would be generated for
+  some PTTTL/RTTTL source, without generating them, using
+  ``ptttl_sample_generator_count_samples()`` (only the parser runs, so this is fast).
+  See ``ptttl_sample_generator.h`` for more details. Requires ``stdint.h``
   and ``memset()`` from ``string.h``.
 
 * **ptttl_to_wav.c**: Reads the output of ``ptttl_parser.c`` and produces a .wav file
@@ -35,10 +38,14 @@ Some additional files, that are not required for normal usage but may be useful 
 reference and/or development & testing, are also provided:
 
 * **ptttl_cli.c**: Implements a sample command-line tool that uses ``ptttl_parser.c`` and
-  ``ptttl_to_wav.c`` to convert RTTTL/PTTTL source to .wav files.
+  ``ptttl_to_wav.c`` to convert RTTTL/PTTTL source to .wav files. The ``--max-samples``
+  option makes it refuse to generate output for source that would produce more than
+  a given number of samples.
 
 * **afl_fuzz_harness.c**: Implements a "harness" to fuzz ``ptttl_parser.c`` and
-  ``ptttl_sample_generator.c`` using `AFL++ <https://github.com/AFLplusplus/AFLplusplus>`_
+  ``ptttl_sample_generator.c`` using `AFL++ <https://github.com/AFLplusplus/AFLplusplus>`_.
+  The harness also checks that ``ptttl_sample_generator_count_samples()`` always agrees
+  with the number of samples actually generated (and reports the same errors).
 
 This implementation has been quite thoroughly tested (see ``test/test_ptttl.c``)
 & fuzzed with AFL++.
@@ -92,6 +99,11 @@ Read PTTTL/RTTTL text and generate audio samples at a specific sample rate
 * Use ``ptttl_sample_generator.c`` to convert PTTTL/RTTTL source to audio samples
   (See ``ptttl_sample_generator.h`` for API documentation)
 
+* Optionally, use ``ptttl_sample_generator_count_samples()`` first to find out how many
+  samples will be generated (for example, to reject source that would generate too many
+  samples, or to allocate an output buffer of the right size). Counting uses up the
+  parser object, so call ``ptttl_parse_init()`` again before creating a sample generator.
+
 PTTTL/RTTTL text and generate a .wav file
 #########################################
 
@@ -112,23 +124,24 @@ See API documentation in ``ptttl_parser.h`` for more details.
 
 The following table shows various values of ``PTTTL_MAX_CHANNELS_PER_FILE``, along with the
 corresponding size of the ``ptttl_parser_t`` and ``ptttl_sample_generator_t`` structs, to give you an idea
-of how much memory you'll need:
+of how much memory you'll need (sizes measured with GCC on x86-64; ``ptttl_sample_generator_t`` includes
+per-channel storage for the "nokia" waveform):
 
 +-------------------------------+--------------------------------+------------------------------------------+
 |``PTTTL_MAX_CHANNELS_PER_FILE``|``ptttl_parser_t`` size in bytes|``ptttl_sample_generator_t`` size in bytes|
 +===============================+================================+==========================================+
-| 1                             | 368                            | 88                                       |
+| 1                             | 368                            | 176                                      |
 +-------------------------------+--------------------------------+------------------------------------------+
-| 2                             | 392                            | 136                                      |
+| 2                             | 392                            | 312                                      |
 +-------------------------------+--------------------------------+------------------------------------------+
-| 4                             | 432                            | 232                                      |
+| 4                             | 432                            | 584                                      |
 +-------------------------------+--------------------------------+------------------------------------------+
-| 8                             | 512                            | 424                                      |
+| 8                             | 512                            | 1128                                     |
 +-------------------------------+--------------------------------+------------------------------------------+
-| 16 (default)                  | 672                            | 816                                      |
+| 16 (default)                  | 672                            | 2224                                     |
 +-------------------------------+--------------------------------+------------------------------------------+
-| 32                            | 992                            | 1600                                     |
+| 32                            | 992                            | 4416                                     |
 +-------------------------------+--------------------------------+------------------------------------------+
-| 64                            | 1632                           | 3168                                     |
+| 64                            | 1632                           | 8800                                     |
 +-------------------------------+--------------------------------+------------------------------------------+
 

@@ -177,6 +177,33 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
                                   ptttl_sample_generator_config_t *config);
 
 /**
+ * Parse the PTTTL/RTTTL source text, and calculate the exact number of samples that
+ * #ptttl_sample_generator_generate would produce for it, without generating any samples.
+ * This is much faster than generating samples, since only the parser runs.
+ *
+ * The parser object must be freshly initialized with #ptttl_parse_init, and is used up
+ * by this function. To generate samples afterwards, initialize the parser again with
+ * #ptttl_parse_init before calling #ptttl_sample_generator_create.
+ *
+ * @param parser       Pointer to freshly initialized parser object
+ * @param config       Pointer to the sample generator configuration that samples would
+ *                     be generated with (the sample rate affects the sample count)
+ * @param max_samples  Maximum allowed sample count. Counting stops as soon as the count is
+ *                     known to be larger than this. 0 means no limit (other than the
+ *                     count fitting in 32 bits).
+ * @param num_samples  Pointer to location to store the sample count. If 1 is returned, this
+ *                     is set to a value larger than max_samples, which is a lower bound on
+ *                     the sample count (or UINT32_MAX, if the count does not fit in 32 bits).
+ *
+ * @return 0 if successful, 1 if the sample count is larger than max_samples (or does not
+ *         fit in 32 bits), and -1 if an error occurred. Call #ptttl_parser_error for an
+ *         error description if -1 is returned.
+ */
+int ptttl_sample_generator_count_samples(ptttl_parser_t *parser,
+                                         const ptttl_sample_generator_config_t *config,
+                                         uint32_t max_samples, uint32_t *num_samples);
+
+/**
  * Set the built-in waveform type for a specific channel of the sample generator
  *
  * @param generator    Pointer to initialized generator object

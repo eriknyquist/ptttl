@@ -437,21 +437,19 @@ static int32_t _generate_waveform_sample(ptttl_waveform_t *waveform, unsigned in
 }
 
 /**
- * Load a single PTTTL note from a specific channel into a note_stream_t object
+ * Calculate the length of a single PTTTL note in samples
  *
- * @param generator    Pointer to initialized sample generator
- * @param note         Pointer to parsed note object
- * @param note_stream  Pointer to note stream object to populate
- * @param channel_idx  Channel number this note belongs to
+ * @param note          Pointer to parsed note object
+ * @param bpm           Beats per minute, from the "settings" section
+ * @param sample_rate   Sampling rate in Hz
+ * @param sample_error  Pointer to the accumulated fractional sample count for the
+ *                      channel this note belongs to (updated by this function)
+ *
+ * @return Note length in samples (may be 0 for very short notes at low sample rates)
  */
-static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_note_t *note,
-                              ptttl_note_stream_t *note_stream, uint32_t channel_idx)
+static unsigned int _note_num_samples(const ptttl_output_note_t *note, unsigned int bpm,
+                                      unsigned int sample_rate, float *sample_error)
 {
-    note_stream->sine_index = 0u;
-    note_stream->start_sample = generator->current_sample;
-
-    note_stream->phasor_state = 0.0f;
-
     /* Compute note duration directly from BPM and fraction index to avoid
      * any integer truncation in the time encoding. This gives exact sample
      * counts regardless of BPM and sample rate.
@@ -464,9 +462,9 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
     unsigned int divisor = (dur_idx < 6u) ? duration_divisors[dur_idx] : 32u;
 
     // whole_note_samples = (60 / bpm) * 4 * sample_rate
-    float whole_note_samples = (60.0f / (float) generator->parser->bpm)
+    float whole_note_samples = (60.0f / (float) bpm)
                                * 4.0f
-                               * (float) generator->config.sample_rate;
+                               * (float) sample_rate;
     float num_samples = whole_note_samples / (float) divisor;
     if (dot)
     {
@@ -475,10 +473,74 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
 
     // Carry forward the fractional sample remainder from previous notes on
     // this channel so truncation error never accumulates beyond one sample.
-    num_samples += note_stream->sample_error;
+    num_samples += *sample_error;
     unsigned int num_samples_int = (unsigned int) num_samples;
-    note_stream->sample_error = num_samples - (float) num_samples_int;
-    note_stream->num_samples = num_samples_int;
+    *sample_error = num_samples - (float) num_samples_int;
+
+    return num_samples_int;
+}
+
+/**
+ * Fetch the next note for a specific channel from the parser, along with its length
+ * in samples. Empty-track sentinels are skipped, and so are notes that are too short
+ * to produce any samples at the given sample rate (their fractional sample count is
+ * still carried forward to the next note).
+ *
+ * Used by both the sample generator and the sample counter, so that both see
+ * exactly the same notes and note lengths.
+ *
+ * @param parser        Pointer to initialized parser object
+ * @param channel_idx   Channel number to fetch the next note for
+ * @param sample_rate   Sampling rate in Hz
+ * @param sample_error  Pointer to the accumulated fractional sample count for the channel
+ * @param note          Pointer to location to store the fetched note
+ * @param num_samples   Pointer to location to store the length of the fetched note, in samples
+ *
+ * @return 0 if a note was fetched, 1 if there are no more notes for this channel,
+ *         and -1 if an error occurred
+ */
+static int _fetch_next_note(ptttl_parser_t *parser, uint32_t channel_idx, unsigned int sample_rate,
+                            float *sample_error, ptttl_output_note_t *note, unsigned int *num_samples)
+{
+    while (1)
+    {
+        int ret = ptttl_parse_next(parser, channel_idx, note);
+        if (ret != 0)
+        {
+            return ret;
+        }
+
+        if (IS_EMPTY_TRACK_SENTINEL(note))
+        {
+            continue;
+        }
+
+        *num_samples = _note_num_samples(note, parser->bpm, sample_rate, sample_error);
+        if (*num_samples > 0u)
+        {
+            return 0;
+        }
+    }
+}
+
+/**
+ * Load a single PTTTL note from a specific channel into a note_stream_t object
+ *
+ * @param generator    Pointer to initialized sample generator
+ * @param note         Pointer to parsed note object
+ * @param num_samples  Length of the note in samples
+ * @param note_stream  Pointer to note stream object to populate
+ * @param channel_idx  Channel number this note belongs to
+ */
+static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_note_t *note,
+                              unsigned int num_samples, ptttl_note_stream_t *note_stream,
+                              uint32_t channel_idx)
+{
+    note_stream->sine_index = 0u;
+    note_stream->start_sample = generator->current_sample;
+
+    note_stream->phasor_state = 0.0f;
+    note_stream->num_samples = num_samples;
 
     // Handle case where attack + delay is longer than note length
     unsigned int attack = generator->config.attack_samples;
@@ -520,9 +582,7 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
 
 /**
  * Fetch the next note for a specific channel from the parser, and load it into the
- * channel's note stream. Empty-track sentinels are skipped, and so are notes that are
- * too short to produce any samples at the configured sample rate (their fractional
- * sample count is still carried forward to the next note).
+ * channel's note stream.
  *
  * @param generator    Pointer to initialized sample generator
  * @param channel_idx  Channel number to load the next note for
@@ -533,27 +593,42 @@ static void _load_note_stream(ptttl_sample_generator_t *generator, ptttl_output_
 static int _load_next_note(ptttl_sample_generator_t *generator, uint32_t channel_idx)
 {
     ptttl_note_stream_t *stream = &generator->note_streams[channel_idx];
+    ptttl_output_note_t note;
+    unsigned int num_samples = 0u;
 
-    while (1)
+    int ret = _fetch_next_note(generator->parser, channel_idx, generator->config.sample_rate,
+                               &stream->sample_error, &note, &num_samples);
+    if (ret == 0)
     {
-        ptttl_output_note_t note;
-        int ret = ptttl_parse_next(generator->parser, channel_idx, &note);
-        if (ret != 0)
-        {
-            return ret;
-        }
-
-        if (IS_EMPTY_TRACK_SENTINEL(&note))
-        {
-            continue;
-        }
-
-        _load_note_stream(generator, &note, stream, channel_idx);
-        if (stream->num_samples > 0u)
-        {
-            return 0;
-        }
+        _load_note_stream(generator, &note, num_samples, stream, channel_idx);
     }
+
+    return ret;
+}
+
+/**
+ * Check that a parser and sample generator config are usable for sample generation
+ *
+ * @param parser  Pointer to initialized parser object
+ * @param config  Pointer to sample generator configuration data
+ *
+ * @return 0 if successful, -1 if an error occurred
+ */
+static int _check_parser_and_config(ptttl_parser_t *parser, const ptttl_sample_generator_config_t *config)
+{
+    if (0u == parser->channel_count)
+    {
+        ERROR(parser, "PTTTL parser object has a channel count of 0");
+        return -1;
+    }
+
+    if ((config->amplitude > 1.0f) || (config->amplitude < 0.0f))
+    {
+        ERROR(parser, "Sample generator amplitude must be between 0.0 - 1.0");
+        return -1;
+    }
+
+    return 0;
 }
 
 
@@ -567,15 +642,8 @@ int ptttl_sample_generator_create(ptttl_parser_t *parser, ptttl_sample_generator
     ASSERT(NULL != generator);
     ASSERT(NULL != config);
 
-    if (0u == parser->channel_count)
+    if (_check_parser_and_config(parser, config) != 0)
     {
-        ERROR(parser, "PTTTL parser object has a channel count of 0");
-        return -1;
-    }
-
-    if ((config->amplitude > 1.0f) || (config->amplitude < 0.0f))
-    {
-        ERROR(parser, "Sample generator amplitude must be between 0.0 - 1.0");
         return -1;
     }
 
@@ -821,6 +889,137 @@ int ptttl_sample_generator_generate(ptttl_sample_generator_t *generator, uint32_
         generator->current_sample += 1u;
         samples[samplenum] = (int16_t) (summed_sample / (float) generator->parser->channel_count);
         *num_samples += 1u;
+    }
+
+    return 0;
+}
+
+/**
+ * Fetch the next note for a specific channel, and advance the channel's end sample
+ * (the sample index at which the channel's current note ends) by the note length
+ *
+ * @param parser        Pointer to initialized parser object
+ * @param channel_idx   Channel number to fetch the next note for
+ * @param sample_rate   Sampling rate in Hz
+ * @param sample_error  Pointer to the accumulated fractional sample count for the channel
+ * @param end_sample    Pointer to the channel's end sample, updated by this function
+ *
+ * @return 0 if a note was fetched, 1 if there are no more notes for this channel,
+ *         2 if the end sample would not fit in 32 bits, and -1 if an error occurred
+ */
+static int _count_next_note(ptttl_parser_t *parser, uint32_t channel_idx, unsigned int sample_rate,
+                            float *sample_error, uint32_t *end_sample)
+{
+    ptttl_output_note_t note;
+    unsigned int note_samples = 0u;
+
+    int ret = _fetch_next_note(parser, channel_idx, sample_rate, sample_error, &note, &note_samples);
+    if (ret == 0)
+    {
+        if (((uint32_t) note_samples) > (UINT32_MAX - *end_sample))
+        {
+            *end_sample = UINT32_MAX;
+            return 2;
+        }
+
+        *end_sample += (uint32_t) note_samples;
+    }
+
+    return ret;
+}
+
+/**
+ * @see ptttl_sample_generator.h
+ */
+int ptttl_sample_generator_count_samples(ptttl_parser_t *parser,
+                                         const ptttl_sample_generator_config_t *config,
+                                         uint32_t max_samples, uint32_t *num_samples)
+{
+    ASSERT(NULL != parser);
+    ASSERT(NULL != config);
+    ASSERT(NULL != num_samples);
+
+    // Per-channel state: sample index at which the current note ends, and note length error
+    uint32_t end_sample[PTTTL_MAX_CHANNELS_PER_FILE];
+    float sample_error[PTTTL_MAX_CHANNELS_PER_FILE];
+    uint8_t finished[PTTTL_MAX_CHANNELS_PER_FILE];
+
+    uint32_t limit = (0u == max_samples) ? UINT32_MAX : max_samples;
+    *num_samples = 0u;
+
+    if (_check_parser_and_config(parser, config) != 0)
+    {
+        return -1;
+    }
+
+    /* Fetch notes in exactly the same order as the sample generator does, so that the
+     * parser behaves identically (e.g. the same error is reported for invalid input).
+     * First, the first note on every channel, in channel order, as in
+     * ptttl_sample_generator_create */
+    uint32_t next = 0u;
+    int ret = 0;
+
+    for (uint32_t chan = 0u; chan < parser->channel_count; chan++)
+    {
+        end_sample[chan] = 0u;
+        sample_error[chan] = 0.0f;
+
+        ret = _count_next_note(parser, chan, config->sample_rate, &sample_error[chan], &end_sample[chan]);
+        finished[chan] = (uint8_t) (ret == 1);
+        if ((ret == 2) || (end_sample[chan] > limit))
+        {
+            *num_samples = end_sample[chan];
+            return 1;
+        }
+        else if (ret < 0)
+        {
+            return ret;
+        }
+    }
+
+    /* Then, the sample generator fetches the next note for a channel when its current
+     * note ends, and handles channels in channel order on each sample, so the next note
+     * to fetch is always for the unfinished channel whose current note ends first (or
+     * the lowest channel number, if multiple channels end on the same sample) */
+    while (1)
+    {
+        uint8_t found = 0u;
+        for (uint32_t chan = 0u; chan < parser->channel_count; chan++)
+        {
+            if ((0u == finished[chan]) && ((0u == found) || (end_sample[chan] < end_sample[next])))
+            {
+                next = chan;
+                found = 1u;
+            }
+        }
+
+        if (0u == found)
+        {
+            // No more notes on any channel
+            break;
+        }
+
+        ret = _count_next_note(parser, next, config->sample_rate, &sample_error[next], &end_sample[next]);
+        if ((ret == 2) || (end_sample[next] > limit))
+        {
+            *num_samples = end_sample[next];
+            return 1;
+        }
+        else if (ret < 0)
+        {
+            return ret;
+        }
+
+        finished[next] = (uint8_t) (ret == 1);
+    }
+
+    // Total sample count is the length of the longest channel
+    for (uint32_t chan = 0u; chan < parser->channel_count; chan++)
+    {
+        if (end_sample[chan] > *num_samples)
+        {
+            *num_samples = end_sample[chan];
+        }
     }
 
     return 0;

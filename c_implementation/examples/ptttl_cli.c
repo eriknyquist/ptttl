@@ -10,7 +10,10 @@
  * Erik Nyquist 2025
  */
 
+#include <ctype.h>
+#include <errno.h>
 #include <getopt.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -21,6 +24,7 @@
 static char *_input_filename = NULL;
 static ptttl_waveform_type_e _wave_type = WAVEFORM_TYPE_SINE;
 static char *_output_filename = NULL;
+static uint32_t _max_samples = 0u; // 0 means no limit
 
 static char *_input_buf = NULL;
 static uint32_t _input_pos = 0u;
@@ -30,6 +34,7 @@ static struct option _long_options[] =
 {
     {"wave-type", required_argument, NULL, 'w'},
     {"output-filename", required_argument, NULL, 'o'},
+    {"max-samples", required_argument, NULL, 'm'},
     {"help", no_argument, NULL, 'h'},
     {NULL, 0, NULL, 0}
 };
@@ -47,6 +52,8 @@ static void _print_usage(void)
     printf("\nOPTIONS:\n\n");
     printf("-w --wave-type [sine|triangle|square|sawtooth|nokia]  Waveform type (default: sine)\n");
     printf("-o --output-filename [string]                         Output filename (default: print to stdout)\n");
+    printf("-m --max-samples [int]                                Refuse to generate output if it would contain\n");
+    printf("                                                      more than this many samples (default: no limit)\n");
     printf("-h --help                                             Show this output and exit\n");
     printf("\n");
     printf("Waveform types:\n");
@@ -62,7 +69,7 @@ static int _parse_args(int argc, char *argv[])
 {
     int ch;
 
-    while ((ch = getopt_long(argc, argv, "w:o:h", _long_options, NULL)) != -1)
+    while ((ch = getopt_long(argc, argv, "w:o:m:h", _long_options, NULL)) != -1)
     {
         switch (ch)
         {
@@ -102,6 +109,22 @@ static int _parse_args(int argc, char *argv[])
             case 'o':
             {
                 _output_filename = optarg;
+                break;
+            }
+            case 'm':
+            {
+                char *end = NULL;
+                errno = 0;
+                unsigned long max_samples = strtoul(optarg, &end, 10);
+                if (!isdigit((unsigned char) optarg[0]) || (*end != '\0') || (errno != 0) ||
+                    (max_samples == 0u) || (max_samples > UINT32_MAX))
+                {
+                    printf("Error: invalid max. sample count '%s' (must be 1 through %u)\n",
+                           optarg, UINT32_MAX);
+                    return -1;
+                }
+
+                _max_samples = (uint32_t) max_samples;
                 break;
             }
             default:
@@ -229,43 +252,62 @@ int main(int argc, char *argv[])
         iface.seek = _seek_file;
     }
 
-    FILE *wfp;
-
-    if (_output_filename == NULL)
-    {
-        wfp = stdout;
-    }
-    else
-    {
-        wfp = fopen(_output_filename, "wb");
-        if (NULL == wfp)
-        {
-            printf("Unable to open output file for writing: %s\n", _output_filename);
-            fclose(rfp);
-            return -1;
-        }
-    }
-
     // Create and initialize PTTTL parser object, sample generator config object
     ptttl_parser_t parser;
     ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
+    bool report_parser_error = true;
+    FILE *wfp = NULL;
 
     int ret = ptttl_parse_init(&parser, iface);
-    if (0 > ret)
+
+    if ((0 == ret) && (0u < _max_samples))
     {
-        ptttl_parser_error_t err = ptttl_parser_error(&parser);
-        printf("Error (line %d, column %d): %s\n", err.line, err.column, err.error_message);
+        // Count samples without generating them, and refuse to generate output if there are too many
+        uint32_t num_samples = 0u;
+        ret = ptttl_sample_generator_count_samples(&parser, &config, _max_samples, &num_samples);
+        if (1 == ret)
+        {
+            printf("Error: output would contain at least %u samples, which is more than the max. of %u\n",
+                   num_samples, _max_samples);
+            report_parser_error = false;
+            ret = -1;
+        }
+        else if (0 == ret)
+        {
+            // Counting samples used up the parser, so initialize it again to generate samples
+            ret = ptttl_parse_init(&parser, iface);
+        }
+    }
+
+    if (0 == ret)
+    {
+        // Open output file only once we know we'll generate output, so no empty file is left behind
+        if (_output_filename == NULL)
+        {
+            wfp = stdout;
+        }
+        else
+        {
+            wfp = fopen(_output_filename, "wb");
+            if (NULL == wfp)
+            {
+                printf("Unable to open output file for writing: %s\n", _output_filename);
+                report_parser_error = false;
+                ret = -1;
+            }
+        }
     }
 
     if (0 == ret)
     {
         // Parse PTTTL/RTTTL source and convert to .wav file
         ret = ptttl_to_wav(&parser, wfp, &config, _wave_type);
-        if (ret < 0)
-        {
-            ptttl_parser_error_t err = ptttl_parser_error(&parser);
-            printf("Error (line %d, column %d): %s\n", err.line, err.column, err.error_message);
-        }
+    }
+
+    if ((0 > ret) && report_parser_error)
+    {
+        ptttl_parser_error_t err = ptttl_parser_error(&parser);
+        printf("Error (line %d, column %d): %s\n", err.line, err.column, err.error_message);
     }
 
     if (NULL != _input_filename)
@@ -273,7 +315,7 @@ int main(int argc, char *argv[])
         fclose(rfp);
     }
 
-    if (NULL != _output_filename)
+    if ((NULL != _output_filename) && (NULL != wfp))
     {
         fclose(wfp);
     }

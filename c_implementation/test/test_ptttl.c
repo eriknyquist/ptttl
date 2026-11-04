@@ -75,7 +75,8 @@ static const char* _testcase_dirs[] =
     "test/testcases/empty_channel_last",
     "test/testcases/empty_channel_first",
     "test/testcases/empty_channel_all_blocks",
-    "test/testcases/all_channels_empty"
+    "test/testcases/all_channels_empty",
+    "test/testcases/error_order_multitrack"
 };
 
 #define NUM_TESTCASES (sizeof(_testcase_dirs) / sizeof(_testcase_dirs[0]))
@@ -470,6 +471,39 @@ static int verify_error(ptttl_parser_error_t err, const char *error_path)
     return 0;
 }
 
+// Check that the sample counter agrees with the sample generator, for the same source text
+static int _verify_sample_count(int count_ret, uint32_t sample_count, ptttl_parser_error_t count_err,
+                                int gen_ret, uint32_t samples_generated, ptttl_parser_error_t gen_err)
+{
+    if (gen_ret < 0)
+    {
+        // Sample generation failed, so counting must fail in the same way
+        bool same_error = (count_ret == -1) && (count_err.error_message != NULL) &&
+                          (strcmp(count_err.error_message, gen_err.error_message) == 0) &&
+                          (count_err.line == gen_err.line) && (count_err.column == gen_err.column);
+        if (!same_error)
+        {
+            printf("Error: sample generator reported '%s' (line %d, column %d), but sample counter "
+                   "returned %d and reported '%s' (line %d, column %d)\n",
+                   gen_err.error_message, gen_err.line, gen_err.column, count_ret,
+                   (count_err.error_message == NULL) ? "no error" : count_err.error_message,
+                   count_err.line, count_err.column);
+            return -1;
+        }
+
+        return 0;
+    }
+
+    if ((count_ret != 0) || (sample_count != samples_generated))
+    {
+        printf("Error: sample counter returned %d and counted %u samples, but %u samples were generated\n",
+               count_ret, sample_count, samples_generated);
+        return -1;
+    }
+
+    return 0;
+}
+
 static int _run_testcase(const char *testcase_dir, ptttl_parser_input_iface_t *iface)
 {
     // Build paths for testcase input/output files
@@ -497,11 +531,30 @@ static int _run_testcase(const char *testcase_dir, ptttl_parser_input_iface_t *i
     uint32_t output_sample_buf_pos = 0u;
     bool samples_mismatch = false;
 
+    ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
+    bool counted = false;
+    int count_ret = 0;
+    uint32_t sample_count = 0u;
+    ptttl_parser_error_t count_err;
+
     int ret = ptttl_parse_init(&parser, *iface);
     if (ret == 0)
     {
+        // Count samples without generating them, then re-initialize the parser to generate them
+        count_ret = ptttl_sample_generator_count_samples(&parser, &config, 0u, &sample_count);
+        count_err = ptttl_parser_error(&parser);
+        counted = true;
+
+        ret = ptttl_parse_init(&parser, *iface);
+
+        // Only report input statistics for sample generation
+        _char_read_count = 0;
+        _high_watermark = 0;
+    }
+
+    if (ret == 0)
+    {
         ptttl_sample_generator_t generator;
-        ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
 
         ret = ptttl_sample_generator_create(&parser, &generator, &config);
         if (ret == 1)
@@ -532,6 +585,13 @@ static int _run_testcase(const char *testcase_dir, ptttl_parser_input_iface_t *i
     }
 
     fclose(_src_fp);
+
+    // The sample counter must agree with the sample generator
+    if (counted && (_verify_sample_count(count_ret, sample_count, count_err, ret, output_sample_buf_pos,
+                                         ptttl_parser_error(&parser)) != 0))
+    {
+        return -1;
+    }
 
     if (ret < 0)
     {
@@ -620,6 +680,202 @@ static void _unload_source_file(void)
     }
 }
 
+// Source text for the sample counter tests below, read from memory
+static const char *_counter_src = NULL;
+static uint32_t _counter_src_len = 0u;
+static uint32_t _counter_src_pos = 0u;
+
+static int _read_counter_src(char *nextchar)
+{
+    if (_counter_src_pos >= _counter_src_len)
+    {
+        return 1;
+    }
+
+    *nextchar = _counter_src[_counter_src_pos++];
+    return 0;
+}
+
+static int _seek_counter_src(uint32_t position)
+{
+    if (position >= _counter_src_len)
+    {
+        return 1;
+    }
+
+    _counter_src_pos = position;
+    return 0;
+}
+
+// Count samples for the given source text, with the given config and limit
+static int _count_src(const char *src, ptttl_sample_generator_config_t *config, uint32_t max_samples,
+                      uint32_t *count, ptttl_parser_error_t *err)
+{
+    ptttl_parser_t parser;
+    ptttl_parser_input_iface_t iface = {.read=_read_counter_src, .seek=_seek_counter_src};
+
+    _counter_src = src;
+    _counter_src_len = (uint32_t) strlen(src);
+
+    int ret = ptttl_parse_init(&parser, iface);
+    if (ret == 0)
+    {
+        ret = ptttl_sample_generator_count_samples(&parser, config, max_samples, count);
+    }
+
+    *err = ptttl_parser_error(&parser);
+    return ret;
+}
+
+// Generate all samples for the given source text, with the given config
+static int _generate_src(const char *src, ptttl_sample_generator_config_t *config,
+                         uint32_t *count, ptttl_parser_error_t *err)
+{
+    ptttl_parser_t parser;
+    ptttl_sample_generator_t generator;
+    ptttl_parser_input_iface_t iface = {.read=_read_counter_src, .seek=_seek_counter_src};
+
+    _counter_src = src;
+    _counter_src_len = (uint32_t) strlen(src);
+    *count = 0u;
+
+    int ret = ptttl_parse_init(&parser, iface);
+    if (ret == 0)
+    {
+        ret = ptttl_sample_generator_create(&parser, &generator, config);
+    }
+
+    while (ret == 0)
+    {
+        uint32_t num_samples = SAMPLE_CHUNK_SIZE;
+        ret = ptttl_sample_generator_generate(&generator, &num_samples, _output_sample_buf);
+        *count += num_samples;
+    }
+
+    *err = ptttl_parser_error(&parser);
+    return (ret < 0) ? ret : 0;
+}
+
+// Check sample count against generated samples, for a source with a custom config
+static int _test_counter_matches_generator(const char *src, ptttl_sample_generator_config_t *config,
+                                           bool expect_error)
+{
+    uint32_t count = 0u;
+    uint32_t generated = 0u;
+    ptttl_parser_error_t count_err;
+    ptttl_parser_error_t gen_err;
+
+    int count_ret = _count_src(src, config, 0u, &count, &count_err);
+    int gen_ret = _generate_src(src, config, &generated, &gen_err);
+    if (expect_error != (gen_ret < 0))
+    {
+        printf("Error: expected sample generation to %s, but it %s\n", expect_error ? "fail" : "succeed",
+               (gen_ret < 0) ? gen_err.error_message : "succeeded");
+        return -1;
+    }
+
+    return _verify_sample_count(count_ret, count, count_err, gen_ret, generated, gen_err);
+}
+
+// Low sample rate, where many notes are too short to produce any samples
+static int _test_counter_low_sample_rate(void)
+{
+    ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
+    config.sample_rate = 8000u;
+
+    const char *src = "zero length:d=32,o=5,b=99999:\n"
+                      "c, d., e, f, g, a, b, c, d, e, 8f, g, a, b, c, d |\n"
+                      "c, c, c, c, c, c, c, c, c, c, c |\n"
+                      "16c., 4p, 16d\n";
+
+    return _test_counter_matches_generator(src, &config, false);
+}
+
+// Sample count exactly at, and just above, the max_samples limit
+static int _test_counter_limit(void)
+{
+    ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
+    const char *src = "limit:d=4,o=5,b=120:\nc, d, e |\nf, g\n";
+    uint32_t count = 0u;
+    uint32_t limited_count = 0u;
+    ptttl_parser_error_t err;
+
+    if ((_count_src(src, &config, 0u, &count, &err) != 0) || (count != 66150u))
+    {
+        printf("Error: expected 66150 samples with no limit, counted %u\n", count);
+        return -1;
+    }
+
+    int ret = _count_src(src, &config, count, &limited_count, &err);
+    if ((ret != 0) || (limited_count != count))
+    {
+        printf("Error: limit %u: expected return 0 and count %u, got %d and %u\n",
+               count, count, ret, limited_count);
+        return -1;
+    }
+
+    ret = _count_src(src, &config, count - 1u, &limited_count, &err);
+    if ((ret != 1) || (limited_count <= (count - 1u)))
+    {
+        printf("Error: limit %u: expected return 1 and count > limit, got %d and %u\n",
+               count - 1u, ret, limited_count);
+        return -1;
+    }
+
+    return 0;
+}
+
+// Sample count that does not fit in 32 bits
+static int _test_counter_overflow(void)
+{
+    ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
+    static char src[4096];
+    uint32_t count = 0u;
+    ptttl_parser_error_t err;
+
+    // 300 dotted whole notes at 1 BPM is about 4.8 billion samples
+    size_t pos = (size_t) snprintf(src, sizeof(src), "overflow:d=1,o=5,b=1:\n");
+    for (int i = 0; i < 300; i++)
+    {
+        pos += (size_t) snprintf(src + pos, sizeof(src) - pos, "%s1c.", (i == 0) ? "" : ",");
+    }
+    (void) snprintf(src + pos, sizeof(src) - pos, "\n");
+
+    int ret = _count_src(src, &config, 0u, &count, &err);
+    if ((ret != 1) || (count != UINT32_MAX))
+    {
+        printf("Error: expected return 1 and count %u, got %d and %u\n", UINT32_MAX, ret, count);
+        return -1;
+    }
+
+    return 0;
+}
+
+// Invalid sample generator config is reported in the same way as ptttl_sample_generator_create
+static int _test_counter_invalid_config(void)
+{
+    ptttl_sample_generator_config_t config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
+    config.amplitude = 2.0f;
+
+    return _test_counter_matches_generator("bad config:d=4,o=5,b=120:\nc, d\n", &config, true);
+}
+
+typedef struct
+{
+    const char *name;
+    int (*run)(void);
+} counter_test_t;
+
+static const counter_test_t _counter_tests[] =
+{
+    {"counter_low_sample_rate", _test_counter_low_sample_rate},
+    {"counter_limit", _test_counter_limit},
+    {"counter_overflow", _test_counter_overflow},
+    {"counter_invalid_config", _test_counter_invalid_config}
+};
+
+#define NUM_COUNTER_TESTS (sizeof(_counter_tests) / sizeof(_counter_tests[0]))
+
 int main(void)
 {
     int failures = 0;
@@ -686,6 +942,23 @@ int main(void)
             _high_watermark = 0;
             _input_pos = 0;
             _buflen = 0;
+        }
+    }
+
+    // Sample counter tests that need a custom config, or check limits
+    for (int i = 0; i < NUM_COUNTER_TESTS; i++)
+    {
+        int result = _counter_tests[i].run();
+        tests += 1;
+
+        char passfail_str[128];
+        (void) snprintf(passfail_str, sizeof(passfail_str), "Test %s %s",
+                        _counter_tests[i].name, (result == 0) ? "PASSED" : "FAILED");
+        printf("%s\n", passfail_str);
+
+        if (result != 0)
+        {
+            failures += 1;
         }
     }
 

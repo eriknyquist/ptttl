@@ -33,6 +33,13 @@
 // Sample width in bits
 #define BITS_PER_SAMPLE (16)
 
+// Size of the WAV header fields counted in the RIFF chunk size, other than the sample data
+#define HEADER_CHUNK_SIZE_OVERHEAD (36u)
+
+/* Maximum number of samples a WAV file can hold, given that the header stores the
+ * RIFF chunk size (header overhead + sample data size) as a signed 32-bit value */
+#define MAX_WAV_SAMPLES ((((uint32_t) INT32_MAX) - HEADER_CHUNK_SIZE_OVERHEAD) / (BITS_PER_SAMPLE / 8u))
+
 
 /**
  * The header of a wav file Based on:
@@ -96,9 +103,10 @@ static int _big_endian; // Set at runtime
 }
 
 static void _prepare_header(wavfile_header_t *output,
-                            int32_t framecount, uint32_t samplerate)
+                            uint32_t framecount, uint32_t samplerate)
 {
-    int32_t subchunk2_size = (framecount * BITS_PER_SAMPLE) / 8;
+    // framecount is at most MAX_WAV_SAMPLES, so this fits in a signed 32-bit value
+    int32_t subchunk2_size = (int32_t) (framecount * (BITS_PER_SAMPLE / 8u));
 
     output->chunk_id[0] = 'R';
     output->chunk_id[1] = 'I';
@@ -194,11 +202,7 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
     ptttl_sample_generator_config_t default_config = PTTTL_SAMPLE_GENERATOR_CONFIG_DEFAULT;
     ptttl_sample_generator_config_t *config_to_use = (config == NULL) ? &default_config : config;
 
-    int ret = _init_sample_generation(&generator, config_to_use, wave_type, parser, false);
-    if (ret < 0)
-    {
-        return ret;
-    }
+    int ret = 0;
 
     // Generate 1k samples at a time and write to file, until all samples are generated
     const uint32_t sample_buf_len = 1024;
@@ -207,14 +211,19 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
 #if PTTTL_WAVFILE_GENERATION_STRATEGY == 0
     int16_t sample_buf[sample_buf_len];
 
-    // First pass of sample generation, we'll generate the header first
-    while ((ret = ptttl_sample_generator_generate(&generator, &num_samples, sample_buf)) == 0);
-    if (ret < 0)
+    // Count samples first (without generating them), so we can write the header first
+    uint32_t framecount = 0u;
+    ret = ptttl_sample_generator_count_samples(parser, config_to_use, MAX_WAV_SAMPLES, &framecount);
+    if (ret == 1)
+    {
+        ERROR(parser, "Too many samples for WAV file");
+        return -1;
+    }
+    else if (ret < 0)
     {
         return ret;
     }
 
-    int framecount = (int32_t) generator.current_sample;
     _prepare_header(&header, framecount, config_to_use->sample_rate);
 
     // Write header
@@ -225,13 +234,21 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
         return -1;
     }
 
-    // Reset parser / sample generator
+    // Re-initialize parser (used up by counting samples), and initialize sample generator
     ret = _init_sample_generation(&generator, config_to_use, wave_type, parser, true);
     if (ret < 0)
     {
         return ret;
     }
-#elif PTTTL_WAVFILE_GENERATION_STRATEGY == 1
+#else
+    ret = _init_sample_generation(&generator, config_to_use, wave_type, parser, false);
+    if (ret < 0)
+    {
+        return ret;
+    }
+#endif
+
+#if PTTTL_WAVFILE_GENERATION_STRATEGY == 1
     uint32_t alloc_size = sample_buf_len * 8u;
     int16_t *sample_buf = malloc(alloc_size * sizeof(int16_t));
     if (NULL == sample_buf)
@@ -260,6 +277,13 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
         ret = ptttl_sample_generator_generate(&generator, &num_samples, sample_buf_ptr);
         if (ret < 0)
         {
+            break;
+        }
+
+        if (generator.current_sample > MAX_WAV_SAMPLES)
+        {
+            ERROR(parser, "Too many samples for WAV file");
+            ret = -1;
             break;
         }
 
@@ -321,7 +345,7 @@ int ptttl_to_wav(ptttl_parser_t *parser, FILE *fp, ptttl_sample_generator_config
 #endif
 
 #if (PTTTL_WAVFILE_GENERATION_STRATEGY == 2) || (PTTTL_WAVFILE_GENERATION_STRATEGY == 1)
-    int32_t framecount = (int32_t) generator.current_sample;
+    uint32_t framecount = (uint32_t) generator.current_sample;
     _prepare_header(&header, framecount, config_to_use->sample_rate);
 
     // Write header
