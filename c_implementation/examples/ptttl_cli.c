@@ -42,27 +42,27 @@ static struct option _long_options[] =
 // File pointer for RTTTL/PTTTL source file
 static FILE *rfp = NULL;
 
-static void _print_usage(void)
+static void _print_usage(FILE *fp)
 {
-    printf("\n");
-    printf("USAGE:\n\n");
-    printf("ptttl_cli [OPTIONS] [input_filename]\n");
-    printf("\nIf no input file is given, input will be read from stdin.\n");
-    printf("If no output file is given, output will be written to stdout.\n\n");
-    printf("\nOPTIONS:\n\n");
-    printf("-w --wave-type [sine|triangle|square|sawtooth|nokia]  Waveform type (default: sine)\n");
-    printf("-o --output-filename [string]                         Output filename (default: print to stdout)\n");
-    printf("-m --max-samples [int]                                Refuse to generate output if it would contain\n");
-    printf("                                                      more than this many samples (default: no limit)\n");
-    printf("-h --help                                             Show this output and exit\n");
-    printf("\n");
-    printf("Waveform types:\n");
-    printf("     sine: Sine waveform\n");
-    printf(" triangle: Triangle waveform\n");
-    printf("   square: Square waveform\n");
-    printf(" sawtooth: Sawtooth waveform\n");
-    printf("    nokia: Waveform that emulates the tone of a Nokia 3310\n");
-    printf("\n");
+    fprintf(fp, "\n");
+    fprintf(fp, "USAGE:\n\n");
+    fprintf(fp, "ptttl_cli [OPTIONS] [input_filename]\n");
+    fprintf(fp, "\nIf no input file is given, input will be read from stdin.\n");
+    fprintf(fp, "If no output file is given, output will be written to stdout.\n\n");
+    fprintf(fp, "\nOPTIONS:\n\n");
+    fprintf(fp, "-w --wave-type [sine|triangle|square|sawtooth|nokia]  Waveform type (default: sine)\n");
+    fprintf(fp, "-o --output-filename [string]                         Output filename (default: print to stdout)\n");
+    fprintf(fp, "-m --max-samples [int]                                Refuse to generate output if it would contain\n");
+    fprintf(fp, "                                                      more than this many samples (default: no limit)\n");
+    fprintf(fp, "-h --help                                             Show this output and exit\n");
+    fprintf(fp, "\n");
+    fprintf(fp, "Waveform types:\n");
+    fprintf(fp, "     sine: Sine waveform\n");
+    fprintf(fp, " triangle: Triangle waveform\n");
+    fprintf(fp, "   square: Square waveform\n");
+    fprintf(fp, " sawtooth: Sawtooth waveform\n");
+    fprintf(fp, "    nokia: Waveform that emulates the tone of a Nokia 3310\n");
+    fprintf(fp, "\n");
 }
 
 static int _parse_args(int argc, char *argv[])
@@ -101,7 +101,7 @@ static int _parse_args(int argc, char *argv[])
                 }
                 else
                 {
-                    printf("Error: unrecognized waveform type '%s'\n", optarg);
+                    fprintf(stderr, "Error: unrecognized waveform type '%s'\n", optarg);
                     return -1;
                 }
                 break;
@@ -119,8 +119,8 @@ static int _parse_args(int argc, char *argv[])
                 if (!isdigit((unsigned char) optarg[0]) || (*end != '\0') || (errno != 0) ||
                     (max_samples == 0u) || (max_samples > UINT32_MAX))
                 {
-                    printf("Error: invalid max. sample count '%s' (must be 1 through %u)\n",
-                           optarg, UINT32_MAX);
+                    fprintf(stderr, "Error: invalid max. sample count '%s' (must be 1 through %u)\n",
+                            optarg, UINT32_MAX);
                     return -1;
                 }
 
@@ -196,7 +196,8 @@ int main(int argc, char *argv[])
     int args_ret = _parse_args(argc, argv);
     if (args_ret != 0)
     {
-        _print_usage();
+        // Usage goes to stdout if requested with -h, otherwise it accompanies an error
+        _print_usage((args_ret < 0) ? stderr : stdout);
         return args_ret < 0 ? -1 : 0;
     }
 
@@ -210,7 +211,7 @@ int main(int argc, char *argv[])
         _input_buf = malloc(total_buflen);
         if (NULL == _input_buf)
         {
-            printf("Failed to allocate memory\n");
+            fprintf(stderr, "Failed to allocate memory\n");
             return -1;
         }
 
@@ -225,7 +226,7 @@ int main(int argc, char *argv[])
                 _input_buf = realloc(_input_buf, total_buflen);
                 if (NULL == _input_buf)
                 {
-                    printf("Failed to allocate memory\n");
+                    fprintf(stderr, "Failed to allocate memory\n");
                     return -1;
                 }
             }
@@ -244,7 +245,7 @@ int main(int argc, char *argv[])
         rfp = fopen(_input_filename, "rb");
         if (NULL == rfp)
         {
-            printf("Unable to open input file for reading: %s\n", _input_filename);
+            fprintf(stderr, "Unable to open input file for reading: %s\n", _input_filename);
             return -1;
         }
 
@@ -267,8 +268,8 @@ int main(int argc, char *argv[])
         ret = ptttl_sample_generator_count_samples(&parser, &config, _max_samples, &num_samples);
         if (1 == ret)
         {
-            printf("Error: output would contain at least %u samples, which is more than the max. of %u\n",
-                   num_samples, _max_samples);
+            fprintf(stderr, "Error: output would contain at least %u samples, which is more than the max. of %u\n",
+                    num_samples, _max_samples);
             report_parser_error = false;
             ret = -1;
         }
@@ -291,7 +292,7 @@ int main(int argc, char *argv[])
             wfp = fopen(_output_filename, "wb");
             if (NULL == wfp)
             {
-                printf("Unable to open output file for writing: %s\n", _output_filename);
+                fprintf(stderr, "Unable to open output file for writing: %s\n", _output_filename);
                 report_parser_error = false;
                 ret = -1;
             }
@@ -300,6 +301,12 @@ int main(int argc, char *argv[])
 
     if (0 == ret)
     {
+        /* Use a large output buffer. ptttl_to_wav writes small chunks, and the default
+         * buffer size can be as small as 512 bytes (e.g. on WSL's 9p/drvfs mounts),
+         * which makes writing very slow when every write is a separate system call */
+        static char output_buf[64u * 1024u];
+        (void) setvbuf(wfp, output_buf, _IOFBF, sizeof(output_buf));
+
         // Parse PTTTL/RTTTL source and convert to .wav file
         ret = ptttl_to_wav(&parser, wfp, &config, _wave_type);
     }
@@ -307,7 +314,7 @@ int main(int argc, char *argv[])
     if ((0 > ret) && report_parser_error)
     {
         ptttl_parser_error_t err = ptttl_parser_error(&parser);
-        printf("Error (line %d, column %d): %s\n", err.line, err.column, err.error_message);
+        fprintf(stderr, "Error (line %d, column %d): %s\n", err.line, err.column, err.error_message);
     }
 
     if (NULL != _input_filename)
